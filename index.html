@@ -9969,6 +9969,17 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// Debug viewport
+function updateDebug() {
+  var vw = window.innerWidth;
+  var el = document.getElementById('vwDebug');
+  var mode = document.getElementById('modeDebug');
+  if (el) el.textContent = vw;
+  if (mode) mode.textContent = vw <= 1024 ? 'MOBILE CSS AKTIV' : 'DESKTOP';
+}
+updateDebug();
+window.addEventListener('resize', updateDebug);
+
 initTheme();
 db.auth.onAuthStateChange(async function(event, session) {
   if (session) { document.getElementById('topbarUser').textContent=session.user.email;
