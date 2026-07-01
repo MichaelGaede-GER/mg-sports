@@ -403,6 +403,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="topbar">
       <span class="topbar-title" id="topbarTitle">Dashboard</span>
       <button class="btn" onclick="nav('entry')">+ Neu erfassen</button>
+      <button onclick="toggleMobileView()" id="mobileToggleBtn" title="Mobilansicht umschalten" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--text2)">📱</button>
       <div id="activeEventDisplay" style="font-size:12px;padding:4px 10px;background:var(--green-bg);color:var(--green);border-radius:6px;display:none;cursor:pointer" onclick="nav('events')"></div>
       <button class="btn" onclick="toggleDarkMode()" id="modeBtn" title="Hell/Dunkel wechseln" style="font-size:18px;padding:4px 8px;border:none;background:none;cursor:pointer">🌙</button>
       <span style="font-size:12px;color:var(--text2)" id="topbarUser"></span>
