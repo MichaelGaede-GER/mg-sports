@@ -174,7 +174,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
 
 /* ===== MOBILE RESPONSIVE ===== */
-@media (max-width: 768px) {
+@media (max-width: 1024px), .is-mobile {
   /* App layout */
   .app { flex-direction: column; }
 
@@ -280,10 +280,24 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   .btn { font-size: 12px; padding: 6px 10px; }
 }
 
-/* Hamburger hidden on desktop */
-.hamburger-btn { display: none; }
-@media (max-width: 768px) {
-  .hamburger-btn { display: flex; }
+/* Hamburger - shown on touch/mobile devices via JS */
+.hamburger-btn { display: flex; }
+.is-mobile .sidebar { 
+  position: fixed !important;
+  top: 0 !important; 
+  left: -280px !important;
+  height: 100vh !important;
+  z-index: 1000 !important;
+  transition: left 0.25s ease !important;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+}
+.is-mobile .sidebar.mobile-open { left: 0 !important; }
+.is-mobile .sidebar-overlay { display: none; }
+.is-mobile .sidebar-overlay.active { display: block !important; }
+
+/* On desktop: hide hamburger */
+@media (min-width: 1201px) {
+  .hamburger-btn { display: none !important; }
 }
 
 </style>
@@ -400,7 +414,11 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   </div>
 
   <div class="main">
-    <div class="topbar">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+<div class="topbar">
+  <button class="hamburger-btn" onclick="toggleMobileSidebar()" aria-label="Menü">
+    <span></span><span></span><span></span>
+  </button>
       <span class="topbar-title" id="topbarTitle">Dashboard</span>
       <button class="btn" onclick="nav('entry')">+ Neu erfassen</button>
       <div id="activeEventDisplay" style="font-size:12px;padding:4px 10px;background:var(--green-bg);color:var(--green);border-radius:6px;display:none;cursor:pointer" onclick="nav('events')"></div>
@@ -2005,6 +2023,7 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
       <button class="person-tab" onclick="switchPersonTab('bank',this)" style="font-size:11px;padding:6px 10px">Bankverbindung</button>
       <button class="person-tab" onclick="switchPersonTab('docs',this)" style="font-size:11px;padding:6px 10px">Dokumente & Foto</button>
       <button class="person-tab" onclick="switchPersonTab('squash',this)" style="font-size:11px;padding:6px 10px">🏆 Ranking</button>
+      <button class="person-tab" onclick="switchPersonTab('visa',this)" style="font-size:11px;padding:6px 10px">🛂 VISA</button>
       </div>
     </div><!-- end header -->
     <div style="flex:1;overflow-y:auto;padding:16px 24px">
@@ -2365,6 +2384,7 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           </div>
         </div>
       </div>
+    
 
       <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🇪🇺 ESF Jugend-Ranking</div>
@@ -2429,7 +2449,39 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         3. Rating eintragen → Person speichern
       </div>
     </div>
-    </div><!-- end scrollable content -->
+    
+    </div><!-- /personTab-squash -->
+
+    <!-- TAB: VISA -->
+    <div id="personTab-visa" class="person-tab-content" style="display:none;background:var(--bg);min-height:200px">
+      <div style="padding:16px 0">
+      <div class="form-grid two" style="gap:12px">
+        <div class="form-group">
+          <label>Full Name (as in passport)</label>
+          <input type="text" id="personVisaFullName" placeholder="Full legal name" />
+        </div>
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input type="date" id="personVisaDob" />
+        </div>
+        <div class="form-group">
+          <label>Place of Birth</label>
+          <input type="text" id="personVisaPlaceOfBirth" placeholder="City, Country" />
+        </div>
+        <div class="form-group">
+          <label>Passport Number</label>
+          <input type="text" id="personVisaPassportNo" placeholder="e.g. C01234567" />
+        </div>
+        <div class="form-group">
+          <label>Date of Issue</label>
+          <input type="date" id="personVisaIssueDate" />
+        </div>
+        <div class="form-group">
+          <label>Date of Expiry</label>
+          <input type="date" id="personVisaExpiryDate" />
+        </div>
+      </div>
+    </div></div><!-- end scrollable content -->
     <div style="padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;background:var(--bg)">
       <button class="btn" onclick="closeModal('personModal')">Abbrechen</button>
       <button class="btn primary" onclick="savePerson()">In Datenbank speichern</button>
@@ -5280,7 +5332,21 @@ async function openPersonModal(person) {
   var coachEsid = document.getElementById('personCoachEsid');
   if (coachEsid) coachEsid.value = person && person.coach_esid || '';
   var coachE = document.getElementById('personCoachEsid'); if(coachE) coachE.value = person&&person.coach_esid||'';
-    // Load ranking fields
+    // Load VISA fields
+  var visaFields = ['visa_full_name','visa_dob','visa_place_of_birth','visa_passport_no','visa_issue_date','visa_expiry_date'];
+  var visaEls = ['personVisaFullName','personVisaDob','personVisaPlaceOfBirth','personVisaPassportNo','personVisaIssueDate','personVisaExpiryDate'];
+  visaFields.forEach(function(f,i){
+    var el = document.getElementById(visaEls[i]);
+    if(el) el.value = (person && person[f]) || '';
+  });
+  // Auto-fill DOB from personal data if VISA DOB is empty
+  var visaDobEl = document.getElementById('personVisaDob');
+  var personDobEl = document.getElementById('personDob');
+  if (visaDobEl && personDobEl && !visaDobEl.value && personDobEl.value) {
+    visaDobEl.value = personDobEl.value;
+  }
+
+  // Load ranking fields
   var rankFields = ['rank_world','rank_euro_masters','rank_national','rank_national_fed'];
   var rankEls = ['personRankWorld','personRankEuroMasters','personRankNational','personRankNationalFed'];
   rankFields.forEach(function(f,i){
@@ -5391,7 +5457,7 @@ function switchPersonTab(tab, btn) {
   // Scroll modal to top when switching tabs
   var modal = document.querySelector('#personModal .modal');
   if (modal) modal.scrollTop = 0;
-  var el=document.getElementById('personTab-'+tab); if(el) el.style.display='block';
+  var el=document.getElementById('personTab-'+tab); if(el) { el.style.display='block'; el.style.minHeight='200px'; } else { console.error('Tab not found: personTab-'+tab); }
 }
 function highlightDietLabel(labelId, cbId) { var label=document.getElementById(labelId); var cb=document.getElementById(cbId); if(!label||!cb) return; label.style.borderColor=cb.checked?'var(--green)':'var(--border)'; label.style.background=cb.checked?'var(--green-bg)':'var(--bg)'; }
 function copyAddressToBilling() {
@@ -5473,6 +5539,12 @@ async function savePerson() {
     rank_euro_masters: parseInt(document.getElementById('personRankEuroMasters')&&document.getElementById('personRankEuroMasters').value)||null,
     rank_national: parseInt(document.getElementById('personRankNational')&&document.getElementById('personRankNational').value)||null,
     rank_national_fed: document.getElementById('personRankNationalFed')&&document.getElementById('personRankNationalFed').value.trim()||null,
+    visa_full_name: document.getElementById('personVisaFullName')&&document.getElementById('personVisaFullName').value.trim()||null,
+    visa_dob: document.getElementById('personVisaDob')&&document.getElementById('personVisaDob').value||null,
+    visa_place_of_birth: document.getElementById('personVisaPlaceOfBirth')&&document.getElementById('personVisaPlaceOfBirth').value.trim()||null,
+    visa_passport_no: document.getElementById('personVisaPassportNo')&&document.getElementById('personVisaPassportNo').value.trim()||null,
+    visa_issue_date: document.getElementById('personVisaIssueDate')&&document.getElementById('personVisaIssueDate').value||null,
+    visa_expiry_date: document.getElementById('personVisaExpiryDate')&&document.getElementById('personVisaExpiryDate').value||null,
     squashlevels_id:document.getElementById('personSquashlevelId')&&document.getElementById('personSquashlevelId').value.trim()||null,
     squashlevels_rating:parseInt(document.getElementById('personSquashlevelRating')&&document.getElementById('personSquashlevelRating').value)||null,
     photo_url:photoUrl||null,passport_doc_url:passportUrl||null,updated_at:new Date().toISOString()
@@ -8161,6 +8233,12 @@ async function syncEntryWithPersons() {
     {entry:'f_mobile',            person:'mobile',             label:'Mobil'},
     {entry:'f_email',             person:'email',              label:'E-Mail'},
     {entry:'f_passport_id',       person:'passport_id',        label:'Passport ID'},
+    {entry:'cl_fullname',         person:'visa_full_name',      label:'VISA Full Name'},
+    {entry:'cl_dob',              person:'visa_dob',            label:'VISA Date of Birth'},
+    {entry:'cl_place_of_birth',   person:'visa_place_of_birth', label:'VISA Place of Birth'},
+    {entry:'cl_passport',         person:'visa_passport_no',    label:'VISA Passport No.'},
+    {entry:'cl_date_of_issue',    person:'visa_issue_date',     label:'VISA Issue Date'},
+    {entry:'cl_date_of_expiry',   person:'visa_expiry_date',    label:'VISA Expiry Date'},
     {entry:'f_squashlevels_id',   person:'squashlevels_id',    label:'Squash Level ID'},
     {entry:'f_squashlevels_rating',person:'squashlevels_rating',label:'Squash Rating'},
   ];
@@ -8301,6 +8379,9 @@ async function applyEntrySync() {
         'f_lastname':'lastname','f_firstname':'firstname','f_country':'country',
         'f_dob':'dob','f_gender':'gender','f_mobile':'mobile',
         'f_email':'email','f_passport_id':'passport_id',
+        'cl_fullname':'visa_full_name','cl_dob':'visa_dob',
+        'cl_place_of_birth':'visa_place_of_birth','cl_passport':'visa_passport_no',
+        'cl_date_of_issue':'visa_issue_date','cl_date_of_expiry':'visa_expiry_date',
         'f_squashlevels_id':'squashlevels_id','f_squashlevels_rating':'squashlevels_rating'
       };
       var col = fieldMap[cb.getAttribute('data-field')];
@@ -9831,6 +9912,20 @@ async function saveRolePermissions() {
 
 
 // ===== MOBILE SIDEBAR =====
+// Detect touch/mobile device and apply is-mobile class
+function detectMobile() {
+  var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  var isSmallScreen = window.innerWidth <= 1200;
+  if (isTouchDevice || isSmallScreen) {
+    document.body.classList.add('is-mobile');
+  } else {
+    document.body.classList.remove('is-mobile');
+  }
+}
+detectMobile();
+window.addEventListener('resize', detectMobile);
+document.addEventListener('DOMContentLoaded', detectMobile);
+
 function toggleMobileSidebar() {
   var sidebar = document.querySelector('.sidebar');
   var overlay = document.getElementById('sidebarOverlay');
