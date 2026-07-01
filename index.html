@@ -400,6 +400,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('checkin')">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Check-in
     </div>
+    <div class="nav-item" onclick="nav('mealcheck')">
+      <svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>Meal-Check
+    </div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="nav('events')">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Events
@@ -1648,6 +1651,74 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <tbody id="checkinTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
             </table>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEAL CHECK -->
+      <div class="page" id="page-mealcheck">
+        <div class="page-header"><h2>🍽️ Meal-Check</h2></div>
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div class="stat green"><div class="lbl">Ausgegeben</div><div class="val" id="mc_served">0</div></div>
+          <div class="stat amber"><div class="lbl">Noch ausstehend</div><div class="val" id="mc_remaining">0</div></div>
+          <div class="stat blue"><div class="lbl">Gesamt erwartet</div><div class="val" id="mc_total">0</div></div>
+        </div>
+
+        <!-- Session selector -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>📅 Mahlzeit auswählen</h3></div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px" id="mc_session_grid">
+              <!-- Sessions rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- QR Scanner -->
+        <div class="card" style="margin-bottom:16px" id="mc_scanner_card">
+          <div class="card-header">
+            <h3>📷 QR-Scanner — <span id="mc_active_session_label" style="color:var(--blue)">– keine Mahlzeit gewählt –</span></h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn primary" id="mc_qr_start" onclick="startMealQR()" disabled>📷 Scanner starten</button>
+              <button class="btn" id="mc_qr_stop" onclick="stopMealQR()" style="display:none">⏹ Stoppen</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="mc_scanner_container" style="display:none;text-align:center">
+              <video id="mc_video" style="width:100%;max-width:400px;border-radius:8px;border:2px solid var(--blue)" autoplay playsinline></video>
+              <canvas id="mc_canvas" style="display:none"></canvas>
+              <div id="mc_scan_status" style="margin-top:8px;font-size:13px;color:var(--text3)">Kamera wird gestartet…</div>
+            </div>
+            <!-- Result box -->
+            <div id="mc_result_ok" style="display:none;padding:16px;background:var(--green-bg);border:2px solid var(--green);border-radius:8px;margin-top:8px;text-align:center">
+              <div style="font-size:28px">✅</div>
+              <div style="font-size:18px;font-weight:700;color:var(--green)" id="mc_result_name"></div>
+              <div style="font-size:12px;color:var(--text2);margin-top:4px" id="mc_result_detail"></div>
+            </div>
+            <div id="mc_result_stop" style="display:none;padding:16px;background:#c0392b;border-radius:8px;margin-top:8px;text-align:center">
+              <div style="font-size:36px;font-weight:900;color:#fff;letter-spacing:4px">⛔ STOP – 2SCAN</div>
+              <div style="font-size:16px;color:#fff;margin-top:8px" id="mc_result_stop_name"></div>
+              <div style="font-size:12px;color:#ffcccc;margin-top:4px">Diese Person wurde für diese Mahlzeit bereits abgehakt!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Participant list for selected session -->
+        <div class="card" id="mc_list_card" style="display:none">
+          <div class="card-header">
+            <h3 id="mc_list_title">Teilnehmerliste</h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="search" id="mc_search" placeholder="Name suchen…" style="font-size:12px;padding:5px 10px" oninput="renderMealList()" />
+              <button class="btn" onclick="loadMealCheck()">🔄</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th>✓</th><th>Name</th><th>Land</th><th>Event</th><th>Package</th><th>Zeit</th></tr></thead>
+              <tbody id="mc_table"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
+            </table></div>
           </div>
         </div>
       </div>
@@ -3623,6 +3694,274 @@ function getNextMahnLevel(current, days, thresholds) {
 }
 
 // ============================================================
+// MEAL-CHECK MODULE
+// ============================================================
+var mcData = [];         // all meal participants
+var mcActiveSession = null;  // e.g. 'do_lunch'
+var mcStream = null;
+var mcAnimFrame = null;
+var mcLastScan = '';
+var mcLastScanTime = 0;
+
+var MC_SESSIONS = [
+  { key:'do_lunch',  label:'Thursday Lunch',   day:'do', meal:'lunch',  color:'#2e7d32', icon:'🥗' },
+  { key:'do_dinner', label:'Thursday Dinner',  day:'do', meal:'dinner', color:'#c62828', icon:'🍽️' },
+  { key:'fr_lunch',  label:'Friday Lunch',     day:'fr', meal:'lunch',  color:'#2e7d32', icon:'🥗' },
+  { key:'fr_dinner', label:'Friday Dinner',    day:'fr', meal:'dinner', color:'#c62828', icon:'🍽️' },
+  { key:'sa_lunch',  label:'Saturday Lunch',   day:'sa', meal:'lunch',  color:'#2e7d32', icon:'🥗' },
+  { key:'sa_dinner', label:'Saturday Dinner',  day:'sa', meal:'dinner', color:'#c62828', icon:'🍽️' },
+  { key:'so_lunch',  label:'Sunday Lunch',     day:'so', meal:'lunch',  color:'#2e7d32', icon:'🥗' },
+];
+
+async function loadMealCheck() {
+  // Load all participants with meal package
+  var q = db.from('participants').select('*').eq('meal_plus','Ja').neq('withdraw','Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  q = q.order('lastname');
+  var { data } = await q;
+  mcData = data || [];
+
+  // Render session buttons
+  var grid = document.getElementById('mc_session_grid');
+  if (grid) {
+    grid.innerHTML = MC_SESSIONS.map(function(s) {
+      var count = mcData.filter(function(p) {
+        return hasMealDay(p, s.meal, s.day);
+      }).length;
+      var served = mcData.filter(function(p) {
+        return hasMealDay(p, s.meal, s.day) && getMealChecked(p, s.key);
+      }).length;
+      var isActive = mcActiveSession === s.key;
+      return '<button data-key="'+s.key+'" onclick="selectMealSession(this.dataset.key)" style="padding:12px;border-radius:8px;border:2px solid '+(isActive?s.color:'var(--border)')+';background:'+(isActive?s.color+'22':'var(--bg2)')+';cursor:pointer;text-align:left;transition:all .15s">'
+        + '<div style="font-size:18px">'+s.icon+'</div>'
+        + '<div style="font-size:13px;font-weight:600;color:'+(isActive?s.color:'var(--text)')+'">'+s.label+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+served+' / '+count+' ausgegeben</div>'
+        + '</button>';
+    }).join('');
+  }
+
+  if (mcActiveSession) renderMealList();
+  updateMealStats();
+}
+
+function hasMealDay(p, meal, day) {
+  if (meal === 'lunch') {
+    return p.meal_lunch === 'Ja' && p.meal_lunch_days && p.meal_lunch_days.split(',').map(function(d){return d.trim();}).indexOf(day) >= 0;
+  } else {
+    return p.meal_dinner === 'Ja' && p.meal_dinner_days && p.meal_dinner_days.split(',').map(function(d){return d.trim();}).indexOf(day) >= 0;
+  }
+}
+
+function getMealChecked(p, sessionKey) {
+  if (!p.meal_checkins) return false;
+  try {
+    var mc = typeof p.meal_checkins === 'string' ? JSON.parse(p.meal_checkins) : p.meal_checkins;
+    return mc && mc[sessionKey] ? true : false;
+  } catch(e) { return false; }
+}
+
+function getMealCheckinTime(p, sessionKey) {
+  if (!p.meal_checkins) return null;
+  try {
+    var mc = typeof p.meal_checkins === 'string' ? JSON.parse(p.meal_checkins) : p.meal_checkins;
+    return mc && mc[sessionKey] ? mc[sessionKey] : null;
+  } catch(e) { return null; }
+}
+
+function updateMealStats() {
+  if (!mcActiveSession) return;
+  var s = MC_SESSIONS.find(function(x){ return x.key === mcActiveSession; });
+  if (!s) return;
+  var eligible = mcData.filter(function(p){ return hasMealDay(p, s.meal, s.day); });
+  var served = eligible.filter(function(p){ return getMealChecked(p, mcActiveSession); }).length;
+  var el1 = document.getElementById('mc_served'); if (el1) el1.textContent = served;
+  var el2 = document.getElementById('mc_remaining'); if (el2) el2.textContent = eligible.length - served;
+  var el3 = document.getElementById('mc_total'); if (el3) el3.textContent = eligible.length;
+}
+
+function selectMealSession(key) {
+  mcActiveSession = key;
+  stopMealQR();
+  var s = MC_SESSIONS.find(function(x){ return x.key === key; });
+  var label = document.getElementById('mc_active_session_label');
+  if (label && s) label.textContent = s.icon + ' ' + s.label;
+  var startBtn = document.getElementById('mc_qr_start');
+  if (startBtn) startBtn.disabled = false;
+  var listCard = document.getElementById('mc_list_card');
+  if (listCard) listCard.style.display = '';
+  var listTitle = document.getElementById('mc_list_title');
+  if (listTitle && s) listTitle.textContent = s.icon + ' ' + s.label + ' – Teilnehmerliste';
+  renderMealList();
+  loadMealCheck(); // refresh session buttons
+  updateMealStats();
+}
+
+function renderMealList() {
+  if (!mcActiveSession) return;
+  var s = MC_SESSIONS.find(function(x){ return x.key === mcActiveSession; });
+  if (!s) return;
+  var search = (document.getElementById('mc_search') ? document.getElementById('mc_search').value : '').toLowerCase();
+  var eligible = mcData.filter(function(p){ return hasMealDay(p, s.meal, s.day); });
+  var filtered = search ? eligible.filter(function(p){
+    return (p.lastname+' '+p.firstname).toLowerCase().includes(search);
+  }) : eligible;
+
+  var tb = document.getElementById('mc_table');
+  if (!tb) return;
+  if (!filtered.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Keine Teilnehmer für diese Mahlzeit</td></tr>'; return; }
+  tb.innerHTML = filtered.map(function(p) {
+    var checked = getMealChecked(p, mcActiveSession);
+    var time = getMealCheckinTime(p, mcActiveSession);
+    var timeStr = time ? new Date(time).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
+    var rowBg = checked ? 'background:rgba(34,197,94,0.08)' : '';
+    return '<tr style="'+rowBg+'">'
+      + '<td style="text-align:center">'
+        + (checked ? '<span style="font-size:18px;color:var(--green)">✅</span>' : '<span style="font-size:18px;color:var(--border)">⬜</span>')
+      + '</td>'
+      + '<td><strong>'+p.lastname+', '+p.firstname+'</strong></td>'
+      + '<td>'+(p.country||'–')+'</td>'
+      + '<td>'+(p.events||'–')+'</td>'
+      + '<td>'+(p.package?'<span class="badge">'+p.package+'</span>':'–')+'</td>'
+      + '<td style="font-size:12px;color:'+(checked?'var(--green)':'var(--text3)')+'">'+timeStr+'</td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function startMealQR() {
+  if (!mcActiveSession) { toast('Bitte zuerst eine Mahlzeit auswählen'); return; }
+  var container = document.getElementById('mc_scanner_container');
+  var video = document.getElementById('mc_video');
+  var status = document.getElementById('mc_scan_status');
+  var startBtn = document.getElementById('mc_qr_start');
+  var stopBtn = document.getElementById('mc_qr_stop');
+  try {
+    mcStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = mcStream;
+    container.style.display = 'block';
+    startBtn.style.display = 'none';
+    stopBtn.style.display = '';
+    status.textContent = 'Scanner aktiv – QR-Code in die Kamera halten';
+    video.addEventListener('loadedmetadata', function() { scanMealFrame(); });
+  } catch(e) {
+    status.textContent = 'Kamerazugriff verweigert: ' + e.message;
+    container.style.display = 'block';
+  }
+}
+
+function stopMealQR() {
+  if (mcStream) { mcStream.getTracks().forEach(function(t){ t.stop(); }); mcStream = null; }
+  if (mcAnimFrame) { cancelAnimationFrame(mcAnimFrame); mcAnimFrame = null; }
+  var container = document.getElementById('mc_scanner_container');
+  var startBtn = document.getElementById('mc_qr_start');
+  var stopBtn = document.getElementById('mc_qr_stop');
+  if (container) container.style.display = 'none';
+  if (startBtn) { startBtn.style.display = ''; startBtn.disabled = !mcActiveSession; }
+  if (stopBtn) stopBtn.style.display = 'none';
+  hideMealResults();
+}
+
+function hideMealResults() {
+  var ok = document.getElementById('mc_result_ok'); if (ok) ok.style.display = 'none';
+  var stop = document.getElementById('mc_result_stop'); if (stop) stop.style.display = 'none';
+}
+
+function scanMealFrame() {
+  var video = document.getElementById('mc_video');
+  var canvas = document.getElementById('mc_canvas');
+  if (!video || !canvas || !mcStream) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    try {
+      if ('BarcodeDetector' in window) {
+        var detector = new BarcodeDetector({ formats: ['qr_code'] });
+        detector.detect(canvas).then(function(codes) {
+          if (codes.length > 0) handleMealQR(codes[0].rawValue);
+        });
+      } else if (window.jsQR) {
+        var code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code) handleMealQR(code.data);
+      }
+    } catch(e) {}
+  }
+  mcAnimFrame = requestAnimationFrame(scanMealFrame);
+}
+
+async function handleMealQR(esid) {
+  if (!esid || !mcActiveSession) return;
+  var now = Date.now();
+  if (esid === mcLastScan && now - mcLastScanTime < 3000) return;
+  mcLastScan = esid;
+  mcLastScanTime = now;
+
+  var p = mcData.find(function(x){ return x.member_id === esid.trim(); });
+  if (!p) {
+    // Try DB lookup
+    var q = db.from('participants').select('*').eq('member_id', esid.trim());
+    if (currentEventId) q = q.eq('event_id', currentEventId);
+    var { data } = await q;
+    if (!data || !data.length) {
+      toast('⚠️ ESID nicht gefunden: ' + esid);
+      document.getElementById('mc_scan_status').textContent = '⚠️ Nicht gefunden: ' + esid;
+      return;
+    }
+    p = data[0];
+  }
+
+  var s = MC_SESSIONS.find(function(x){ return x.key === mcActiveSession; });
+  var fullName = p.firstname + ' ' + p.lastname;
+
+  // Check if already scanned for THIS session
+  if (getMealChecked(p, mcActiveSession)) {
+    // STOP - 2SCAN!
+    if (navigator.vibrate) navigator.vibrate([200,100,200,100,400]);
+    hideMealResults();
+    var stopEl = document.getElementById('mc_result_stop');
+    var stopName = document.getElementById('mc_result_stop_name');
+    if (stopEl) stopEl.style.display = 'block';
+    if (stopName) stopName.textContent = fullName + ' · ' + (p.country||'') + ' · ' + (s?s.label:'');
+    document.getElementById('mc_scan_status').textContent = '⛔ DOPPELSCAN erkannt!';
+    setTimeout(function() { hideMealResults(); }, 5000);
+    return;
+  }
+
+  // Not yet scanned - check in now
+  var nowISO = new Date().toISOString();
+  var existing = {};
+  try {
+    existing = p.meal_checkins ? (typeof p.meal_checkins === 'string' ? JSON.parse(p.meal_checkins) : p.meal_checkins) : {};
+  } catch(e) {}
+  existing[mcActiveSession] = nowISO;
+
+  var { error } = await db.from('participants').update({
+    meal_checkins: JSON.stringify(existing),
+    updated_at: nowISO
+  }).eq('id', p.id);
+
+  if (error) { toast('Fehler: ' + error.message); return; }
+
+  // Update local data
+  p.meal_checkins = existing;
+
+  // Show success
+  if (navigator.vibrate) navigator.vibrate(200);
+  hideMealResults();
+  var okEl = document.getElementById('mc_result_ok');
+  var nameEl = document.getElementById('mc_result_name');
+  var detailEl = document.getElementById('mc_result_detail');
+  if (okEl) okEl.style.display = 'block';
+  if (nameEl) nameEl.textContent = '✅ ' + fullName;
+  if (detailEl) detailEl.textContent = (p.country||'') + ' · ' + (p.events||'') + ' · ' + (s?s.label:'');
+  document.getElementById('mc_scan_status').textContent = 'Bereit für nächsten Scan…';
+  setTimeout(function() { hideMealResults(); }, 3000);
+  renderMealList();
+  updateMealStats();
+}
+
+// ============================================================
 // NAVIGATION
 function nav(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -3657,6 +3996,7 @@ function nav(page) {
   else if (page === 'import') initImportPage();
   else if (page === 'broadcast') loadBroadcastRecipients();
   else if (page === 'checkin') loadCheckin();
+  else if (page === 'mealcheck') loadMealCheck();
   else if (page === 'events') loadEvents();
   else if (page === 'backup') initBackupPage();
   else if (page === 'persons') loadPersons();
