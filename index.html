@@ -301,6 +301,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 /* Mobile sidebar support */
 
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 </head>
 <body>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
@@ -1604,11 +1605,32 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="stat amber"><div class="lbl">Noch ausstehend</div><div class="val" id="ci_pending">0</div></div>
           <div class="stat blue"><div class="lbl">Gesamt erwartet</div><div class="val" id="ci_total">0</div></div>
         </div>
+        <!-- QR Scanner -->
         <div class="card" style="margin-bottom:16px">
-          <div class="card-header"><h3>Suche / Schnell-Check-in</h3></div>
+          <div class="card-header">
+            <h3>📷 QR-Code Scanner</h3>
+            <button class="btn primary" id="qrStartBtn" onclick="startQRScanner()">📷 Scanner starten</button>
+            <button class="btn" id="qrStopBtn" onclick="stopQRScanner()" style="display:none">⏹ Stoppen</button>
+          </div>
           <div class="card-body">
-            <div style="display:flex;gap:10px;align-items:center">
-              <input type="search" id="ci_search" placeholder="Name oder Member ID suchen…" style="flex:1;font-size:14px;padding:10px 14px" oninput="searchCheckin()" autofocus />
+            <div id="qrScannerContainer" style="display:none;text-align:center">
+              <video id="qrVideo" style="width:100%;max-width:400px;border-radius:8px;border:2px solid var(--blue)" autoplay playsinline></video>
+              <canvas id="qrCanvas" style="display:none"></canvas>
+              <div id="qrStatus" style="margin-top:8px;font-size:13px;color:var(--text3)">Kamera wird gestartet…</div>
+            </div>
+            <div id="qrResult" style="display:none;padding:16px;background:var(--green-bg);border:1px solid var(--green);border-radius:8px;margin-top:8px">
+              <div style="font-size:16px;font-weight:700;color:var(--green)" id="qrResultName"></div>
+              <div style="font-size:12px;color:var(--text2);margin-top:4px" id="qrResultDetail"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suche -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>🔍 Suche / Schnell-Check-in</h3></div>
+          <div class="card-body">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input type="search" id="ci_search" placeholder="Name, Member ID oder ESID suchen…" style="flex:1;min-width:200px;font-size:14px;padding:10px 14px" oninput="searchCheckin()" />
               <select id="ci_filter_role" onchange="loadCheckin()" style="font-size:13px">
                 <option value="">Alle Rollen</option>
                 <option>Player</option><option>Coach</option><option>Parent</option><option>Referee</option>
@@ -3367,6 +3389,119 @@ async function sendBroadcast() {
     delay += 800;
   });
   toast(selected.length + ' WhatsApp-Fenster werden geöffnet…');
+}
+
+// ============================================================
+// QR SCANNER MODULE
+// ============================================================
+var qrStream = null;
+var qrAnimFrame = null;
+var qrLastScan = '';
+var qrLastScanTime = 0;
+
+async function startQRScanner() {
+  var container = document.getElementById('qrScannerContainer');
+  var video = document.getElementById('qrVideo');
+  var status = document.getElementById('qrStatus');
+  var startBtn = document.getElementById('qrStartBtn');
+  var stopBtn = document.getElementById('qrStopBtn');
+  if (!container || !video) return;
+  try {
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = qrStream;
+    container.style.display = 'block';
+    startBtn.style.display = 'none';
+    stopBtn.style.display = '';
+    status.textContent = 'Scanner aktiv – QR-Code in die Kamera halten';
+    video.addEventListener('loadedmetadata', function() { scanQRFrame(); });
+  } catch(e) {
+    status.textContent = 'Kamerazugriff verweigert: ' + e.message;
+    container.style.display = 'block';
+  }
+}
+
+function stopQRScanner() {
+  if (qrStream) { qrStream.getTracks().forEach(function(t){ t.stop(); }); qrStream = null; }
+  if (qrAnimFrame) { cancelAnimationFrame(qrAnimFrame); qrAnimFrame = null; }
+  var container = document.getElementById('qrScannerContainer');
+  var startBtn = document.getElementById('qrStartBtn');
+  var stopBtn = document.getElementById('qrStopBtn');
+  if (container) container.style.display = 'none';
+  if (startBtn) startBtn.style.display = '';
+  if (stopBtn) stopBtn.style.display = 'none';
+}
+
+function scanQRFrame() {
+  var video = document.getElementById('qrVideo');
+  var canvas = document.getElementById('qrCanvas');
+  if (!video || !canvas || !qrStream) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    try {
+      // Use BarcodeDetector API if available
+      if ('BarcodeDetector' in window) {
+        var detector = new BarcodeDetector({ formats: ['qr_code'] });
+        detector.detect(canvas).then(function(codes) {
+          if (codes.length > 0) {
+            handleQRResult(codes[0].rawValue);
+          }
+        });
+      } else {
+        // Fallback: use jsQR library
+        if (window.jsQR) {
+          var code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) handleQRResult(code.data);
+        } else {
+          document.getElementById('qrStatus').textContent = 'QR-Erkennung nicht verfügbar – bitte Name/ESID manuell eingeben';
+        }
+      }
+    } catch(e) {}
+  }
+  qrAnimFrame = requestAnimationFrame(scanQRFrame);
+}
+
+async function handleQRResult(esid) {
+  if (!esid) return;
+  var now = Date.now();
+  // Debounce - same code within 3 seconds = ignore
+  if (esid === qrLastScan && now - qrLastScanTime < 3000) return;
+  qrLastScan = esid;
+  qrLastScanTime = now;
+
+  // Find participant by member_id / ESID
+  var q = db.from('participants').select('*').eq('member_id', esid.trim());
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var { data } = await q;
+  if (!data || !data.length) {
+    toast('⚠️ ESID nicht gefunden: ' + esid);
+    document.getElementById('qrStatus').textContent = '⚠️ Nicht gefunden: ' + esid;
+    return;
+  }
+  var p = data[0];
+  // Auto check-in
+  var now2 = new Date().toISOString();
+  await db.from('participants').update({ checkin_confirmed: true, checkin_time: now2, updated_at: now2 }).eq('id', p.id);
+  // Update local data
+  var local = checkinData.find(function(x){ return x.id === p.id; });
+  if (local) { local.checkin_confirmed = true; local.checkin_time = now2; }
+  // Show result
+  var resultEl = document.getElementById('qrResult');
+  var nameEl = document.getElementById('qrResultName');
+  var detailEl = document.getElementById('qrResultDetail');
+  if (resultEl) resultEl.style.display = 'block';
+  if (nameEl) nameEl.textContent = '✅ ' + p.firstname + ' ' + p.lastname + ' eingecheckt!';
+  if (detailEl) detailEl.textContent = (p.country||'') + ' · ' + (p.events||'') + ' · ' + (p.role||'') + ' · Zimmer: ' + (p.room_number||'–');
+  document.getElementById('qrStatus').textContent = 'Bereit für nächsten Scan…';
+  renderCheckin();
+  // Hide result after 4 seconds
+  setTimeout(function() { if (resultEl) resultEl.style.display = 'none'; }, 4000);
+  // Vibrate on mobile if supported
+  if (navigator.vibrate) navigator.vibrate(200);
+  toast('✅ ' + p.firstname + ' ' + p.lastname + ' eingecheckt');
 }
 
 // ============================================================
