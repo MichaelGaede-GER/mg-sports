@@ -392,6 +392,12 @@ body.sidebar-mobile .content { width: 100% !important; }
     <div class="nav-item" onclick="nav('airport')">
       <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Airport Transfer
     </div>
+    <div class="nav-item" onclick="nav('broadcast')">
+      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Broadcast
+    </div>
+    <div class="nav-item" onclick="nav('checkin')">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Check-in
+    </div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="nav('events')">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Events
@@ -1526,6 +1532,101 @@ body.sidebar-mobile .content { width: 100% !important; }
       </div>
 
       <!-- EVENTS -->
+      <!-- BROADCAST -->
+      <div class="page" id="page-broadcast">
+        <div class="page-header"><h2>📢 Broadcast – Massen-WhatsApp</h2></div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Empfänger filtern</h3></div>
+          <div class="card-body">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Rolle</label>
+                <select id="bc_role" style="margin-top:4px">
+                  <option value="">Alle Rollen</option>
+                  <option>Player</option><option>Coach</option><option>Parent</option>
+                  <option>Referee</option><option>ESF Official</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Land</label>
+                <input type="text" id="bc_country" placeholder="z.B. GER" style="width:90px;margin-top:4px" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Zahlungsstatus</label>
+                <select id="bc_payment" style="margin-top:4px">
+                  <option value="">Alle</option>
+                  <option>Ausstehend</option><option>Teilzahlung</option>
+                  <option>Bezahlt</option><option>Neu</option>
+                </select>
+              </div>
+              <button class="btn primary" onclick="loadBroadcastRecipients()">🔍 Empfänger laden</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Nachricht</h3></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Nachrichtenvorlage</label>
+              <select id="bc_template" onchange="applyBcTemplate()" style="margin-bottom:8px">
+                <option value="">– Vorlage wählen –</option>
+                <option value="payment">💰 Zahlungserinnerung</option>
+                <option value="welcome">👋 Willkommen</option>
+                <option value="info">ℹ️ Allgemeine Info</option>
+                <option value="custom">✏️ Eigener Text</option>
+              </select>
+              <textarea id="bc_message" rows="5" placeholder="Nachricht eingeben…" style="width:100%;font-size:13px;padding:10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg2);color:var(--text);resize:vertical"></textarea>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">Verfügbare Variablen: {name}, {country}, {package}, {total}, {received}, {open}</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Empfänger (<span id="bc_count">0</span>)</h3>
+            <button class="btn primary" onclick="sendBroadcast()">💬 Alle WhatsApp öffnen</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th><input type="checkbox" id="bc_select_all" onchange="toggleAllBc(this.checked)" /></th><th>Name</th><th>Land</th><th>Mobil</th><th>Package</th><th>Status</th><th>Aktion</th></tr></thead>
+              <tbody id="bcTable"><tr><td colspan="7" class="empty">Empfänger laden um zu beginnen</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHECK-IN -->
+      <div class="page" id="page-checkin">
+        <div class="page-header"><h2>✅ Check-in</h2></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="stat green"><div class="lbl">Eingecheckt</div><div class="val" id="ci_count">0</div></div>
+          <div class="stat amber"><div class="lbl">Noch ausstehend</div><div class="val" id="ci_pending">0</div></div>
+          <div class="stat blue"><div class="lbl">Gesamt erwartet</div><div class="val" id="ci_total">0</div></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Suche / Schnell-Check-in</h3></div>
+          <div class="card-body">
+            <div style="display:flex;gap:10px;align-items:center">
+              <input type="search" id="ci_search" placeholder="Name oder Member ID suchen…" style="flex:1;font-size:14px;padding:10px 14px" oninput="searchCheckin()" autofocus />
+              <select id="ci_filter_role" onchange="loadCheckin()" style="font-size:13px">
+                <option value="">Alle Rollen</option>
+                <option>Player</option><option>Coach</option><option>Parent</option><option>Referee</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Teilnehmerliste</h3>
+            <button class="btn" onclick="loadCheckin()">🔄 Aktualisieren</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th>✓</th><th>Name</th><th>Land</th><th>Event</th><th>Rolle</th><th>Package</th><th>Zimmer</th><th>Check-in Zeit</th></tr></thead>
+              <tbody id="checkinTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
       <div class="page" id="page-events">
         <div class="page-header"><h2>Event-Verwaltung</h2>
           <button class="btn primary" onclick="openEventModal()">+ Neues Event</button>
@@ -3172,6 +3273,218 @@ async function saveEntryFee() {
   await loadDashboard();
 }
 
+// ============================================================
+// BROADCAST MODULE
+// ============================================================
+var bcRecipients = [];
+
+async function loadBroadcastRecipients() {
+  var role = document.getElementById('bc_role').value;
+  var country = document.getElementById('bc_country').value.trim().toUpperCase();
+  var payment = document.getElementById('bc_payment').value;
+  var q = db.from('participants').select('*').neq('withdraw','Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  if (role) q = q.eq('role', role);
+  if (country) q = q.eq('country', country);
+  if (payment) q = q.eq('payment_status', payment);
+  q = q.order('lastname');
+  var { data } = await q;
+  bcRecipients = (data||[]).filter(p => p.mobile);
+  document.getElementById('bc_count').textContent = bcRecipients.length;
+  var tb = document.getElementById('bcTable');
+  if (!bcRecipients.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Keine Empfänger mit Mobilnummer gefunden</td></tr>'; return; }
+  tb.innerHTML = bcRecipients.map(function(p, i) {
+    var open = Math.max(0,(parseFloat(p.package_price)||0)-(parseFloat(p.amount_received)||0));
+    return '<tr>'
+      + '<td><input type="checkbox" class="bc-cb" data-i="'+i+'" checked /></td>'
+      + '<td><strong>'+p.lastname+', '+p.firstname+'</strong></td>'
+      + '<td>'+( p.country||'–')+'</td>'
+      + '<td style="font-size:12px">'+p.mobile+'</td>'
+      + '<td>'+(p.package?'<span class="badge">'+p.package+'</span>':'–')+'</td>'
+      + '<td><span class="status '+statusClass(p.payment_status)+'">'+( p.payment_status||'–')+'</span></td>'
+      + '<td><button class="btn" style="font-size:11px;padding:2px 8px;background:#25D366;color:#fff;border-color:#25D366" onclick="sendSingleWA('+i+')">💬</button></td>'
+      + '</tr>';
+  }).join('');
+  toast(bcRecipients.length + ' Empfänger geladen');
+}
+
+function applyBcTemplate() {
+  var t = document.getElementById('bc_template').value;
+  var msgs = {
+    payment: 'Hello {name},\n\nThis is a friendly reminder that your payment for the European Junior Open 2026 is still outstanding.\n\nTotal: \u20ac{total}\nReceived: \u20ac{received}\nOpen: \u20ac{open}\n\nPlease transfer the outstanding amount as soon as possible.\n\nBest regards,\nMG Sports & Eventmanagement',
+    welcome: 'Hello {name},\n\nWelcome to the European Junior Open 2026! \ud83c\udf89\n\nWe are looking forward to seeing you in Hamburg.\n\nBest regards,\nMG Sports & Eventmanagement',
+    info: 'Hello {name},\n\nWe have an important update regarding the European Junior Open 2026.\n\n[Your message here]\n\nBest regards,\nMG Sports & Eventmanagement',
+    custom: ''
+  };
+  if (msgs[t] !== undefined) document.getElementById('bc_message').value = msgs[t];
+}
+
+function buildWAMessage(p, template) {
+  var open = Math.max(0,(parseFloat(p.package_price)||0)-(parseFloat(p.amount_received)||0));
+  return template
+    .replace(/{name}/g, p.firstname + ' ' + p.lastname)
+    .replace(/{country}/g, p.country||'')
+    .replace(/{package}/g, p.package||'')
+    .replace(/{total}/g, (parseFloat(p.package_price)||0).toFixed(2))
+    .replace(/{received}/g, (parseFloat(p.amount_received)||0).toFixed(2))
+    .replace(/{open}/g, open.toFixed(2));
+}
+
+function sendSingleWA(idx) {
+  var p = bcRecipients[idx];
+  if (!p) return;
+  var msg = buildWAMessage(p, document.getElementById('bc_message').value || 'Hello {name},');
+  var phone = p.mobile.replace(/[^0-9+]/g,'');
+  if (phone.startsWith('00')) phone = '+' + phone.slice(2);
+  window.open('https://wa.me/' + phone.replace('+','') + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function toggleAllBc(checked) {
+  document.querySelectorAll('.bc-cb').forEach(function(cb) { cb.checked = checked; });
+}
+
+async function sendBroadcast() {
+  var template = document.getElementById('bc_message').value;
+  if (!template) { toast('Bitte Nachricht eingeben'); return; }
+  var selected = [];
+  document.querySelectorAll('.bc-cb:checked').forEach(function(cb) {
+    var i = parseInt(cb.dataset.i);
+    if (bcRecipients[i]) selected.push(bcRecipients[i]);
+  });
+  if (!selected.length) { toast('Keine Empfänger ausgewählt'); return; }
+  if (!confirm(selected.length + ' WhatsApp-Nachrichten öffnen? Browser muss Pop-ups erlauben.')) return;
+  var delay = 0;
+  selected.forEach(function(p) {
+    setTimeout(function() {
+      var msg = buildWAMessage(p, template);
+      var phone = p.mobile.replace(/[^0-9+]/g,'');
+      if (phone.startsWith('00')) phone = '+' + phone.slice(2);
+      window.open('https://wa.me/' + phone.replace('+','') + '?text=' + encodeURIComponent(msg), '_blank');
+    }, delay);
+    delay += 800;
+  });
+  toast(selected.length + ' WhatsApp-Fenster werden geöffnet…');
+}
+
+// ============================================================
+// CHECK-IN MODULE
+// ============================================================
+var checkinData = [];
+
+async function loadCheckin() {
+  var role = document.getElementById('ci_filter_role') ? document.getElementById('ci_filter_role').value : '';
+  var q = db.from('participants').select('*').neq('withdraw','Ja').order('lastname');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  if (role) q = q.eq('role', role);
+  var { data } = await q;
+  checkinData = data || [];
+  renderCheckin();
+}
+
+function renderCheckin() {
+  var search = (document.getElementById('ci_search') ? document.getElementById('ci_search').value : '').toLowerCase();
+  var filtered = search ? checkinData.filter(function(p) {
+    return (p.lastname+' '+p.firstname).toLowerCase().includes(search)
+      || (p.member_id||'').toLowerCase().includes(search);
+  }) : checkinData;
+
+  var checked = checkinData.filter(function(p) { return p.checkin_confirmed; }).length;
+  var el = document.getElementById('ci_count'); if (el) el.textContent = checked;
+  var el2 = document.getElementById('ci_pending'); if (el2) el2.textContent = checkinData.length - checked;
+  var el3 = document.getElementById('ci_total'); if (el3) el3.textContent = checkinData.length;
+
+  var tb = document.getElementById('checkinTable');
+  if (!tb) return;
+  if (!filtered.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Keine Teilnehmer gefunden</td></tr>'; return; }
+  tb.innerHTML = filtered.map(function(p) {
+    var checked = p.checkin_confirmed ? true : false;
+    var checkinTime = p.checkin_time ? new Date(p.checkin_time).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
+    var rowBg = checked ? 'background:rgba(34,197,94,0.08)' : '';
+    return '<tr style="'+rowBg+'">'
+      + '<td style="text-align:center">'
+        + '<input type="checkbox" '+(checked?'checked':'')
+        +' style="width:20px;height:20px;accent-color:var(--green);cursor:pointer"'
+        +' data-id="'+p.id+'" onchange="toggleCheckin(this)">'
+      + '</td>'
+      + '<td><strong>'+p.lastname+', '+p.firstname+'</strong></td>'
+      + '<td>'+( p.country||'–')+'</td>'
+      + '<td>'+(p.events||'–')+'</td>'
+      + '<td>'+(p.role||'–')+'</td>'
+      + '<td>'+(p.package?'<span class="badge">'+p.package+'</span>':'–')+'</td>'
+      + '<td style="font-size:12px">'+(p.room_number||'–')+'</td>'
+      + '<td style="font-size:12px;color:'+(checked?'var(--green)':'var(--text3)')+'">'+checkinTime+'</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function searchCheckin() {
+  renderCheckin();
+}
+
+async function toggleCheckin(cb) {
+  var id = cb.dataset.id;
+  var checked = cb.checked;
+  var now = checked ? new Date().toISOString() : null;
+  var { error } = await db.from('participants').update({
+    checkin_confirmed: checked,
+    checkin_time: now,
+    updated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { toast('Fehler: '+error.message); cb.checked = !checked; return; }
+  // Update local data
+  var p = checkinData.find(function(x){ return x.id === id; });
+  if (p) { p.checkin_confirmed = checked; p.checkin_time = now; }
+  renderCheckin();
+  toast(checked ? '✅ Eingecheckt' : 'Check-in zurückgesetzt');
+}
+
+// ============================================================
+// AUTO-MAHNUNGEN MODULE (Modul 4)
+// ============================================================
+async function checkAndTriggerMahnungen() {
+  var today = new Date();
+  var q = db.from('participants').select('*').neq('withdraw','Ja').neq('payment_status','Bezahlt').neq('payment_status','Pending');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var { data } = await q;
+  if (!data || !data.length) { toast('Keine offenen Zahlungen'); return; }
+
+  // Load mahnungen templates and thresholds
+  var thresholds = await loadMahnThresholds();
+  var triggered = 0;
+  for (var i = 0; i < data.length; i++) {
+    var p = data[i];
+    var open = Math.max(0,(parseFloat(p.package_price)||0)-(parseFloat(p.amount_received)||0));
+    if (open <= 0) continue;
+    var daysSinceReg = Math.floor((today - new Date(p.created_at)) / (1000*60*60*24));
+    var nextLevel = getNextMahnLevel(p.mahnung, daysSinceReg, thresholds);
+    if (nextLevel) {
+      await db.from('participants').update({ mahnung: nextLevel, updated_at: today.toISOString() }).eq('id', p.id);
+      await db.from('mahnlog').insert({ participant_id: p.id, level: nextLevel, sent_at: today.toISOString(), event_id: currentEventId });
+      triggered++;
+    }
+  }
+  toast(triggered > 0 ? triggered + ' Mahnungen ausgelöst' : 'Keine neuen Mahnungen fällig');
+  loadMahnlog();
+}
+
+async function loadMahnThresholds() {
+  try {
+    var { data } = await db.from('app_settings').select('value').eq('key','mahn_thresholds').single();
+    if (data) return JSON.parse(data.value);
+  } catch(e) {}
+  return { '1. Mahnung': 14, '2. Mahnung': 28, '3. Mahnung': 42 };
+}
+
+function getNextMahnLevel(current, days, thresholds) {
+  var levels = ['1. Mahnung','2. Mahnung','3. Mahnung'];
+  var currentIdx = current ? levels.indexOf(current) : -1;
+  for (var i = currentIdx + 1; i < levels.length; i++) {
+    if (days >= thresholds[levels[i]]) return levels[i];
+  }
+  return null;
+}
+
+// ============================================================
 // NAVIGATION
 function nav(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -3204,6 +3517,8 @@ function nav(page) {
   else if (page === 'idcard') { loadIdCards(); }
   else if (page === 'waitlist') loadWaitlist();
   else if (page === 'import') initImportPage();
+  else if (page === 'broadcast') loadBroadcastRecipients();
+  else if (page === 'checkin') loadCheckin();
   else if (page === 'events') loadEvents();
   else if (page === 'backup') initBackupPage();
   else if (page === 'persons') loadPersons();
