@@ -4750,7 +4750,26 @@ function switchMahnTab(num,btn) {
 // ACTIVE EVENT
 async function loadActiveEvent() {
   var saved = localStorage.getItem('mg_active_event');
-  if (saved) { try { var p=JSON.parse(saved); currentEventId=p.id; currentEventName=p.name; updateActiveEventDisplay(); } catch(e){} }
+  if (saved) { try { var p=JSON.parse(saved); currentEventId=p.id; currentEventName=p.name; updateActiveEventDisplay(); return; } catch(e){} }
+  // No saved event - try to load first active event from DB
+  try {
+    var r = await db.from('events').select('id,name').eq('active',true).limit(1).single();
+    if (r.data) {
+      currentEventId = r.data.id;
+      currentEventName = r.data.name;
+      localStorage.setItem('mg_active_event', JSON.stringify({id:r.data.id, name:r.data.name}));
+      updateActiveEventDisplay();
+    } else {
+      // Try any event
+      var r2 = await db.from('events').select('id,name').limit(1).single();
+      if (r2.data) {
+        currentEventId = r2.data.id;
+        currentEventName = r2.data.name;
+        localStorage.setItem('mg_active_event', JSON.stringify({id:r2.data.id, name:r2.data.name}));
+        updateActiveEventDisplay();
+      }
+    }
+  } catch(e) { console.log('loadActiveEvent DB error:', e); }
 }
 async function setActiveEvent(id, name) {
   currentEventId=id; currentEventName=name;
