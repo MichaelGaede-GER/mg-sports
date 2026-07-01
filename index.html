@@ -289,7 +289,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
 /* ===== MOBILE ===== */
 .hamburger-btn {
-  display: flex !important;
+  display: flex;
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
@@ -305,6 +305,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   background: var(--text);
   border-radius: 2px;
 }
+@media (min-width: 1025px) {
+  .hamburger-btn { display: none; }
+}
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -314,7 +317,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 }
 .sidebar-overlay.active { display: block; }
 
-@media (max-width: 9999px) {
+@media (max-width: 1024px) {
   .hamburger-btn { display: flex; }
   .sidebar {
     position: fixed;
