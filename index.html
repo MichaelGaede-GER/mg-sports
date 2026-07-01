@@ -289,7 +289,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
 /* ===== MOBILE ===== */
 .hamburger-btn {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
@@ -304,6 +304,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   height: 2px;
   background: var(--text);
   border-radius: 2px;
+}
+@media (min-width: 1025px) {
+  .hamburger-btn { display: none; }
 }
 .sidebar-overlay {
   display: none;
@@ -9968,17 +9971,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
-
-// Debug viewport
-function updateDebug() {
-  var vw = window.innerWidth;
-  var el = document.getElementById('vwDebug');
-  var mode = document.getElementById('modeDebug');
-  if (el) el.textContent = vw;
-  if (mode) mode.textContent = vw <= 1024 ? 'MOBILE CSS AKTIV' : 'DESKTOP';
-}
-updateDebug();
-window.addEventListener('resize', updateDebug);
 
 initTheme();
 db.auth.onAuthStateChange(async function(event, session) {
