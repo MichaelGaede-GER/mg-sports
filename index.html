@@ -174,7 +174,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
 
 /* ===== MOBILE RESPONSIVE ===== */
-@media (max-width: 1024px), .is-mobile {
+@media (max-width: 768px) {
   /* App layout */
   .app { flex-direction: column; }
 
@@ -280,24 +280,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   .btn { font-size: 12px; padding: 6px 10px; }
 }
 
-/* Hamburger - shown on touch/mobile devices via JS */
-.hamburger-btn { display: flex; }
-.is-mobile .sidebar { 
-  position: fixed !important;
-  top: 0 !important; 
-  left: -280px !important;
-  height: 100vh !important;
-  z-index: 1000 !important;
-  transition: left 0.25s ease !important;
-  box-shadow: 4px 0 20px rgba(0,0,0,0.3);
-}
-.is-mobile .sidebar.mobile-open { left: 0 !important; }
-.is-mobile .sidebar-overlay { display: none; }
-.is-mobile .sidebar-overlay.active { display: block !important; }
-
-/* On desktop: hide hamburger */
-@media (min-width: 1201px) {
-  .hamburger-btn { display: none !important; }
+/* Hamburger hidden on desktop */
+.hamburger-btn { display: none; }
+@media (max-width: 768px) {
+  .hamburger-btn { display: flex; }
 }
 
 </style>
@@ -414,11 +400,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   </div>
 
   <div class="main">
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
-<div class="topbar">
-  <button class="hamburger-btn" onclick="toggleMobileSidebar()" aria-label="Menü">
-    <span></span><span></span><span></span>
-  </button>
+    <div class="topbar">
       <span class="topbar-title" id="topbarTitle">Dashboard</span>
       <button class="btn" onclick="nav('entry')">+ Neu erfassen</button>
       <div id="activeEventDisplay" style="font-size:12px;padding:4px 10px;background:var(--green-bg);color:var(--green);border-radius:6px;display:none;cursor:pointer" onclick="nav('events')"></div>
@@ -5339,12 +5321,6 @@ async function openPersonModal(person) {
     var el = document.getElementById(visaEls[i]);
     if(el) el.value = (person && person[f]) || '';
   });
-  // Auto-fill DOB from personal data if VISA DOB is empty
-  var visaDobEl = document.getElementById('personVisaDob');
-  var personDobEl = document.getElementById('personDob');
-  if (visaDobEl && personDobEl && !visaDobEl.value && personDobEl.value) {
-    visaDobEl.value = personDobEl.value;
-  }
 
   // Load ranking fields
   var rankFields = ['rank_world','rank_euro_masters','rank_national','rank_national_fed'];
@@ -9912,20 +9888,6 @@ async function saveRolePermissions() {
 
 
 // ===== MOBILE SIDEBAR =====
-// Detect touch/mobile device and apply is-mobile class
-function detectMobile() {
-  var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  var isSmallScreen = window.innerWidth <= 1200;
-  if (isTouchDevice || isSmallScreen) {
-    document.body.classList.add('is-mobile');
-  } else {
-    document.body.classList.remove('is-mobile');
-  }
-}
-detectMobile();
-window.addEventListener('resize', detectMobile);
-document.addEventListener('DOMContentLoaded', detectMobile);
-
 function toggleMobileSidebar() {
   var sidebar = document.querySelector('.sidebar');
   var overlay = document.getElementById('sidebarOverlay');
