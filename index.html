@@ -1716,9 +1716,36 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           </div>
           <div class="card-body" style="padding:0">
             <div class="table-wrap"><table>
-              <thead><tr><th>✓</th><th>Name</th><th>Land</th><th>Event</th><th>Package</th><th>Zeit</th></tr></thead>
+              <thead><tr><th>✓</th><th>Name</th><th>Land</th><th>Event</th><th>Package</th><th>Zeit</th><th></th></tr></thead>
               <tbody id="mc_table"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
             </table></div>
+          </div>
+        </div>
+
+        <!-- REPORTS -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <h3>📊 Berichte & Statistiken</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select id="mc_report_session" style="font-size:12px;padding:4px 8px">
+                <option value="all">📊 Gesamtübersicht alle Tage</option>
+                <option value="do_lunch">Thursday Lunch</option>
+                <option value="do_dinner">Thursday Dinner</option>
+                <option value="fr_lunch">Friday Lunch</option>
+                <option value="fr_dinner">Friday Dinner</option>
+                <option value="sa_lunch">Saturday Lunch</option>
+                <option value="sa_dinner">Saturday Dinner</option>
+                <option value="so_lunch">Sunday Lunch</option>
+              </select>
+              <button class="btn primary" onclick="showMealReport()">📋 Bericht anzeigen</button>
+              <button class="btn" onclick="exportMealReportPDF()">🖨 PDF</button>
+              <button class="btn" onclick="exportMealReportExcel()">📊 Excel</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div id="mc_report_container">
+              <div style="padding:20px;text-align:center;color:var(--text3)">Bericht auswählen und anzeigen</div>
+            </div>
           </div>
         </div>
       </div>
@@ -3745,10 +3772,16 @@ async function loadMealCheck() {
 }
 
 function hasMealDay(p, meal, day) {
+  if (!p.meal_plus || p.meal_plus !== 'Ja') return false;
   if (meal === 'lunch') {
-    return p.meal_lunch === 'Ja' && p.meal_lunch_days && p.meal_lunch_days.split(',').map(function(d){return d.trim();}).indexOf(day) >= 0;
+    // If meal_lunch is Ja and no specific days set, eligible for all lunch
+    if (p.meal_lunch !== 'Ja') return false;
+    if (!p.meal_lunch_days || p.meal_lunch_days.trim() === '') return true; // no days = all days
+    return p.meal_lunch_days.split(',').map(function(d){return d.trim();}).indexOf(day) >= 0;
   } else {
-    return p.meal_dinner === 'Ja' && p.meal_dinner_days && p.meal_dinner_days.split(',').map(function(d){return d.trim();}).indexOf(day) >= 0;
+    if (p.meal_dinner !== 'Ja') return false;
+    if (!p.meal_dinner_days || p.meal_dinner_days.trim() === '') return true; // no days = all days
+    return p.meal_dinner_days.split(',').map(function(d){return d.trim();}).indexOf(day) >= 0;
   }
 }
 
@@ -3796,6 +3829,29 @@ function selectMealSession(key) {
   updateMealStats();
 }
 
+async function undoMealCheckin(pid) {
+  if (!mcActiveSession) return;
+  if (!confirm('Meal-Check für diese Person löschen?')) return;
+  var p = mcData.find(function(x){ return x.id === pid; });
+  if (!p) return;
+  var existing = {};
+  try {
+    existing = p.meal_checkins ? (typeof p.meal_checkins === 'string' ? JSON.parse(p.meal_checkins) : Object.assign({}, p.meal_checkins)) : {};
+  } catch(e) {}
+  delete existing[mcActiveSession];
+  var nowISO = new Date().toISOString();
+  var { error } = await db.from('participants').update({
+    meal_checkins: existing,
+    updated_at: nowISO
+  }).eq('id', pid);
+  if (error) { toast('Fehler: ' + error.message); return; }
+  p.meal_checkins = existing;
+  renderMealList();
+  updateMealStats();
+  loadMealCheck();
+  toast('✅ Meal-Check gelöscht');
+}
+
 function renderMealList() {
   if (!mcActiveSession) return;
   var s = MC_SESSIONS.find(function(x){ return x.key === mcActiveSession; });
@@ -3823,6 +3879,7 @@ function renderMealList() {
       + '<td>'+(p.events||'–')+'</td>'
       + '<td>'+(p.package?'<span class="badge">'+p.package+'</span>':'–')+'</td>'
       + '<td style="font-size:12px;color:'+(checked?'var(--green)':'var(--text3)')+'">'+timeStr+'</td>'
+      + '<td>'+(checked ? '<button class="btn danger" style="font-size:11px;padding:2px 8px" data-id="'+p.id+'" onclick="undoMealCheckin(this.dataset.id)">↩ Löschen</button>' : '')+'</td>'
       + '</tr>';
   }).join('');
 }
@@ -3936,15 +3993,29 @@ async function handleMealQR(esid) {
   } catch(e) {}
   existing[mcActiveSession] = nowISO;
 
-  var { error } = await db.from('participants').update({
-    meal_checkins: JSON.stringify(existing),
+  // First ensure meal_checkins column exists by trying the update
+  var updateResult = await db.from('participants').update({
+    meal_checkins: existing,
     updated_at: nowISO
   }).eq('id', p.id);
 
-  if (error) { toast('Fehler: ' + error.message); return; }
+  if (updateResult.error) {
+    // Column might not exist yet - show clear error
+    var errMsg = updateResult.error.message || 'Unbekannter Fehler';
+    document.getElementById('mc_scan_status').textContent = '❌ DB Fehler: ' + errMsg;
+    toast('❌ DB Fehler: ' + errMsg);
+    console.error('Meal checkin error:', updateResult.error);
+    return;
+  }
 
-  // Update local data
-  p.meal_checkins = existing;
+  // Update local data - update the object in mcData array directly
+  var localP = mcData.find(function(x){ return x.id === p.id; });
+  if (localP) {
+    localP.meal_checkins = existing;
+  } else {
+    p.meal_checkins = existing;
+    mcData.push(p);
+  }
 
   // Show success
   if (navigator.vibrate) navigator.vibrate(200);
@@ -3959,6 +4030,245 @@ async function handleMealQR(esid) {
   setTimeout(function() { hideMealResults(); }, 3000);
   renderMealList();
   updateMealStats();
+}
+
+// ============================================================
+// MEAL-CHECK REPORTS
+// ============================================================
+
+function showMealReport() {
+  var sessionKey = document.getElementById('mc_report_session').value;
+  var container = document.getElementById('mc_report_container');
+  if (!container) return;
+  if (!mcData.length) { container.innerHTML = '<div style="padding:20px;color:var(--text3)">Bitte zuerst Meal-Check laden</div>'; return; }
+  if (sessionKey === 'all') {
+    container.innerHTML = buildMealOverallReport();
+  } else {
+    var s = MC_SESSIONS.find(function(x){ return x.key === sessionKey; });
+    if (s) container.innerHTML = buildMealSessionReport(s);
+  }
+}
+
+function buildMealSessionReport(s) {
+  var eligible = mcData.filter(function(p){ return hasMealDay(p, s.meal, s.day); });
+  var checked = eligible.filter(function(p){ return getMealChecked(p, s.key); });
+  var notChecked = eligible.filter(function(p){ return !getMealChecked(p, s.key); });
+  var pct = eligible.length ? Math.round(checked.length / eligible.length * 100) : 0;
+
+  var html = '<div style="padding:16px">';
+  // Stats row
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">';
+  html += statBox('Erwartet', eligible.length, 'var(--blue)');
+  html += statBox('Ausgegeben', checked.length, 'var(--green)');
+  html += statBox('Nicht erschienen', notChecked.length, 'var(--red)');
+  html += statBox('Ausgabe-Quote', pct + '%', pct >= 80 ? 'var(--green)' : 'var(--amber)');
+  html += '</div>';
+
+  // Progress bar
+  html += '<div style="background:var(--border);border-radius:4px;height:8px;margin-bottom:16px">';
+  html += '<div style="background:var(--green);height:8px;border-radius:4px;width:'+pct+'%;transition:width .5s"></div></div>';
+
+  // Checked-in table
+  if (checked.length) {
+    html += '<h4 style="margin:0 0 8px;color:var(--green)">✅ Ausgegeben ('+checked.length+')</h4>';
+    html += buildMealTable(checked, s.key, true);
+  }
+
+  // Not checked table
+  if (notChecked.length) {
+    html += '<h4 style="margin:16px 0 8px;color:var(--red)">❌ Nicht erschienen ('+notChecked.length+')</h4>';
+    html += buildMealTable(notChecked, s.key, false);
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function buildMealOverallReport() {
+  var html = '<div style="padding:16px">';
+  html += '<h3 style="margin:0 0 16px">📊 Gesamtübersicht alle Mahlzeiten</h3>';
+
+  // Summary table
+  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px">';
+  html += '<thead><tr style="background:var(--bg2)">'
+    + '<th style="padding:8px 12px;text-align:left">Mahlzeit</th>'
+    + '<th style="padding:8px 12px;text-align:center">Erwartet</th>'
+    + '<th style="padding:8px 12px;text-align:center">Ausgegeben</th>'
+    + '<th style="padding:8px 12px;text-align:center">Nicht erschienen</th>'
+    + '<th style="padding:8px 12px;text-align:center">Quote</th>'
+    + '<th style="padding:8px 12px;text-align:left">Fortschritt</th>'
+    + '</tr></thead><tbody>';
+
+  var totalExpected = 0, totalServed = 0;
+  MC_SESSIONS.forEach(function(s, i) {
+    var eligible = mcData.filter(function(p){ return hasMealDay(p, s.meal, s.day); });
+    var served = eligible.filter(function(p){ return getMealChecked(p, s.key); });
+    var pct = eligible.length ? Math.round(served.length / eligible.length * 100) : 0;
+    totalExpected += eligible.length;
+    totalServed += served.length;
+    var bg = i % 2 === 0 ? '' : 'background:var(--bg2)';
+    html += '<tr style="'+bg+'">'
+      + '<td style="padding:8px 12px;font-weight:500">'+s.icon+' '+s.label+'</td>'
+      + '<td style="padding:8px 12px;text-align:center">'+eligible.length+'</td>'
+      + '<td style="padding:8px 12px;text-align:center;color:var(--green);font-weight:600">'+served.length+'</td>'
+      + '<td style="padding:8px 12px;text-align:center;color:var(--red)">'+( eligible.length - served.length)+'</td>'
+      + '<td style="padding:8px 12px;text-align:center;font-weight:600;color:'+(pct>=80?'var(--green)':'var(--amber)')+'">'+pct+'%</td>'
+      + '<td style="padding:8px 12px"><div style="background:var(--border);border-radius:3px;height:6px"><div style="background:var(--green);height:6px;border-radius:3px;width:'+pct+'%"></div></div></td>'
+      + '</tr>';
+  });
+
+  // Total row
+  var totalPct = totalExpected ? Math.round(totalServed / totalExpected * 100) : 0;
+  html += '<tr style="background:var(--blue-bg);font-weight:700">'
+    + '<td style="padding:10px 12px">🍽️ GESAMT</td>'
+    + '<td style="padding:10px 12px;text-align:center">'+totalExpected+'</td>'
+    + '<td style="padding:10px 12px;text-align:center;color:var(--green)">'+totalServed+'</td>'
+    + '<td style="padding:10px 12px;text-align:center;color:var(--red)">'+(totalExpected-totalServed)+'</td>'
+    + '<td style="padding:10px 12px;text-align:center;color:var(--blue)">'+totalPct+'%</td>'
+    + '<td style="padding:10px 12px"><div style="background:var(--border);border-radius:3px;height:6px"><div style="background:var(--blue);height:6px;border-radius:3px;width:'+totalPct+'%"></div></div></td>'
+    + '</tr>';
+  html += '</tbody></table>';
+
+  // Per-person summary
+  html += '<h4 style="margin:0 0 8px">👥 Teilnehmer-Übersicht</h4>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg2)">'
+    + '<th style="padding:6px 10px;text-align:left">Name</th>'
+    + '<th style="padding:6px 10px;text-align:left">Land</th>';
+  MC_SESSIONS.forEach(function(s) {
+    html += '<th style="padding:6px 10px;text-align:center;font-size:10px">'+s.icon+'<br>'+s.label.replace(' ','<br>')+'</th>';
+  });
+  html += '<th style="padding:6px 10px;text-align:center">Total</th></tr></thead><tbody>';
+
+  mcData.forEach(function(p, i) {
+    var hasAny = MC_SESSIONS.some(function(s){ return hasMealDay(p, s.meal, s.day); });
+    if (!hasAny) return;
+    var bg = i % 2 === 0 ? '' : 'background:var(--bg2)';
+    var personTotal = 0;
+    html += '<tr style="'+bg+'"><td style="padding:6px 10px"><strong>'+p.lastname+', '+p.firstname+'</strong></td><td style="padding:6px 10px">'+( p.country||'–')+'</td>';
+    MC_SESSIONS.forEach(function(s) {
+      var eligible = hasMealDay(p, s.meal, s.day);
+      var served = eligible && getMealChecked(p, s.key);
+      if (served) personTotal++;
+      html += '<td style="padding:6px 10px;text-align:center">';
+      if (!eligible) html += '<span style="color:var(--border)">–</span>';
+      else if (served) html += '✅';
+      else html += '<span style="color:var(--red)">❌</span>';
+      html += '</td>';
+    });
+    html += '<td style="padding:6px 10px;text-align:center;font-weight:600">'+personTotal+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function buildMealTable(persons, sessionKey, showTime) {
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg2)">'
+    + '<th style="padding:6px 10px;text-align:left">Name</th>'
+    + '<th style="padding:6px 10px">Land</th>'
+    + '<th style="padding:6px 10px">Event</th>'
+    + '<th style="padding:6px 10px">Package</th>';
+  if (showTime) html += '<th style="padding:6px 10px">Uhrzeit</th>';
+  html += '</tr></thead><tbody>';
+  persons.forEach(function(p, i) {
+    var bg = i % 2 === 0 ? '' : 'background:var(--bg2)';
+    var time = showTime ? getMealCheckinTime(p, sessionKey) : null;
+    var timeStr = time ? new Date(time).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
+    html += '<tr style="'+bg+'"><td style="padding:6px 10px"><strong>'+p.lastname+', '+p.firstname+'</strong></td>'
+      + '<td style="padding:6px 10px">'+(p.country||'–')+'</td>'
+      + '<td style="padding:6px 10px">'+(p.events||'–')+'</td>'
+      + '<td style="padding:6px 10px">'+(p.package?'<span class="badge">'+p.package+'</span>':'–')+'</td>';
+    if (showTime) html += '<td style="padding:6px 10px;color:var(--green);font-weight:500">'+timeStr+'</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function statBox(label, val, color) {
+  return '<div style="text-align:center;padding:12px;background:var(--bg2);border-radius:8px;border-top:3px solid '+color+'">'
+    + '<div style="font-size:22px;font-weight:700;color:'+color+'">'+val+'</div>'
+    + '<div style="font-size:11px;color:var(--text2);margin-top:2px">'+label+'</div>'
+    + '</div>';
+}
+
+async function exportMealReportPDF() {
+  if (!mcData.length) { toast('Bitte zuerst Meal-Check laden'); return; }
+  var sessionKey = document.getElementById('mc_report_session').value;
+  var reportHtml = document.getElementById('mc_report_container').innerHTML;
+  if (!reportHtml || reportHtml.includes('Bitte zuerst')) { showMealReport(); reportHtml = document.getElementById('mc_report_container').innerHTML; }
+
+  var s = sessionKey === 'all' ? null : MC_SESSIONS.find(function(x){ return x.key === sessionKey; });
+  var title = s ? s.icon + ' ' + s.label : '📊 Meal-Check Gesamtübersicht';
+  var now = new Date().toLocaleString('de-DE');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Meal-Check Bericht</title>'
+    + '<style>body{font-family:Arial,sans-serif;margin:0;padding:20px;font-size:12px}'
+    + 'table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:6px 10px}'
+    + 'th{background:#f5f5f5;font-weight:600}.green{color:#2e7d32}.red{color:#c62828}.blue{color:#185FA5}'
+    + 'h1{font-size:18px;margin:0 0 4px}h3,h4{margin:16px 0 8px}'
+    + '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}'
+    + '.stat-box{text-align:center;padding:10px;border:1px solid #ddd;border-radius:6px}'
+    + '.stat-val{font-size:20px;font-weight:700}.stat-lbl{font-size:10px;color:#666}'
+    + '@media print{.no-print{display:none}}</style></head><body>'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:2px solid #185FA5;padding-bottom:12px">'
+    + '<div><h1>'+title+'</h1><div style="font-size:11px;color:#666">European Junior Open 2026 · Erstellt: '+now+'</div></div></div>'
+    + reportHtml
+    + '</body></html>';
+
+  var w = window.open('','_blank');
+  if (!w) { toast('Pop-up-Blocker aktiv'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+async function exportMealReportExcel() {
+  if (!mcData.length) { toast('Bitte zuerst Meal-Check laden'); return; }
+  var sessionKey = document.getElementById('mc_report_session').value;
+  var XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+  var wb = XLSX.utils.book_new();
+
+  if (sessionKey === 'all') {
+    // Summary sheet
+    var summaryData = [['Mahlzeit','Erwartet','Ausgegeben','Nicht erschienen','Quote %']];
+    var totExp = 0, totServ = 0;
+    MC_SESSIONS.forEach(function(s) {
+      var eligible = mcData.filter(function(p){ return hasMealDay(p, s.meal, s.day); });
+      var served = eligible.filter(function(p){ return getMealChecked(p, s.key); });
+      var pct = eligible.length ? Math.round(served.length / eligible.length * 100) : 0;
+      summaryData.push([s.label, eligible.length, served.length, eligible.length - served.length, pct+'%']);
+      totExp += eligible.length; totServ += served.length;
+    });
+    summaryData.push(['GESAMT', totExp, totServ, totExp - totServ, totExp ? Math.round(totServ/totExp*100)+'%' : '0%']);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Übersicht');
+
+    // Per-session sheets
+    MC_SESSIONS.forEach(function(s) {
+      var eligible = mcData.filter(function(p){ return hasMealDay(p, s.meal, s.day); });
+      var rows = [['Nachname','Vorname','Land','Event','Package','Ausgegeben','Uhrzeit']];
+      eligible.forEach(function(p) {
+        var served = getMealChecked(p, s.key);
+        var time = getMealCheckinTime(p, s.key);
+        var timeStr = time ? new Date(time).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '';
+        rows.push([p.lastname, p.firstname, p.country||'', p.events||'', p.package||'', served ? 'Ja' : 'Nein', timeStr]);
+      });
+      var sheetName = s.label.substring(0,31);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
+    });
+  } else {
+    var s = MC_SESSIONS.find(function(x){ return x.key === sessionKey; });
+    var eligible = s ? mcData.filter(function(p){ return hasMealDay(p, s.meal, s.day); }) : mcData;
+    var rows = [['Nachname','Vorname','Land','Event','Package','Ausgegeben','Uhrzeit']];
+    eligible.forEach(function(p) {
+      var served = getMealChecked(p, sessionKey);
+      var time = getMealCheckinTime(p, sessionKey);
+      var timeStr = time ? new Date(time).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '';
+      rows.push([p.lastname, p.firstname, p.country||'', p.events||'', p.package||'', served ? 'Ja' : 'Nein', timeStr]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), s ? s.label : 'Meal Report');
+  }
+
+  XLSX.writeFile(wb, 'Meal-Check-Bericht.xlsx');
+  toast('Excel wird heruntergeladen…');
 }
 
 // ============================================================
