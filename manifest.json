@@ -1,0 +1,26 @@
+{
+  "name": "MG Sports & Eventmanagement",
+  "short_name": "MG Sports",
+  "description": "Tournament & Event Management System",
+  "start_url": "./mg-sports-event-management.html",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#185FA5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%23185FA5'/><text x='96' y='130' font-size='100' text-anchor='middle' fill='white'>🏆</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='64' fill='%23185FA5'/><text x='256' y='350' font-size='280' text-anchor='middle' fill='white'>🏆</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "productivity", "business"],
+  "lang": "de-DE"
+}
