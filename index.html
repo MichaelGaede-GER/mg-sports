@@ -286,6 +286,20 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   .hamburger-btn { display: flex; }
 }
 
+
+/* Mobile sidebar support */
+body.sidebar-mobile .sidebar {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  height: 100vh;
+  width: 260px;
+  z-index: 1000;
+  transition: left 0.25s ease;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+}
+body.sidebar-mobile .sidebar.mobile-open { left: 0 !important; }
+body.sidebar-mobile .content { width: 100% !important; }
 </style>
 </head>
 <body>
@@ -3238,23 +3252,27 @@ async function loadDashboard() {
     return s + fee + pkg + meal + travel;
   }, 0);
 
-  var totalOutstanding = Math.max(0, totalExpected - totalReceived);
+  // Outstanding = total invoiced - total received
+  var totalInvoiced = active.reduce(function(s,p){ return s + (parseFloat(p.total)||0); }, 0);
+  var totalOutstanding = Math.max(0, totalInvoiced - totalReceived);
   var paidCount = active.filter(function(p){ return p.payment_status === 'Bezahlt' || p.payment_status === 'Vollständig'; }).length;
   var pendingCount = active.filter(function(p){ return p.payment_status === 'Ausstehend' || p.payment_status === 'Neu' || !p.payment_status; }).length;
 
   // Count players (paying roles) vs total
-  var exemptRolesForCount = ['Coach','Parent','Referee','Official','ESF Official'];
-  var playerCount = active.filter(function(p){ return !exemptRolesForCount.includes(p.role); }).length;
+  var playerCount = active.filter(function(p){ return p.role === 'Player'; }).length;
   var nonPlayerCount = active.length - playerCount;
   document.getElementById('statTotal').textContent = active.length;
   var subEl = document.getElementById('statTotalSub');
   if (subEl) subEl.textContent = playerCount + ' Player · ' + nonPlayerCount + ' Coaches/Officials';
   document.getElementById('statReceived').textContent = fmtK(totalReceived);
   document.getElementById('statReceivedSub').textContent = paidCount + ' vollständig bezahlt';
-  document.getElementById('statExpected').textContent = fmtK(totalExpected);
-  document.getElementById('statExpectedSub').textContent = 'Meldegebühr + Packages + Meals';
+  document.getElementById('statExpected').textContent = fmtK(totalInvoiced);
+  document.getElementById('statExpectedSub').textContent = 'Gesamt laut Rechnungen';
   document.getElementById('statOutstanding').textContent = fmtK(totalOutstanding > 0 ? totalOutstanding : 0);
-  document.getElementById('statOutstandingSub').textContent = pendingCount + ' Personen ausstehend';
+  var owingCount = active.filter(function(p){ 
+    return (parseFloat(p.total)||0) > (parseFloat(p.amount_received)||0); 
+  }).length;
+  document.getElementById('statOutstandingSub').textContent = owingCount + ' Personen mit offenem Betrag';
   document.getElementById('statFees').textContent = fmtK(totalFees);
   document.getElementById('statFeeSub').textContent = payingPlayers.length + ' Player × ' + fmt(entryFee) + ' = Meldegebühren';
   // Total package prices for all active participants with a package
@@ -9888,6 +9906,25 @@ async function saveRolePermissions() {
 
 
 // ===== MOBILE SIDEBAR =====
+// Detect mobile and apply class
+function checkMobileMode() {
+  if (window.innerWidth <= 1024) {
+    document.body.classList.add('sidebar-mobile');
+  } else {
+    document.body.classList.remove('sidebar-mobile');
+    // Ensure sidebar is visible on desktop
+    var sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.classList.remove('mobile-open');
+      sidebar.style.left = '';
+    }
+    var overlay = document.getElementById('sidebarOverlay');
+    if (overlay) overlay.classList.remove('active');
+  }
+}
+checkMobileMode();
+window.addEventListener('resize', checkMobileMode);
+
 function toggleMobileSidebar() {
   var sidebar = document.querySelector('.sidebar');
   var overlay = document.getElementById('sidebarOverlay');
