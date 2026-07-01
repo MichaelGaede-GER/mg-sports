@@ -280,31 +280,26 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   .btn { font-size: 12px; padding: 6px 10px; }
 }
 
-/* Hamburger: hidden on wide desktop, shown on mobile */
+/* Hamburger hidden on desktop */
 .hamburger-btn { display: none; }
-@media (max-width: 1200px) {
-  .hamburger-btn { display: flex !important; }
-}
-@media (min-width: 1201px) {
-  .hamburger-btn { display: none !important; }
-  .sidebar { position: relative !important; left: 0 !important; }
+@media (max-width: 768px) {
+  .hamburger-btn { display: flex; }
 }
 
 
 /* Mobile sidebar support */
-@media (max-width: 1200px) {
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: -260px;
-    height: 100vh;
-    width: 260px;
-    z-index: 1000;
-    transition: left 0.25s ease;
-    box-shadow: 4px 0 20px rgba(0,0,0,0.4);
-  }
-  .sidebar.mobile-open { left: 0 !important; }
+body.sidebar-mobile .sidebar {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  height: 100vh;
+  width: 260px;
+  z-index: 1000;
+  transition: left 0.25s ease;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.4);
 }
+body.sidebar-mobile .sidebar.mobile-open { left: 0 !important; }
+body.sidebar-mobile .content { width: 100% !important; }
 </style>
 </head>
 <body>
@@ -420,9 +415,6 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
   <div class="main">
     <div class="topbar">
-      <button class="hamburger-btn" onclick="toggleMobileSidebar()" aria-label="Menü">
-        <span></span><span></span><span></span>
-      </button>
       <span class="topbar-title" id="topbarTitle">Dashboard</span>
       <button class="btn" onclick="nav('entry')">+ Neu erfassen</button>
       <div id="activeEventDisplay" style="font-size:12px;padding:4px 10px;background:var(--green-bg);color:var(--green);border-radius:6px;display:none;cursor:pointer" onclick="nav('events')"></div>
@@ -524,10 +516,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   <th class="sortable" onclick="sortParticipants('payment_status')" id="pth_payment_status">Zahlung <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('total')" id="pth_total">Gesamt <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('updated_at')" id="pth_updated_at" title="Zuletzt bearbeitet" style="text-align:center">✏ <span class="sort-icon">↕</span></th>
-  <th class="sortable" onclick="sortParticipants('shirt')" id="pth_shirt" style="text-align:center">Shirt <span class="sort-icon">↕</span></th>
   <th style="white-space:nowrap">Aktionen</th>
 </tr></thead>
-            <tbody id="participantsTable"><tr><td colspan="13" class="loading">Lade…</td></tr></tbody>
+            <tbody id="participantsTable"><tr><td colspan="12" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
       </div>
@@ -1058,6 +1049,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                   <option>Flugzeug</option>
                 </select>
               </div>
+
               <div id="flightFieldsGroup" style="grid-column:1/-1;display:block">
                 <div class="form-group" style="margin-bottom:10px">
                   <label style="margin-bottom:8px;display:block">✈ Anreise (Flug)</label>
@@ -1114,13 +1106,6 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <span id="mahnungDateHint" style="font-size:11px;color:var(--amber);margin-top:4px;display:none">⚠ Datum erforderlich wenn Mahnung gesetzt</span>
               </div>
               <div class="form-group" style="grid-column:1/-1">
-                <div class="form-group" style="margin-bottom:12px">
-                  <label>Betrag Anreise</label>
-                  <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
-                    <input type="checkbox" id="f_travel_amount" style="width:18px;height:18px;accent-color:var(--blue);cursor:pointer" onchange="calcTotal()" />
-                    <label for="f_travel_amount" style="font-size:13px;cursor:pointer;color:var(--text)">Betrag bei Anreise zu bezahlen</label>
-                  </div>
-                </div>
                 <label>Übersicht Gesamtkosten</label>
                 <div id="totalBreakdown" style="padding:12px 14px;background:var(--bg2);border-radius:var(--radius);font-size:13px;border:1px solid var(--border)">
                   – wähle Package –
@@ -1349,6 +1334,15 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           </div>
 
           <!-- Withdrawals -->
+          <div class="card" style="margin:0">
+            <div class="card-header"><div style="font-size:20px;margin-right:8px">❌</div><div><div style="font-weight:600;font-size:13px">Withdrawals</div><div style="font-size:11px;color:var(--text3)">Absagen & Rückzahlungen</div></div></div>
+            <div class="card-body" style="display:flex;gap:8px">
+              <button class="btn primary" style="flex:1" onclick="exportWithdrawPDF()">🖨 Drucken / PDF</button>
+              <button class="btn" style="flex:1" onclick="exportWithdrawExcel()">📊 Excel</button>
+              <button class="btn" style="flex:1" onclick="emailReport('withdraw')">✉ Per E-Mail</button>
+            </div>
+          </div>
+
           <!-- Withdraw Abrechnung -->
           <div class="card" style="margin:0">
             <div class="card-header"><div style="font-size:20px;margin-right:8px">💸</div><div><div style="font-weight:600;font-size:13px">Withdraw Abrechnung</div><div style="font-size:11px;color:var(--text3)">Rückerstattungen & offene Beträge</div></div></div>
@@ -3269,7 +3263,7 @@ async function loadDashboard() {
   document.getElementById('statOutstandingSub').textContent = owingCount + ' Personen mit offenem Betrag';
 
 
-  // Sum of package_price for all active participants only
+  // Sum of package_price for all active participants
   var totalPkgAll = active.reduce(function(s,p){ return s + (parseFloat(p.package_price)||0); }, 0);
   var pkgCount = active.filter(function(p){ return p.package && (parseFloat(p.package_price)||0) > 0; }).length;
   document.getElementById('statPkg').textContent = fmtK(totalPkgAll);
@@ -3282,13 +3276,12 @@ async function loadDashboard() {
 
   // Count rooms by unique room_number per type
   var withHotel = active.filter(function(p){ return p.room_type && p.room_type !== 'Warteliste'; });
-  // Count by unique room_number; persons without room_number each count as 1 room
   var hSingle = new Set(withHotel.filter(function(p){return p.room_type==='Einzelzimmer'&&p.room_number;}).map(function(p){return p.room_number;})).size
               + withHotel.filter(function(p){return p.room_type==='Einzelzimmer'&&!p.room_number;}).length;
   var hDouble = new Set(withHotel.filter(function(p){return p.room_type==='Doppelzimmer'&&p.room_number;}).map(function(p){return p.room_number;})).size
-              + withHotel.filter(function(p){return p.room_type==='Doppelzimmer'&&!p.room_number;}).length;
+              + Math.ceil(withHotel.filter(function(p){return p.room_type==='Doppelzimmer'&&!p.room_number;}).length/2);
   var hTriple = new Set(withHotel.filter(function(p){return p.room_type==='Dreibettzimmer'&&p.room_number;}).map(function(p){return p.room_number;})).size
-              + withHotel.filter(function(p){return p.room_type==='Dreibettzimmer'&&!p.room_number;}).length;
+              + Math.ceil(withHotel.filter(function(p){return p.room_type==='Dreibettzimmer'&&!p.room_number;}).length/3);
   var hTotal = hSingle + hDouble + hTriple;
   document.getElementById('statHotel').innerHTML = hTotal
     + '<span style="font-size:10px;font-weight:400;color:var(--text3);display:block;margin-top:2px">EZ:'+hSingle+' · DZ:'+hDouble+' · DBZ:'+hTriple+'</span>';
@@ -3429,7 +3422,7 @@ async function loadParticipants() {
     // Icons in order: Package(badge) · Meal · Hotel · Ankunft · Abflug
     var icons = [];
     if (p.meal_plus === 'Ja') icons.push('🍽');
-    if (p.room_type && p.room_type !== 'Warteliste' && p.checkin) icons.push('🏨' + (p.room_number ? ' <span style="font-size:11px;color:var(--text2);font-weight:600">' + p.room_number + '</span>' : ''));
+    if (p.room_type && p.room_type !== 'Warteliste' && p.checkin) icons.push('🏨');
     if (p.arrival_date) icons.push('🛬');
     if (p.departure_date) icons.push('🛫');
     var iconsHtml = icons.length ? '<span style="font-size:14px;margin-left:4px;display:inline-flex;gap:2px;align-items:center">' + icons.join('') + '</span>' : '';
@@ -3460,12 +3453,12 @@ async function loadParticipants() {
       + '<td>' + sb + '</td>'
       + '<td>' + fmt(p.total) + '</td>'
       + '<td style="font-size:10px;color:var(--text3);white-space:nowrap;text-align:center">' + (p.updated_at ? new Date(p.updated_at).toLocaleDateString('de-DE') + '<br>' + new Date(p.updated_at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–') + '</td>'
-      + '<td style="text-align:center;font-size:12px">' + (p.shirt || '–') + (p.shirt_color ? '<br><span style="font-size:10px;color:var(--text3)">' + p.shirt_color + '</span>' : '') + '</td>'
       + '<td style="white-space:nowrap">'
         + eb + ' ' + vb + ' ' + db2
         + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Pending'
            ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
            : '')
+        + (p.mobile ? ' <button class="btn" style="font-size:11px;padding:3px 6px;background:#25D366;color:#fff;border-color:#25D366" data-mobile="'+p.mobile+'" data-name="'+p.firstname+' '+p.lastname+'" onclick="openWhatsAppDirect(this.dataset.mobile, this.dataset.name)" title="WhatsApp">💬</button>' : '')
         + '</td>'
       + '</tr>';
   }
@@ -3901,6 +3894,10 @@ function openPackageModal(pkg) {
     document.getElementById('pkgMealIncluded').checked = false;
     document.getElementById('pkgEntry').value = 'Nein';
   }
+  // Load meals text
+  var mealsTextEl = document.getElementById('pkgMealsText');
+  if (mealsTextEl) mealsTextEl.value = pkg ? (pkg.meals_text || '') : '';
+
   // Restore meal day checkboxes
   var days = ['mo','di','mi','do','fr','sa','so'];
   ['breakfast','lunch','dinner'].forEach(function(meal) {
@@ -3989,9 +3986,7 @@ async function loadHotel() {
   let q = db.from('participants').select('*').not('checkin', 'is', null).order(hotelSortField, {ascending: hotelSortDir === 'asc'});
   if (filter) q = q.eq('room_type', filter);
   const { data } = await q;
-  const allRaw = data || [];
-  const all = allRaw.filter(p => p.withdraw !== 'Ja' && p.withdraw !== true);
-  const allWithdrawn = allRaw.filter(p => p.withdraw === 'Ja' || p.withdraw === true);
+  const all = data || [];
   // Count unique room numbers per type (most accurate)
   var singleRooms = new Set(all.filter(p=>p.room_type==='Einzelzimmer'&&p.room_number).map(p=>p.room_number)).size;
   var doubleRooms = new Set(all.filter(p=>p.room_type==='Doppelzimmer'&&p.room_number).map(p=>p.room_number)).size;
@@ -4024,29 +4019,6 @@ async function loadHotel() {
       return hdr + '<tr><td>' + p.lastname + '</td><td>' + p.firstname + '</td><td>' + (p.country||'-') + '</td><td><strong>' + (p.room_number||'-') + '</strong></td><td>' + (p.room_type||'-') + '</td><td>' + (p.hotel||'-') + '</td><td>' + fmtDate(p.checkin) + '</td><td>' + fmtDate(p.checkout) + '</td><td>' + nights + '</td><td>' + (p.package ? '<span class=\"badge\">'+p.package+'</span>' : '-') + '</td><td><span class=\"status ' + statusClass(p.payment_status) + '\">' + (p.payment_status||'-') + '</span></td><td style=\"font-size:12px\">' + (p.passport_id||'-') + '</td><td style=\"font-size:12px\">' + fmtDate(p.dob) + '</td><td>' + (p.gender||'-') + '</td><td style=\"font-size:12px\">' + (p.mobile||'-') + '</td></tr>';
     }).join('');
   })();
-
-  // Append withdrawn/cancelled hotel bookings at bottom
-  if (allWithdrawn.length) {
-    allWithdrawn.sort((a,b) => {
-      const rA = a.room_number||'zzz', rB = b.room_number||'zzz';
-      if (rA !== rB) return rA.localeCompare(rB, undefined, {numeric:true});
-      return (a.lastname||'').localeCompare(b.lastname||'');
-    });
-    const wdRoomMap = {};
-    allWithdrawn.forEach(p => { if (p.room_number) { if (!wdRoomMap[p.room_number]) wdRoomMap[p.room_number] = []; wdRoomMap[p.room_number].push(p.lastname+', '+p.firstname); }});
-    let wdLastRoom = null;
-    var wdHtml = '<tr style="background:var(--red-bg)"><td colspan="15" style="padding:8px 12px;font-size:13px;font-weight:700;color:var(--red)">⚠ Stornierte Zimmer (Absagen)</td></tr>';
-    wdHtml += allWithdrawn.map(p => {
-      const nights = p.checkin && p.checkout ? Math.round((new Date(p.checkout)-new Date(p.checkin))/(1000*60*60*24)) : '-';
-      let hdr = '';
-      if (p.room_number && p.room_number !== wdLastRoom) {
-        wdLastRoom = p.room_number;
-        hdr = '<tr style="background:var(--red-bg);opacity:0.7"><td colspan="15" style="padding:6px 12px;font-size:12px;font-weight:600;color:var(--red)">Zimmer ' + p.room_number + ' · ' + (p.room_type||'') + ' · STORNIERT</td></tr>';
-      }
-      return hdr + '<tr style="opacity:0.6;text-decoration:line-through"><td>' + p.lastname + '</td><td>' + p.firstname + '</td><td>' + (p.country||'-') + '</td><td><strong>' + (p.room_number||'-') + '</strong></td><td>' + (p.room_type||'-') + '</td><td>' + (p.checkin||'-') + '</td><td>' + (p.checkout||'-') + '</td><td>' + nights + '</td><td><span style="color:var(--red);font-weight:600">ABGESAGT</span></td><td>' + (p.package||'-') + '</td><td>' + (p.events||'-') + '</td><td>' + (p.role||'-') + '</td><td></td><td></td><td></td></tr>';
-    }).join('');
-    document.getElementById('hotelTable').innerHTML += wdHtml;
-  }
 }
 
 // PAYMENTS
@@ -4056,7 +4028,7 @@ async function loadPayments() {
   const { data } = await q;
   const all = (data||[]).filter(p => p.withdraw !== 'Ja');
   const received = all.reduce((s,p)=>s+(parseFloat(p.amount_received)||0),0);
-  const totalOwed = all.reduce((s,p)=>s+(parseFloat(p.total)||0),0);
+  const totalOwed = all.reduce((s,p)=>s+(parseFloat(p.package_price)||0),0);
   const outstanding = totalOwed - received;
   const mahnungen = all.filter(p=>p.mahnung && p.mahnung !== 'Keine').length;
   document.getElementById('payIn').textContent = fmtK(received);
@@ -4273,16 +4245,9 @@ async function deleteAppUser(id, email) {
 
 // PDF EXPORTS
 async function exportHotelPDF() {
-  const { data: dataRaw } = await db.from('participants').select('*').not('checkin', 'is', null).order('room_number');
-  if (!dataRaw || !dataRaw.length) { toast('Keine Hoteldaten vorhanden'); return; }
-  const data = dataRaw.filter(p => p.withdraw !== 'Ja' && p.withdraw !== true);
-  const dataWithdrawn = dataRaw.filter(p => p.withdraw === 'Ja' || p.withdraw === true);
+  const { data } = await db.from('participants').select('*').not('checkin', 'is', null).order('room_number');
+  if (!data || !data.length) { toast('Keine Hoteldaten vorhanden'); return; }
   data.sort((a,b) => {
-    const rA = a.room_number||'zzz', rB = b.room_number||'zzz';
-    if (rA !== rB) return rA.localeCompare(rB, undefined, {numeric:true});
-    return (a.lastname||'').localeCompare(b.lastname||'');
-  });
-  dataWithdrawn.sort((a,b) => {
     const rA = a.room_number||'zzz', rB = b.room_number||'zzz';
     if (rA !== rB) return rA.localeCompare(rB, undefined, {numeric:true});
     return (a.lastname||'').localeCompare(b.lastname||'');
@@ -4295,13 +4260,6 @@ async function exportHotelPDF() {
     const rn = p.room_number || '–';
     if (!roomGroups[rn]) { roomGroups[rn] = []; roomOrder.push(rn); }
     roomGroups[rn].push(p);
-  });
-  const roomGroupsWD = {};
-  const roomOrderWD = [];
-  dataWithdrawn.forEach(p => {
-    const rn = p.room_number || '–';
-    if (!roomGroupsWD[rn]) { roomGroupsWD[rn] = []; roomOrderWD.push(rn); }
-    roomGroupsWD[rn].push(p);
   });
 
   // Get logo
@@ -4320,7 +4278,6 @@ async function exportHotelPDF() {
   var typeBorder = { 'Einzelzimmer': '#4a9e4a', 'Doppelzimmer': '#185FA5', 'Dreibettzimmer': '#d4820a' };
 
   // Build table rows grouped by room
-  function td(v) { return '<td style="padding:4px 7px;font-size:10px;border-bottom:1px solid #e8e8e8">' + (v||'–') + '</td>'; }
   var tableRows = '';
   roomOrder.forEach(function(rn) {
     var persons = roomGroups[rn];
@@ -4361,25 +4318,7 @@ async function exportHotelPDF() {
     tableRows += '<tr><td colspan="14" style="height:6px;background:#f0f0f0;border:none"></td></tr>';
   });
 
-  // Withdrawn/cancelled rooms section
-  if (roomOrderWD.length) {
-    tableRows += '<tr><td colspan="14" style="padding:10px 10px 4px;font-size:13px;font-weight:700;color:#c0392b;background:#fdf0f0;border-top:3px solid #c0392b">⚠ Stornierte Zimmer (Absagen)</td></tr>';
-    roomOrderWD.forEach(function(rn) {
-      var persons = roomGroupsWD[rn];
-      var p0 = persons[0];
-      var rtype = p0.room_type || '–';
-      var hotel = p0.hotel || '–';
-      tableRows += '<tr><td colspan="14" style="background:#fdf0f0;border-left:4px solid #c0392b;border-top:1px solid #c0392b;padding:5px 10px;font-weight:700;font-size:11px;color:#c0392b">🏨 Zimmer ' + rn + ' &nbsp;·&nbsp; ' + rtype + ' &nbsp;·&nbsp; ' + hotel + ' &nbsp;·&nbsp; STORNIERT</td></tr>';
-      persons.forEach(function(p, pi) {
-        tableRows += '<tr style="background:#fdf0f0;opacity:0.7;text-decoration:line-through;border-left:4px solid #c0392b">'
-          + td(p.lastname) + td(p.firstname) + td(p.country) + td(p.events) + td(p.gender)
-          + td(fmtDate(p.dob)) + td(p.passport_id) + td(p.member_id) + td(p.mobile) + td(p.email)
-          + td(fmtDate(p.checkin)) + td(fmtDate(p.checkout))
-          + '<td style="padding:4px 7px;font-size:10px;color:#c0392b;font-weight:700">ABGESAGT</td>'
-          + td(p.package) + '</tr>';
-      });
-    });
-  }
+  function td(v) { return '<td style="padding:4px 7px;font-size:10px;border-bottom:1px solid #e8e8e8">' + (v||'–') + '</td>'; }
 
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hotel-Liste</title>'
     + '<style>body{font-family:Arial,sans-serif;margin:0;padding:16px;font-size:11px}'
@@ -4410,10 +4349,8 @@ async function exportHotelPDF() {
 }
 
 async function exportMealPDF() {
-  const { data: mealRaw } = await db.from('participants').select('*').eq('meal_plus','Ja').order('lastname');
-  if (!mealRaw || !mealRaw.length) { toast('Keine Teilnehmer mit Meal Package vorhanden'); return; }
-  const data = mealRaw.filter(p => p.withdraw !== 'Ja' && p.withdraw !== true);
-  const dataWithdrawn = mealRaw.filter(p => p.withdraw === 'Ja' || p.withdraw === true);
+  const { data } = await db.from('participants').select('*').eq('meal_plus','Ja').order('lastname');
+  if (!data || !data.length) { toast('Keine Teilnehmer mit Meal Package vorhanden'); return; }
 
   // Get logo
   var logoSrc = currentEventLogoForPrint || '';
@@ -4461,33 +4398,6 @@ async function exportMealPDF() {
     return tr;
   }).join('');
 
-  // Withdrawn rows
-  var rowsWithdrawn = '';
-  if (dataWithdrawn.length) {
-    rowsWithdrawn += '<tr><td colspan="100" style="padding:8px 10px;font-size:12px;font-weight:700;color:#c0392b;background:#fdf0f0;border-top:3px solid #c0392b">⚠ Stornierte Mahlzeiten (Absagen)</td></tr>';
-    rowsWithdrawn += dataWithdrawn.map(function(p, i) {
-      var lunchDays = p.meal_lunch_days || '';
-      var dinnerDays = p.meal_dinner_days || '';
-      var hasLunch = p.meal_lunch === 'Ja';
-      var hasDinner = p.meal_dinner === 'Ja';
-      var tr = '<tr style="background:#fdf0f0;opacity:0.6;text-decoration:line-through">'
-        + '<td style="padding:4px 7px;border:1px solid #ddd;font-weight:600;white-space:nowrap;color:#c0392b">' + (p.lastname||'') + ', ' + (p.firstname||'') + ' <span style="font-weight:700">[ABGESAGT]</span></td>'
-        + '<td style="padding:4px 7px;border:1px solid #ddd">' + (p.country||'–') + '</td>'
-        + '<td style="padding:4px 7px;border:1px solid #ddd">' + (p.events||'–') + '</td>'
-        + '<td style="padding:4px 7px;border:1px solid #ddd">' + (p.role||'–') + '</td>';
-      days.forEach(function(d) {
-        var hl = hasLunch && hasDay(lunchDays, d);
-        tr += '<td style="text-align:center;border:1px solid #ddd;background:' + (hl ? '#c8e6c9' : '#fff') + '">' + (hl ? '✓' : '') + '</td>';
-      });
-      days.forEach(function(d) {
-        var hd = hasDinner && hasDay(dinnerDays, d);
-        tr += '<td style="text-align:center;border:1px solid #ddd;background:' + (hd ? '#ffcdd2' : '#fff') + '">' + (hd ? '✓' : '') + '</td>';
-      });
-      tr += '</tr>';
-      return tr;
-    }).join('');
-  }
-
   // Header: grouped Lunch + Dinner
   var lunchHeaders = dayLabels.map(function(d){ return '<th style="background:#2e7d32;color:#fff;padding:4px 6px;text-align:center;font-size:10px;border:1px solid #1b5e20">' + d + '</th>'; }).join('');
   var dinnerHeaders = dayLabels.map(function(d){ return '<th style="background:#c62828;color:#fff;padding:4px 6px;text-align:center;font-size:10px;border:1px solid #8e0000">' + d + '</th>'; }).join('');
@@ -4515,7 +4425,8 @@ async function exportMealPDF() {
     + '<th colspan="7" style="background:#c62828;color:#fff;padding:5px 8px;text-align:center;border:1px solid #8e0000;font-size:11px">🍽 DINNER</th>'
     + '</tr>'
     + '<tr>' + lunchHeaders + dinnerHeaders + '</tr>'
-    + '</thead><tbody>' + rows + rowsWithdrawn + '</tbody></table>'
+    + '</thead><tbody>' + rows + '</tbody></table>'
+    + detailSection
     + '<div class="ftr">© MG Sports & Eventmanagement 2026</div>'
     + '</body></html>';
 
@@ -4528,39 +4439,21 @@ async function exportMealPDF() {
 async function exportAirportPDF(type) {
   const isArrival = type === 'arrival';
   const pdfDateField = isArrival ? 'arrival_date' : 'departure_date';
-  // Active
   let aq = db.from('participants').select('*').not(pdfDateField, 'is', null);
   if (currentEventId) aq = aq.eq('event_id', currentEventId);
   aq = aq.neq('withdraw', 'Ja');
   aq = aq.order(isArrival?'arrival_date':'departure_date', {nullsFirst: false});
   aq = aq.order(isArrival?'arrival_time':'departure_time', {nullsFirst: false});
   const { data } = await aq;
-  // Withdrawn
-  let wq = db.from('participants').select('*').not(pdfDateField, 'is', null);
-  if (currentEventId) wq = wq.eq('event_id', currentEventId);
-  wq = wq.eq('withdraw', 'Ja');
-  wq = wq.order(isArrival?'arrival_date':'departure_date', {nullsFirst: false});
-  const { data: dataWD } = await wq;
-  if ((!data || !data.length) && (!dataWD || !dataWD.length)) { toast('Keine Transferdaten vorhanden'); return; }
-
-  var activeRows = (data||[]).map(p => [p.lastname,p.firstname,p.country||'–',isArrival?(p.flight_in||'–'):(p.flight_out||'–'),fmtDate(isArrival?p.arrival_date:p.departure_date),(isArrival?p.arrival_time:p.departure_time)||'–',p.mobile||'–']);
-  var withdrawnRows = (dataWD||[]).map(p => ['⚠ '+p.lastname+' [ABGESAGT]',p.firstname,p.country||'–',isArrival?(p.flight_in||'–'):(p.flight_out||'–'),fmtDate(isArrival?p.arrival_date:p.departure_date),(isArrival?p.arrival_time:p.departure_time)||'–',p.mobile||'–']);
-
-  var allRows = activeRows;
-  if (withdrawnRows.length) {
-    allRows = allRows.concat([['── STORNIERTE TRANSFERS ──','','','','','','']]);
-    allRows = allRows.concat(withdrawnRows);
-  }
-
+  if (!data || !data.length) { toast('Keine Transferdaten vorhanden'); return; }
   printTable((isArrival ? 'Airport Pickup' : 'Airport Drop-off') + ' – MG Sports Event 2026',
     ['Nachname','Vorname','Land','Flug-Nr.','Datum','Uhrzeit','Telefon'],
-    allRows
+    data.map(p => [p.lastname,p.firstname,p.country||'–',isArrival?(p.flight_in||'–'):(p.flight_out||'–'),fmtDate(isArrival?p.arrival_date:p.departure_date),(isArrival?p.arrival_time:p.departure_time)||'–',p.mobile||'–'])
   );
 }
 
 async function exportWithdrawPDF() {
-  const { data: dataRawWD } = await db.from('participants').select('*').eq('withdraw','Ja');
-  const data = (dataRawWD||[]).sort((a,b) => (a.lastname||'').localeCompare(b.lastname||''));
+  const { data } = await db.from('participants').select('*').eq('withdraw','Ja').order('withdraw_date');
   if (!data || !data.length) { toast('Keine Absagen vorhanden'); return; }
   printTable('Withdraw-Liste – MG Sports Event 2026',
     ['Nachname','Vorname','Land','Package','Withdraw-Datum','Bezahlt (€)','Zahlungsstatus','Memo'],
@@ -4750,26 +4643,7 @@ function switchMahnTab(num,btn) {
 // ACTIVE EVENT
 async function loadActiveEvent() {
   var saved = localStorage.getItem('mg_active_event');
-  if (saved) { try { var p=JSON.parse(saved); currentEventId=p.id; currentEventName=p.name; updateActiveEventDisplay(); return; } catch(e){} }
-  // No saved event - try to load first active event from DB
-  try {
-    var r = await db.from('events').select('id,name').eq('active',true).limit(1).single();
-    if (r.data) {
-      currentEventId = r.data.id;
-      currentEventName = r.data.name;
-      localStorage.setItem('mg_active_event', JSON.stringify({id:r.data.id, name:r.data.name}));
-      updateActiveEventDisplay();
-    } else {
-      // Try any event
-      var r2 = await db.from('events').select('id,name').limit(1).single();
-      if (r2.data) {
-        currentEventId = r2.data.id;
-        currentEventName = r2.data.name;
-        localStorage.setItem('mg_active_event', JSON.stringify({id:r2.data.id, name:r2.data.name}));
-        updateActiveEventDisplay();
-      }
-    }
-  } catch(e) { console.log('loadActiveEvent DB error:', e); }
+  if (saved) { try { var p=JSON.parse(saved); currentEventId=p.id; currentEventName=p.name; updateActiveEventDisplay(); } catch(e){} }
 }
 async function setActiveEvent(id, name) {
   currentEventId=id; currentEventName=name;
@@ -4849,6 +4723,7 @@ async function loadWaitlist() {
         + '<td style="display:flex;gap:4px">'
         + '<button class="btn primary" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="confirmPending(this.dataset.id)">✅ Bestätigen</button>'
         + '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>'
+        + '<button class="btn danger" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="rejectWaitlist(this.dataset.id,this.dataset.name)">❌ Ablehnen</button>'
         + '</td></tr>';
     }).join('') : '<tr><td colspan="8" class="empty" style="color:var(--green)">✅ Keine ausstehenden Registrierungen</td></tr>';
   }
@@ -4864,7 +4739,8 @@ async function loadWaitlist() {
   var ce=document.getElementById('waitlistCount'); if(ce) ce.textContent=(pending.length ? pending.length+' neu · ' : '')+(all.length)+' Warteliste';
   var tb=document.getElementById('waitlistTable'); if(!tb) return;
   tb.innerHTML=all.length?all.map(function(p){
-    return '<tr><td>'+p.lastname+', '+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+(p.events||'-')+'</td><td>'+(p.package?'<span class="badge">'+p.package+'</span>':'-')+'</td><td><span class="status pending">Warteliste</span></td><td style="color:var(--text3)">'+fmtDate(p.created_at)+'</td><td style="font-size:12px">'+(p.memo||'-')+'</td><td><button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button></td></tr>';
+    var ablehnenBtn = '<button class="btn danger" style="font-size:11px;padding:3px 6px" onclick="rejectWaitlist(\'' + p.id + '\',\'' + (p.lastname+', '+p.firstname).replace(/'/g,"\\'\\'") + '\')">' + '❌ Ablehnen</button>';
+    return '<tr><td>'+p.lastname+', '+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+(p.events||'-')+'</td><td>'+(p.package?'<span class="badge">'+p.package+'</span>':'-')+'</td><td><span class="status pending">Warteliste</span></td><td style="color:var(--text3)">'+fmtDate(p.created_at)+'</td><td style="font-size:12px">'+(p.memo||'-')+'</td><td style="white-space:nowrap"><button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button> '+ablehnenBtn+'</td></tr>';
   }).join(''):'<tr><td colspan="8" class="empty">Keine Personen auf der Warteliste</td></tr>';
 }
 
@@ -4875,6 +4751,14 @@ async function confirmPending(id) {
   toast('✅ Registrierung bestätigt');
   loadWaitlist();
 }
+async function rejectWaitlist(id, name) {
+  if (!confirm('Registrierung von ' + name + ' ablehnen und löschen?')) return;
+  var r = await db.from('participants').delete().eq('id', id);
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  toast(name + ' wurde abgelehnt und gelöscht.');
+  loadWaitlist();
+}
+
 async function exportWaitlistPDF() {
   var q=db.from('participants').select('*').eq('room_type','Warteliste').order('created_at');
   if(currentEventId) q=q.eq('event_id',currentEventId);
@@ -5276,14 +5160,12 @@ async function exportWithdrawReportPDF() {
   var q=db.from('participants').select('*').eq('withdraw','Ja');
   if(currentEventId) q=q.eq('event_id',currentEventId);
   var r=await q; if(!r.data||!r.data.length){toast('Keine Absagen');return;}
-  r.data.sort((a,b) => (a.lastname||'').localeCompare(b.lastname||''));
   printTable('Withdraw-Abrechnung',['Nachname','Vorname','Land','Package','Abgemeldet','Gesamt','Erhalten','Rueckzahlung','Faellig','Regelung'],r.data.map(function(p){var wd=p.withdraw_date?new Date(p.withdraw_date):null;var reg='-';if(wd){if(wd<WITHDRAW_DATE_FULL)reg='100%';else if(wd<=WITHDRAW_DATE_HALF)reg='50%';else reg='0%';}return[p.lastname,p.firstname,p.country||'-',p.package||'-',fmtDate(p.withdraw_date),fmt(p.total),fmt(p.amount_received),fmt(p.withdraw_refund||0),fmt(p.withdraw_refund_due||0),reg];}));
 }
 async function exportTravelAmountPDF() {
   var q=db.from('participants').select('*').eq('travel_amount',1).neq('withdraw','Ja');
   if(currentEventId) q=q.eq('event_id',currentEventId);
   var r=await q; if(!r.data||!r.data.length){toast('Keine offenen Anreisebetraege');return;}
-  r.data.sort((a,b) => (a.lastname||'').localeCompare(b.lastname||''));
   printTable('Offene Anreisebetraege',['Nachname','Vorname','Land','Event','Package','Gesamt','Erhalten','Offen','Anreise'],r.data.map(function(p){return[p.lastname,p.firstname,p.country||'-',p.events||'-',p.package||'-',fmt(p.total),fmt(p.amount_received),fmt((parseFloat(p.total)||0)-(parseFloat(p.amount_received)||0)),p.ams_bus||'-'];}));
 }
 
@@ -9245,6 +9127,15 @@ function searchSquashLevels() {
 
 // PAYMENT REMINDER EMAIL
 var _payEmailData = null;
+
+function openWhatsAppDirect(mobile, name) {
+  if (!mobile) { toast('Keine Mobilnummer vorhanden'); return; }
+  var phone = mobile.replace(/[^0-9+]/g,'');
+  if (phone.startsWith('00')) phone = '+' + phone.slice(2);
+  var msg = encodeURIComponent('Hello ' + (name||'') + ',\n\n');
+  var url = 'https://wa.me/' + phone.replace('+','') + '?text=' + msg;
+  window.open(url, '_blank');
+}
 
 async function openPaymentEmail(participantId) {
   var r = await db.from('participants').select('*').eq('id', participantId).single();
