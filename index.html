@@ -9889,6 +9889,14 @@ async function saveRolePermissions() {
 
 
 // ===== MOBILE SIDEBAR =====
+function toggleMobileView() {
+  var isMobile = document.body.classList.toggle('mobile-view');
+  var btn = document.getElementById('mobileToggleBtn');
+  if (btn) btn.style.color = isMobile ? 'var(--blue)' : 'var(--text2)';
+  try { localStorage.setItem('mobileView', isMobile ? '1' : '0'); } catch(e) {}
+  if (!isMobile) closeMobileSidebar();
+}
+
 function toggleMobileSidebar() {
   var sidebar = document.querySelector('.sidebar');
   var overlay = document.getElementById('sidebarOverlay');
