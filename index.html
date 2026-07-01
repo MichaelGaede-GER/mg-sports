@@ -452,6 +452,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="stat"><div class="lbl">Package-Einnahmen gesamt</div><div class="val" id="statPkg">–</div><div class="sub" id="statPkgSub"></div></div>
           <div class="stat red"><div class="lbl">Absagen</div><div class="val" id="statWithdraw">–</div></div>
           <div class="stat"><div class="lbl">Mit Hotelbuchung</div><div class="val" id="statHotel">–</div></div>
+          <div class="stat green"><div class="lbl">Meal Packages</div><div class="val" id="statMeal">–</div><div class="sub" id="statMealSub"></div></div>
         </div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
@@ -3323,24 +3324,25 @@ async function doLogout() {
 }
 
 async function initApp() {
-  // Load role permissions
-  await loadRolePermissions();
-
-  try { await loadAgeClasses(); } catch(e) {}
-  await checkTables();
+  // Step 1: load event ID first (critical for dashboard)
   await loadActiveEvent();
-  await loadEntryFee();
-  await loadVisaExpressFee();
-  await loadMahnTemplates();
-  await loadSponsorLogos();
-  await updateSidebarEventLogo();
+
+  // Step 2: load dashboard immediately so numbers appear right away
+  loadDashboard();
+
+  // Step 3: load rest in background (non-blocking)
+  loadRolePermissions().catch(function(){});
+  try { await loadAgeClasses(); } catch(e) {}
+  checkTables().catch(function(){});
+  loadEntryFee().catch(function(){});
+  loadVisaExpressFee().catch(function(){});
+  loadMahnTemplates().catch(function(){});
+  loadSponsorLogos().catch(function(){});
+  updateSidebarEventLogo().catch(function(){});
   await loadPackagesData();
-  await loadMealOptions();
-  await loadPersonRoles();
-  await loadWithdrawPolicy();
-  await loadAgeClasses();
-  await loadPersonRoles();
-  await loadDashboard();
+  loadMealOptions().catch(function(){});
+  loadPersonRoles().catch(function(){});
+  loadWithdrawPolicy().catch(function(){});
   populatePackageSelect();
   populateCoachDropdowns();
   updateMealOptionSelects();
@@ -4388,6 +4390,22 @@ async function loadDashboard() {
   var hTotal = hSingle + hDouble + hTriple;
   document.getElementById('statHotel').innerHTML = hTotal
     + '<span style="font-size:10px;font-weight:400;color:var(--text3);display:block;margin-top:2px">EZ:'+hSingle+' · DZ:'+hDouble+' · DBZ:'+hTriple+'</span>';
+
+  // Meal packages count - meal_plus=Ja OR package has meal_included=Ja
+  var mealPkgCodes = (packagesData||[]).filter(function(pkg){
+    return pkg.meal_included === 'Ja' || pkg.pkg_lunch_days || pkg.pkg_dinner_days || pkg.pkg_breakfast_days;
+  }).map(function(pkg){ return pkg.code; });
+  var mealCount = active.filter(function(p){
+    return p.meal_plus === 'Ja' || (p.package && mealPkgCodes.indexOf(p.package) >= 0);
+  }).length;
+  var mealLunch = active.filter(function(p){ return p.meal_lunch === 'Ja' || (p.package && mealPkgCodes.indexOf(p.package) >= 0); }).length;
+  var mealDinner = active.filter(function(p){ return p.meal_dinner === 'Ja' || (p.package && mealPkgCodes.indexOf(p.package) >= 0); }).length;
+  var mealEl = document.getElementById('statMeal');
+  if (mealEl) {
+    mealEl.textContent = mealCount;
+    var mealSubEl = document.getElementById('statMealSub');
+    if (mealSubEl) mealSubEl.textContent = 'Lunch: ' + mealLunch + ' · Dinner: ' + mealDinner;
+  }
 
   // Age grid - use dynamic age classes
   var ageList = ageClassesCache && ageClassesCache.length ? ageClassesCache : ['GU11','GU13','GU15','GU17','GU19','BU11','BU13','BU15','BU17','BU19'];
@@ -11072,7 +11090,7 @@ document.addEventListener('DOMContentLoaded', function() {
 initTheme();
 db.auth.onAuthStateChange(async function(event, session) {
   if (session) { document.getElementById('topbarUser').textContent=session.user.email;
-  if (event === 'SIGNED_IN') { setTimeout(function(){ loadRolePermissions(); }, 500); } document.getElementById('loginScreen').style.display='none'; document.getElementById('appShell').style.display='flex'; initApp(); }
+  if (event === 'SIGNED_IN') { setTimeout(function(){ loadRolePermissions(); }, 500); } document.getElementById('loginScreen').style.display='none'; document.getElementById('appShell').style.display='flex'; initApp().catch(console.error); }
 });
 
 </script>
