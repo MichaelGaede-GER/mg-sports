@@ -80,7 +80,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .stat.red .val{color:var(--red)}
 
 /* TABLE */
-.table-wrap{overflow-x:auto}
+.table-wrap{overflow-x:auto;position:relative}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:8px 12px;background:var(--bg2);font-weight:500;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -517,6 +517,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         <div class="card">
           <div class="table-wrap"><table>
             <thead><tr>
+  <th style="white-space:nowrap;position:sticky;left:0;z-index:2;background:var(--bg2)">Aktionen</th>
   <th style="width:40px">Foto</th>
   <th class="sortable" onclick="sortParticipants('group_tp')" id="pth_group_tp">ID <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('lastname')" id="pth_lastname">Nachname <span class="sort-icon">↕</span></th>
@@ -529,7 +530,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   <th class="sortable" onclick="sortParticipants('payment_status')" id="pth_payment_status">Zahlung <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('total')" id="pth_total">Gesamt <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('updated_at')" id="pth_updated_at" title="Zuletzt bearbeitet" style="text-align:center">✏ <span class="sort-icon">↕</span></th>
-  <th style="white-space:nowrap">Aktionen</th>
+  <th style="white-space:nowrap;position:sticky;left:0;z-index:2;background:var(--bg2)">Aktionen</th>
 </tr></thead>
             <tbody id="participantsTable"><tr><td colspan="12" class="loading">Lade…</td></tr></tbody>
           </table></div>
@@ -3324,27 +3325,26 @@ async function doLogout() {
 }
 
 async function initApp() {
-  // Step 1: load event ID first (critical for dashboard)
+  // 1. Load event ID first - critical for all queries
   await loadActiveEvent();
-
-  // Step 2: load dashboard immediately so numbers appear right away
-  loadDashboard();
-
-  // Step 3: load rest in background (non-blocking)
+  // 2. Load dashboard immediately - user sees numbers right away
+  await loadDashboard();
+  // 3. Load rest in background
   loadRolePermissions().catch(function(){});
-  try { await loadAgeClasses(); } catch(e) {}
+  try { loadAgeClasses().catch(function(){}); } catch(e) {}
   checkTables().catch(function(){});
   loadEntryFee().catch(function(){});
   loadVisaExpressFee().catch(function(){});
   loadMahnTemplates().catch(function(){});
   loadSponsorLogos().catch(function(){});
   updateSidebarEventLogo().catch(function(){});
-  await loadPackagesData();
+  loadPackagesData().then(function(){
+    populatePackageSelect();
+    populateCoachDropdowns();
+  }).catch(function(){});
   loadMealOptions().catch(function(){});
   loadPersonRoles().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
-  populatePackageSelect();
-  populateCoachDropdowns();
   updateMealOptionSelects();
 }
 
@@ -4554,7 +4554,14 @@ async function loadParticipants() {
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr>'
-      + '<td style="padding:4px 6px">'
++ '<td style="white-space:nowrap">'
+        + eb + ' ' + vb + ' ' + db2
+        + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Pending'
+           ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
+           : '')
+        + (p.mobile ? ' <button class="btn" style="font-size:11px;padding:3px 6px;background:#25D366;color:#fff;border-color:#25D366" data-mobile="'+p.mobile+'" data-name="'+p.firstname+' '+p.lastname+'" onclick="openWhatsAppDirect(this.dataset.mobile, this.dataset.name)" title="WhatsApp">💬</button>' : '')
+        + '</td>'
+            + '<td style="padding:4px 6px">'
         + (p.photo_url
           ? '<img src="'+p.photo_url+'" style="width:36px;height:44px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />'
           : '<div style="width:36px;height:44px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>')
@@ -4574,13 +4581,6 @@ async function loadParticipants() {
       + '<td>' + sb + '</td>'
       + '<td>' + fmt(p.total) + '</td>'
       + '<td style="font-size:10px;color:var(--text3);white-space:nowrap;text-align:center">' + (p.updated_at ? new Date(p.updated_at).toLocaleDateString('de-DE') + '<br>' + new Date(p.updated_at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–') + '</td>'
-      + '<td style="white-space:nowrap">'
-        + eb + ' ' + vb + ' ' + db2
-        + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Pending'
-           ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
-           : '')
-        + (p.mobile ? ' <button class="btn" style="font-size:11px;padding:3px 6px;background:#25D366;color:#fff;border-color:#25D366" data-mobile="'+p.mobile+'" data-name="'+p.firstname+' '+p.lastname+'" onclick="openWhatsAppDirect(this.dataset.mobile, this.dataset.name)" title="WhatsApp">💬</button>' : '')
-        + '</td>'
       + '</tr>';
   }
 
@@ -11090,7 +11090,7 @@ document.addEventListener('DOMContentLoaded', function() {
 initTheme();
 db.auth.onAuthStateChange(async function(event, session) {
   if (session) { document.getElementById('topbarUser').textContent=session.user.email;
-  if (event === 'SIGNED_IN') { setTimeout(function(){ loadRolePermissions(); }, 500); } document.getElementById('loginScreen').style.display='none'; document.getElementById('appShell').style.display='flex'; initApp().catch(console.error); }
+  if (event === 'SIGNED_IN') { setTimeout(function(){ loadRolePermissions(); }, 500); } document.getElementById('loginScreen').style.display='none'; document.getElementById('appShell').style.display='flex'; initApp(); }
 });
 
 </script>
