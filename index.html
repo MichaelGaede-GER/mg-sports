@@ -337,89 +337,92 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="brand">MG Sports EM</div>
-      <div class="sub">Turnierverwaltung 2026</div>
+      <div class="sub" data-i18n="sidebar_sub">Turnierverwaltung 2026</div>
       <span class="role-badge" id="roleBadge">Admin</span>
     </div>
-    <div class="nav-section">Übersicht</div>
+    <div class="nav-section" data-i18n="nav_section_overview">Übersicht</div>
     <div class="nav-item active" onclick="nav('dashboard')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span data-i18n="nav_dashboard">Dashboard</span>
     </div>
     <div class="nav-item" onclick="nav('participants')">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Teilnehmer
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-i18n="nav_participants">Teilnehmer</span>
       <span class="nav-cnt" id="cntParticipants">0</span>
     </div>
     <div class="nav-item" onclick="nav('entry')">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Neu erfassen
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg><span data-i18n="nav_entry">Neu erfassen</span>
     </div>
-    <div class="nav-section">Verwaltung</div>
+    <div class="nav-section" data-i18n="nav_section_admin">Verwaltung</div>
     <div class="nav-item" onclick="nav('idcard')">
-      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><line x1="12" y1="9" x2="19" y2="9"/><line x1="12" y1="13" x2="17" y2="13"/></svg>ID Cards
+      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><line x1="12" y1="9" x2="19" y2="9"/><line x1="12" y1="13" x2="17" y2="13"/></svg><span data-i18n="nav_idcard">ID Cards</span>
     </div>
     <div class="nav-item" onclick="nav('packages')">
-      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Packages
+      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg><span data-i18n="nav_packages">Packages</span>
     </div>
     <div class="nav-item" onclick="nav('persons')">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Personendatenbank
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-i18n="nav_persons">Personendatenbank</span>
     </div>
     <div class="nav-item" onclick="nav('import')">
-      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span data-i18n="nav_import">Import</span>
     </div>
     <div class="nav-item" onclick="nav('hotel')">
-      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Hotelbelegung
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span data-i18n="nav_hotel">Hotelbelegung</span>
+    </div>
+    <div class="nav-item" onclick="nav('shuttle')">
+      <svg viewBox="0 0 24 24"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M19 10h3l2 3v5h-2"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg><span data-i18n="nav_shuttle">Shuttle</span>
     </div>
     <div class="nav-item" onclick="nav('payments')">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>Zahlungen
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg><span data-i18n="nav_payments">Zahlungen</span>
     </div>
     <div class="nav-item" onclick="nav('mahnlog')">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Mahnungs-Log
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="nav_mahnlog">Mahnungs-Log</span>
       <span class="nav-cnt" id="cntMahnlog" style="display:none">!</span>
     </div>
     <div class="nav-item" onclick="nav('withdrawals')">
-      <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>Absagen
+      <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg><span data-i18n="nav_withdrawals">Absagen</span>
       <span class="nav-cnt" id="cntWithdrawals" style="display:none">!</span>
     </div>
     <div class="nav-item" onclick="nav('waitlist')">
       <span id="cntPending" style="display:none;background:var(--amber,#ef9f27);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;margin-right:4px;float:right">!</span>
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11l-4 4-2-2"/></svg>Warteliste
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11l-4 4-2-2"/></svg><span data-i18n="nav_waitlist">Warteliste</span>
       <span class="nav-cnt" id="cntWaitlist" style="display:none">0</span>
     </div>
-    <div class="nav-section">Marketing</div>
+    <div class="nav-section" data-i18n="nav_section_marketing">Marketing</div>
     <div class="nav-item" onclick="nav('marketing')">
-      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Verteiler
+      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span data-i18n="nav_marketing">Verteiler</span>
     </div>
-    <div class="nav-section">Export</div>
+    <div class="nav-section" data-i18n="nav_section_export">Export</div>
     <div class="nav-item" onclick="nav('reports')">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Berichte & PDFs
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span data-i18n="nav_reports">Berichte & PDFs</span>
     </div>
     <div class="nav-item" onclick="nav('airport')">
-      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Airport Transfer
+      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span data-i18n="nav_airport">Airport Transfer</span>
     </div>
     <div class="nav-item" onclick="nav('broadcast')">
-      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Broadcast
+      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span data-i18n="nav_broadcast">Broadcast</span>
     </div>
     <div class="nav-item" onclick="nav('checkin')">
-      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Check-in
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span data-i18n="nav_checkin">Check-in</span>
     </div>
     <div class="nav-item" onclick="nav('mealcheck')">
-      <svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>Meal-Check
+      <svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg><span data-i18n="nav_mealcheck">Meal-Check</span>
     </div>
-    <div class="nav-section">System</div>
+    <div class="nav-section" data-i18n="nav_section_system">System</div>
     <div class="nav-item" onclick="nav('events')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Events
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span data-i18n="nav_events">Events</span>
       <span class="nav-cnt" id="activeEventBadge" style="background:var(--green-bg);color:var(--green);display:none">●</span>
     </div>
     <div class="nav-item" onclick="nav('backup')">
-      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Backup & Restore
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span data-i18n="nav_backup">Backup & Restore</span>
     </div>
     <div class="nav-item" onclick="nav('settings')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07 10 10 0 0 0 19.07 4.93z"/></svg>Einstellungen
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07 10 10 0 0 0 19.07 4.93z"/></svg><span data-i18n="nav_settings">Einstellungen</span>
     </div>
     <div class="nav-item" onclick="nav('users')">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Benutzer & Rollen
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-i18n="nav_users">Benutzer & Rollen</span>
     </div>
     <div class="sidebar-bottom">
       <div class="nav-item" onclick="doLogout()">
-        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Abmelden
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span data-i18n="nav_logout">Abmelden</span>
       </div>
     </div>
   </div>
@@ -428,9 +431,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="topbar">
       <button class="hamburger-btn" onclick="toggleMobileSidebar()" aria-label="Menü"><span></span><span></span><span></span></button>
       <span class="topbar-title" id="topbarTitle">Dashboard</span>
-      <button class="btn" onclick="nav('entry')">+ Neu erfassen</button>
+      <button class="btn" onclick="nav('entry')" data-i18n="btn_new_entry">+ Neu erfassen</button>
       <div id="activeEventDisplay" style="font-size:12px;padding:4px 10px;background:var(--green-bg);color:var(--green);border-radius:6px;display:none;cursor:pointer" onclick="nav('events')"></div>
       <button class="btn" onclick="toggleDarkMode()" id="modeBtn" title="Hell/Dunkel wechseln" style="font-size:18px;padding:4px 8px;border:none;background:none;cursor:pointer">🌙</button>
+      <button class="btn" onclick="toggleLanguage()" id="langBtn" title="Deutsch / English" style="font-size:18px;padding:4px 8px;border:none;background:none;cursor:pointer">🇩🇪</button>
       <span style="font-size:12px;color:var(--text2)" id="topbarUser"></span>
     </div>
     <div class="content">
@@ -446,44 +450,43 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div class="stats-grid" id="dashStats">
-          <div class="stat blue"><div class="lbl">Anmeldungen gesamt</div><div class="val" id="statTotal">–</div><div class="sub" id="statTotalSub"></div></div>
-          <div class="stat green"><div class="lbl">Einnahmen erhalten</div><div class="val" id="statReceived">–</div><div class="sub" id="statReceivedSub"></div></div>
-          <div class="stat red"><div class="lbl">Noch ausstehend</div><div class="val" id="statOutstanding">–</div><div class="sub" id="statOutstandingSub"></div></div>
-          <div class="stat"><div class="lbl">Package-Einnahmen gesamt</div><div class="val" id="statPkg">–</div><div class="sub" id="statPkgSub"></div></div>
-          <div class="stat red"><div class="lbl">Absagen</div><div class="val" id="statWithdraw">–</div></div>
-          <div class="stat"><div class="lbl">Mit Hotelbuchung</div><div class="val" id="statHotel">–</div></div>
-          <div class="stat green"><div class="lbl">Meal Packages</div><div class="val" id="statMeal">–</div><div class="sub" id="statMealSub"></div></div>
+          <div class="stat green"><div class="lbl" data-i18n="stat_received">Einnahmen erhalten</div><div class="val" id="statReceived">–</div><div class="sub" id="statReceivedSub"></div></div>
+          <div class="stat red"><div class="lbl" data-i18n="stat_outstanding">Noch ausstehend</div><div class="val" id="statOutstanding">–</div><div class="sub" id="statOutstandingSub"></div></div>
+          <div class="stat"><div class="lbl" data-i18n="stat_pkg">Package-Einnahmen gesamt</div><div class="val" id="statPkg">–</div><div class="sub" id="statPkgSub"></div></div>
+          <div class="stat red"><div class="lbl" data-i18n="stat_withdraw">Absagen</div><div class="val" id="statWithdraw">–</div></div>
+          <div class="stat"><div class="lbl" data-i18n="stat_hotel">Mit Hotelbuchung</div><div class="val" id="statHotel">–</div></div>
+          <div class="stat green"><div class="lbl" data-i18n="stat_meal">Meal Packages</div><div class="val" id="statMeal">–</div><div class="sub" id="statMealSub"></div></div>
         </div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
-            <h3>Zimmerbelegung</h3>
-            <button class="btn" style="font-size:11px;padding:4px 8px" onclick="nav('settings')">Einstellungen</button>
+            <h3 data-i18n="dash_room_occupancy">Zimmerbelegung</h3>
+            <button class="btn" style="font-size:11px;padding:4px 8px" onclick="nav('settings')" data-i18n="nav_settings">Einstellungen</button>
           </div>
           <div class="card-body">
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="roomOccupancy">
-              <div class="loading">Lade…</div>
+              <div class="loading" data-i18n="loading">Lade…</div>
             </div>
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           <div class="card">
-            <div class="card-header"><h3>Anmeldungen nach Event</h3>
-              <button class="btn" style="font-size:11px;padding:4px 8px" onclick="nav('entry')">+ Neu</button>
+            <div class="card-header"><h3 data-i18n="dash_by_event">Anmeldungen nach Event</h3>
+              <button class="btn" style="font-size:11px;padding:4px 8px" onclick="nav('entry')" data-i18n="btn_new">+ Neu</button>
             </div>
-            <div class="card-body"><div class="age-grid" id="ageGrid"><div class="loading">Lade…</div></div>
+            <div class="card-body"><div class="age-grid" id="ageGrid"><div class="loading" data-i18n="loading">Lade…</div></div>
 
             </div>
           </div>
           <div class="card">
-            <div class="card-header"><h3>Akkreditierungen</h3></div>
-            <div class="card-body" id="accredGrid"><div class="loading">Lade…</div></div>
+            <div class="card-header"><h3 data-i18n="dash_accreditations">Akkreditierungen</h3></div>
+            <div class="card-body" id="accredGrid"><div class="loading" data-i18n="loading">Lade…</div></div>
           </div>
         </div>
         <div class="card" style="margin-top:16px">
-          <div class="card-header"><h3>Zuletzt erfasst</h3></div>
-          <div class="table-wrap"><table><thead><tr><th>Name</th><th>Land</th><th>Event</th><th>Package</th><th>Status</th><th>Erfasst</th></tr></thead>
-          <tbody id="recentTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody></table></div>
+          <div class="card-header"><h3 data-i18n="dash_recent">Zuletzt erfasst</h3></div>
+          <div class="table-wrap"><table><thead><tr><th data-i18n="th_name">Name</th><th data-i18n="th_country">Land</th><th data-i18n="th_event">Event</th><th data-i18n="th_package">Package</th><th data-i18n="th_status">Status</th><th data-i18n="th_created">Erfasst</th></tr></thead>
+          <tbody id="recentTable"><tr><td colspan="6" class="loading" data-i18n="loading">Lade…</td></tr></tbody></table></div>
         </div>
       </div>
 
@@ -560,6 +563,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <button class="entry-tab" onclick="switchEntryTab('hotel',this)">🏨 Hotel & Reise</button>
           <button class="entry-tab" onclick="switchEntryTab('payment',this)">💳 Zahlung</button>
           <button class="entry-tab" onclick="switchEntryTab('other',this)">⚙ Sonstiges</button>
+          <button class="entry-tab" onclick="switchEntryTab('nationalfed',this)">🏳 National Federation</button>
         </div>
 
         <div id="entryTab-personal" class="entry-tab-content active">
@@ -1082,6 +1086,13 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                     <div class="form-group"><label>Flug-Nr.</label><input type="text" id="f_flight_out" placeholder="z.B. LH5678" /></div>
                   </div>
                 </div>
+                <div class="form-group">
+                  <label>Abholung (Airport Drop-off) ab</label>
+                  <select id="f_airport_pickup_location">
+                    <option value="Hotel">🏨 Hotel</option>
+                    <option value="Anlage">🏸 Squash-Anlage</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -1182,6 +1193,44 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           </div>
         </div>
 
+        <div id="entryTab-nationalfed" class="entry-tab-content">
+<div class="card">
+          <div class="card-header"><h3>National Federation</h3></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group" style="grid-column:1/-1"><label>Nationaler Verband</label>
+                <input type="text" id="f_nf_federation" placeholder="z.B. Egyptian Squash Federation" />
+              </div>
+
+              <div class="form-group" style="grid-column:1/-1"><label style="color:var(--blue)">National Trainer</label></div>
+              <div class="form-group"><label>Name</label>
+                <input type="text" id="f_nf_trainer_name" placeholder="Name des National Trainers" />
+              </div>
+              <div class="form-group"><label>Telefon</label>
+                <input type="text" id="f_nf_trainer_phone" placeholder="Festnetz" />
+              </div>
+              <div class="form-group"><label>Mobil</label>
+                <input type="text" id="f_nf_trainer_mobile" placeholder="Mobilnummer" />
+              </div>
+              <div class="form-group"><label>E-Mail</label>
+                <input type="email" id="f_nf_trainer_email" placeholder="trainer@verband.com" />
+              </div>
+
+              <div class="form-group" style="grid-column:1/-1;margin-top:10px"><label style="color:var(--blue)">Office</label></div>
+              <div class="form-group"><label>Telefon</label>
+                <input type="text" id="f_nf_office_phone" placeholder="Festnetz" />
+              </div>
+              <div class="form-group"><label>Mobil</label>
+                <input type="text" id="f_nf_office_mobile" placeholder="Mobilnummer" />
+              </div>
+              <div class="form-group"><label>E-Mail</label>
+                <input type="email" id="f_nf_office_email" placeholder="office@verband.com" />
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
         <!-- SAVE BAR -->
         <div style="display:flex;gap:10px;justify-content:flex-end;padding:8px 0 20px 0">
           <button class="btn" onclick="nav('participants')">Abbrechen</button>
@@ -1245,6 +1294,30 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <tbody id="hotelTable"><tr><td colspan="15" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
+      </div>
+
+      <!-- SHUTTLE -->
+      <div class="page" id="page-shuttle">
+        <div class="page-header"><h2>Shuttle Anlage ↔ Hotel</h2>
+          <button class="btn" onclick="exportShuttlePDF()">PDF exportieren</button>
+          <button class="btn primary" onclick="openShuttleSlotModal()">+ Neue Abfahrt</button>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-body" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+            <div class="form-group" style="margin:0"><label style="font-size:12px">Datum</label>
+              <input type="date" id="shuttleFilterDate" onchange="loadShuttle()" style="margin-top:4px" />
+            </div>
+            <div class="form-group" style="margin:0"><label style="font-size:12px">Richtung</label>
+              <select id="shuttleFilterDirection" onchange="loadShuttle()" style="margin-top:4px">
+                <option value="">Alle</option>
+                <option value="Hotel→Anlage">Hotel → Anlage</option>
+                <option value="Anlage→Hotel">Anlage → Hotel</option>
+              </select>
+            </div>
+            <button class="btn" style="margin-top:16px;font-size:11px" onclick="document.getElementById('shuttleFilterDate').value='';document.getElementById('shuttleFilterDirection').value='';loadShuttle()">Filter zurücksetzen</button>
+          </div>
+        </div>
+        <div id="shuttleList"><div class="loading">Lade…</div></div>
       </div>
 
       <!-- ZAHLUNGEN -->
@@ -1369,6 +1442,22 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             </div>
           </div>
 
+          <!-- Airport Drop-off Blöcke -->
+          <div class="card" style="margin:0">
+            <div class="card-header"><div style="font-size:20px;margin-right:8px">🚐</div><div><div style="font-weight:600;font-size:13px">Airport Drop-off Blöcke</div><div style="font-size:11px;color:var(--text3)">Gruppiert nach Abholzeit (Vorlaufzeit einstellbar)</div></div></div>
+            <div class="card-body" style="display:flex;gap:8px">
+              <button class="btn primary" style="flex:1" onclick="exportAirportBlocksPDF()">🖨 Drucken / PDF</button>
+            </div>
+          </div>
+
+          <!-- Shuttle-Plan -->
+          <div class="card" style="margin:0">
+            <div class="card-header"><div style="font-size:20px;margin-right:8px">🚌</div><div><div style="font-weight:600;font-size:13px">Shuttle-Plan</div><div style="font-size:11px;color:var(--text3)">Anlage ↔ Hotel, alle Abfahrten</div></div></div>
+            <div class="card-body" style="display:flex;gap:8px">
+              <button class="btn primary" style="flex:1" onclick="exportShuttlePDF()">🖨 Drucken / PDF</button>
+            </div>
+          </div>
+
           <!-- Withdrawals -->
           <div class="card" style="margin:0">
             <div class="card-header"><div style="font-size:20px;margin-right:8px">❌</div><div><div style="font-weight:600;font-size:13px">Withdrawals</div><div style="font-size:11px;color:var(--text3)">Absagen & Rückzahlungen</div></div></div>
@@ -1446,8 +1535,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         <div class="tabs">
           <div class="tab active" onclick="switchAirportTab('arrival',this)">Ankunft (Pickup)</div>
           <div class="tab" onclick="switchAirportTab('departure',this)">Abreise (Drop-off)</div>
+          <div class="tab" onclick="switchAirportTab('blocks',this)">🚐 Drop-off Blöcke</div>
         </div>
-        <div class="card">
+        <div class="card" id="airportListCard">
           <div class="card-header"><h3 id="airportTabTitle">Ankunftsliste</h3>
             <button class="btn" style="font-size:11px;padding:4px 8px" onclick="exportAirportPDF(currentAirportTab)">PDF exportieren</button>
           </div>
@@ -1455,6 +1545,41 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <thead id="airportHead"></thead>
             <tbody id="airportTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
           </table></div>
+        </div>
+        <div id="airportBlocksCard" style="display:none">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-header"><h3 id="airportBlocksTitle">🚐 Drop-off Blöcke – Abholzeit = Abflugzeit − 3 Std.</h3>
+              <div style="display:flex;gap:8px;align-items:center">
+                <label style="font-size:12px;color:var(--text3)">Abholort</label>
+                <select id="blockPickupLocation" onchange="loadAirportBlocks()" style="font-size:12px;padding:4px 8px">
+                  <option value="">Alle</option>
+                  <option value="Hotel">🏨 Hotel</option>
+                  <option value="Anlage">🏸 Squash-Anlage</option>
+                </select>
+                <label style="font-size:12px;color:var(--text3)">Vorlaufzeit</label>
+                <select id="blockLeadHours" onchange="loadAirportBlocks()" style="font-size:12px;padding:4px 8px">
+                  <option value="1.5">1,5 Std.</option>
+                  <option value="2">2 Std.</option>
+                  <option value="2.5">2,5 Std.</option>
+                  <option value="3" selected>3 Std.</option>
+                  <option value="3.5">3,5 Std.</option>
+                  <option value="4">4 Std.</option>
+                  <option value="4.5">4,5 Std.</option>
+                  <option value="5">5 Std.</option>
+                </select>
+                <label style="font-size:12px;color:var(--text3)">Zeitfenster</label>
+                <select id="blockWindowMinutes" onchange="loadAirportBlocks()" style="font-size:12px;padding:4px 8px">
+                  <option value="15">± 15 Min.</option>
+                  <option value="30" selected>± 30 Min.</option>
+                  <option value="45">± 45 Min.</option>
+                  <option value="60">± 60 Min.</option>
+                </select>
+                <button class="btn" style="font-size:11px;padding:4px 8px" onclick="exportAirportBlocksPDF()">PDF exportieren</button>
+                <button class="btn" style="font-size:11px;padding:4px 8px" onclick="window.print()">🖨 Drucken</button>
+              </div>
+            </div>
+          </div>
+          <div id="airportBlocksList"></div>
         </div>
       </div>
 
@@ -2142,6 +2267,29 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           <div id="idDiffBox" style="display:none;color:var(--red);font-weight:600">⚠️ Differenz: <span id="idDiff"></span></div>
         </div>
 
+        <!-- SERIENDRUCK -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>🖨 Seriendruck</h3><span style="font-size:11px;color:var(--text3)">Filtern, in Blöcken drucken statt alles auf einmal an den Drucker zu senden</span></div>
+          <div class="card-body" style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+            <div class="form-group" style="margin:0"><label style="font-size:12px">Rolle</label>
+              <select id="idcardFilterRole" style="margin-top:4px"><option value="">Alle Rollen</option></select>
+            </div>
+            <div class="form-group" style="margin:0"><label style="font-size:12px">Altersklasse / Event</label>
+              <select id="idcardFilterAge" style="margin-top:4px"><option value="">Alle Altersklassen</option></select>
+            </div>
+            <div class="form-group" style="margin:0"><label style="font-size:12px">Blockgröße</label>
+              <select id="idcardBlockSize" style="margin-top:4px" onchange="_idcardBlockIndex=0;renderIdCardSeriendruckResult()">
+                <option value="10">10 Stück</option>
+                <option value="20">20 Stück</option>
+                <option value="50">50 Stück</option>
+                <option value="99999">Alle auf einmal</option>
+              </select>
+            </div>
+            <button class="btn primary" style="margin-top:16px" onclick="applyIdCardSeriendruck()">Anwenden</button>
+          </div>
+          <div id="idcardSeriendruckResult" style="display:none;padding:0 16px 16px;font-size:13px"></div>
+        </div>
+
         <!-- CATEGORIES -->
         <div id="idcardBlocks"></div>
       </div>
@@ -2256,6 +2404,7 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
       <button class="person-tab" onclick="switchPersonTab('docs',this)" style="font-size:11px;padding:6px 10px">Dokumente & Foto</button>
       <button class="person-tab" onclick="switchPersonTab('squash',this)" style="font-size:11px;padding:6px 10px">🏆 Ranking</button>
       <button class="person-tab" onclick="switchPersonTab('visa',this)" style="font-size:11px;padding:6px 10px">🛂 VISA</button>
+      <button class="person-tab" onclick="switchPersonTab('nationalfed',this)" style="font-size:11px;padding:6px 10px">🏳 National Federation</button>
       </div>
     </div><!-- end header -->
     <div style="flex:1;overflow-y:auto;padding:16px 24px">
@@ -2713,10 +2862,100 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           <input type="date" id="personVisaExpiryDate" />
         </div>
       </div>
+    </div>
+    </div><!-- /personTab-visa -->
+
+    <div id="personTab-nationalfed" class="person-tab-content" style="display:none;background:var(--bg);min-height:200px">
+      <div style="padding:16px 0">
+      <div class="form-grid two" style="gap:12px">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nationaler Verband</label>
+          <input type="text" id="personNfFederation" placeholder="z.B. Egyptian Squash Federation" />
+        </div>
+        <div class="form-group" style="grid-column:1/-1"><label style="color:var(--blue);font-weight:600">National Trainer</label></div>
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="personNfTrainerName" placeholder="Name des National Trainers" />
+        </div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="text" id="personNfTrainerPhone" placeholder="Festnetz" />
+        </div>
+        <div class="form-group">
+          <label>Mobil</label>
+          <input type="text" id="personNfTrainerMobile" placeholder="Mobilnummer" />
+        </div>
+        <div class="form-group">
+          <label>E-Mail</label>
+          <input type="email" id="personNfTrainerEmail" placeholder="trainer@verband.com" />
+        </div>
+        <div class="form-group" style="grid-column:1/-1;margin-top:6px"><label style="color:var(--blue);font-weight:600">Office</label></div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="text" id="personNfOfficePhone" placeholder="Festnetz" />
+        </div>
+        <div class="form-group">
+          <label>Mobil</label>
+          <input type="text" id="personNfOfficeMobile" placeholder="Mobilnummer" />
+        </div>
+        <div class="form-group">
+          <label>E-Mail</label>
+          <input type="email" id="personNfOfficeEmail" placeholder="office@verband.com" />
+        </div>
+      </div>
     </div></div><!-- end scrollable content -->
     <div style="padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;background:var(--bg)">
       <button class="btn" onclick="closeModal('personModal')">Abbrechen</button>
       <button class="btn primary" onclick="savePerson()">In Datenbank speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHUTTLE SLOT MODAL -->
+<div class="modal-overlay" id="shuttleSlotModal">
+  <div class="modal" style="width:480px">
+    <button class="modal-close" onclick="closeModal('shuttleSlotModal')">×</button>
+    <h2 id="shuttleSlotModalTitle" style="margin-bottom:14px">Neue Abfahrt</h2>
+    <input type="hidden" id="shuttleSlotEditId" />
+    <div class="form-grid" style="gap:12px">
+      <div class="form-group"><label>Datum *</label><input type="date" id="shuttleDate" /></div>
+      <div class="form-group"><label>Uhrzeit *</label><input type="time" id="shuttleTime" /></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Richtung *</label>
+        <select id="shuttleDirection">
+          <option value="Hotel→Anlage">Hotel → Anlage</option>
+          <option value="Anlage→Hotel">Anlage → Hotel</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Hotel *</label>
+        <select id="shuttleHotel"><option value="">– Hotel wählen –</option></select>
+      </div>
+      <div class="form-group"><label>Kapazität (Personen)</label><input type="number" id="shuttleCapacity" value="8" min="1" /></div>
+      <div class="form-group"><label>Fahrzeug / Fahrer</label><input type="text" id="shuttleVehicle" placeholder="z.B. Bus 1 / Herr Müller" /></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn" onclick="closeModal('shuttleSlotModal')">Abbrechen</button>
+      <button class="btn primary" onclick="saveShuttleSlot()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHUTTLE ASSIGN MODAL -->
+<div class="modal-overlay" id="shuttleAssignModal">
+  <div class="modal" style="width:560px;max-height:80vh;display:flex;flex-direction:column">
+    <button class="modal-close" onclick="closeModal('shuttleAssignModal')">×</button>
+    <h2 style="margin-bottom:4px">Teilnehmer zuweisen</h2>
+    <div id="shuttleAssignSubtitle" style="font-size:12px;color:var(--text3);margin-bottom:14px"></div>
+    <input type="hidden" id="shuttleAssignSlotId" />
+    <div style="margin-bottom:10px">
+      <input type="text" id="shuttleAssignSearch" placeholder="Suche Name…" oninput="renderShuttleAssignList()" style="width:100%" />
+    </div>
+    <div id="shuttleAssignList" style="overflow-y:auto;flex:1;border:1px solid var(--border);border-radius:var(--radius);padding:8px"></div>
+    <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:14px">
+      <span id="shuttleAssignCount" style="font-size:12px;color:var(--text3)"></span>
+      <div style="display:flex;gap:10px">
+        <button class="btn" onclick="closeModal('shuttleAssignModal')">Abbrechen</button>
+        <button class="btn primary" onclick="saveShuttleAssignments()">Speichern</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3347,6 +3586,7 @@ async function doLogout() {
 }
 
 async function initApp() {
+  applyTranslations();
   // 1. Load event ID first - critical for all queries
   await loadActiveEvent();
   // 2. Load dashboard immediately - user sees numbers right away
@@ -4322,8 +4562,10 @@ function nav(page) {
     if (!packagesData || !packagesData.length) { loadPackagesData().then(function(){ populatePackageSelect(); }); } }
   else if (page === 'packages') loadPackages();
   else if (page === 'hotel') { loadHotel(); populateHotelDropdowns(); }
+  else if (page === 'shuttle') loadShuttle();
   else if (page === 'payments') loadPayments();
   else if (page === 'withdrawals') loadWithdrawals();
+  else if (page === 'airport') loadAirport();
   else if (page === 'marketing') loadMarketing();
   else if (page === 'idcard') { loadIdCards(); }
   else if (page === 'waitlist') loadWaitlist();
@@ -4376,7 +4618,8 @@ async function loadDashboard() {
   // Count players (paying roles) vs total
   var playerCount = active.filter(function(p){ return p.role === 'Player'; }).length;
   var nonPlayerCount = active.length - playerCount;
-  document.getElementById('statTotal').textContent = active.length;
+  var totalEl = document.getElementById('statTotal');
+  if (totalEl) totalEl.textContent = active.length;
   var subEl = document.getElementById('statTotalSub');
   if (subEl) subEl.textContent = playerCount + ' Player · ' + nonPlayerCount + ' Coaches/Officials';
   document.getElementById('statReceived').textContent = fmtK(totalReceived);
@@ -4449,19 +4692,20 @@ async function loadDashboard() {
   var roleColors = ['var(--blue)','var(--green)','#EF9F27','#7F77DD','#D85A30','#888780','var(--blue-text)','#33aa66'];
   var roleList = personRolesCache && personRolesCache.length ? personRolesCache : ['Player','Coach','Parent','Referee','Official','ESF Official'];
   var accHtml = roleList.map(function(r, i) {
-    var cnt = all.filter(function(p){ return p.role === r; }).length;
+    var cnt = active.filter(function(p){ return p.role === r; }).length;
     if (cnt === 0) return '';
     var color = roleColors[i % roleColors.length];
     return '<div class="role-row"><span class="dot" style="background:'+color+'"></span><span class="rname">'+r+'</span><strong>'+cnt+'</strong></div>';
   }).join('');
   // Add any roles not in roleList
   var extraRoles = [];
-  all.forEach(function(p){ if(p.role && roleList.indexOf(p.role)<0 && extraRoles.indexOf(p.role)<0) extraRoles.push(p.role); });
+  active.forEach(function(p){ if(p.role && roleList.indexOf(p.role)<0 && extraRoles.indexOf(p.role)<0) extraRoles.push(p.role); });
   accHtml += extraRoles.map(function(r){
-    var cnt = all.filter(function(p){ return p.role === r; }).length;
+    var cnt = active.filter(function(p){ return p.role === r; }).length;
     return '<div class="role-row"><span class="dot" style="background:var(--text3)"></span><span class="rname">'+r+'</span><strong>'+cnt+'</strong></div>';
   }).join('');
-  accHtml += '<div class="role-row"><span class="dot" style="background:var(--red)"></span><span class="rname">Absagen</span><strong style="color:var(--red)">'+withdrawn.length+'</strong></div>';
+  accHtml += '<div class="role-row"><span class="dot" style="background:var(--red)"></span><span class="rname">'+t('stat_withdraw')+'</span><strong style="color:var(--red)">'+withdrawn.length+'</strong></div>';
+  accHtml += '<div class="role-row" style="border-top:2px solid var(--border);margin-top:6px;padding-top:10px;font-weight:700"><span class="rname">'+t('dash_total_active')+'</span><strong>'+active.length+'</strong></div>';
   var accEl = document.getElementById('accredGrid'); if (accEl) accEl.innerHTML = accHtml || '<div class="empty">Keine Einträge</div>';
 
   // Recent
@@ -4772,7 +5016,7 @@ async function editEntry(id) {
   if (!p) return;
   document.getElementById('editingId').value = id;
   document.getElementById('entryFormTitle').textContent = `Bearbeiten: ${p.lastname}, ${p.firstname}`;
-  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount'};
+  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email'};
   Object.entries(map).forEach(([k,v]) => {
     const el = document.getElementById('f_'+k);
     if (!el) return;
@@ -4833,7 +5077,7 @@ async function editEntry(id) {
     }
   });
   ['arrival_time','departure_time'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
-  ['gender','role','events','shirt','payment_status','visa','mahnung','meal_plus','airport_plus','ams_bus','tp_check','room_type'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
+  ['gender','role','events','shirt','payment_status','visa','mahnung','meal_plus','airport_plus','ams_bus','tp_check','room_type','airport_pickup_location'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
   // Normalize gender if needed
   var gEl = document.getElementById('f_gender');
   if (gEl && p.gender) {
@@ -4884,15 +5128,17 @@ async function editEntry(id) {
     const pkgSel = document.getElementById('f_package');
     if (pkgSel && p.package) {
       pkgSel.value = p.package;
-      // If value wasn't set (option not found), try after short delay
-      if (!pkgSel.value) {
-        setTimeout(function() {
-          pkgSel.value = p.package;
-          updatePackagePrice();
-        }, 300);
-      } else {
-        updatePackagePrice();
+      if (pkgSel.value !== p.package) {
+        // Der gespeicherte Package-Code existiert nicht (mehr) in der aktuellen
+        // Package-Liste (z.B. umbenannt/gelöscht). Statt die Auswahl stillschweigend
+        // zu verlieren, fügen wir ihn als sichtbare Option hinzu und wählen ihn aus.
+        var missingOpt = document.createElement('option');
+        missingOpt.value = p.package;
+        missingOpt.textContent = '⚠ ' + p.package + ' (nicht mehr in Package-Liste)';
+        pkgSel.appendChild(missingOpt);
+        pkgSel.value = p.package;
       }
+      updatePackagePrice();
     }
   } catch (e) {
     console.error('Package laden fehlgeschlagen:', e);
@@ -4987,6 +5233,7 @@ async function saveEntry() {
     airport_plus: v('airport_plus'),
     airport_minus: ['Ja – Abflug','Ja – Beide'].includes(v('airport_plus')) ? 'Ja' : 'Nein',
     ams_bus: v('ams_bus'),
+    airport_pickup_location: v('airport_pickup_location') || 'Hotel',
     travel_amount: document.getElementById('f_travel_amount')?.checked ? 1 : 0,
     arrival_date: v('arrival_date')||null, arrival_time: v('arrival_time')||null, flight_in: v('flight_in'),
     departure_date: v('departure_date')||null, departure_time: v('departure_time')||null, flight_out: v('flight_out'),
@@ -4996,6 +5243,9 @@ async function saveEntry() {
     withdraw_date: v('withdraw_date')||null,
     withdraw_refund: parseFloat(document.getElementById('f_withdraw_refund')?.value)||0,
     withdraw_refund_due: parseFloat(document.getElementById('f_withdraw_refund_due')?.value)||0,
+    nf_federation: v('nf_federation'),
+    nf_trainer_name: v('nf_trainer_name'), nf_trainer_phone: v('nf_trainer_phone'), nf_trainer_mobile: v('nf_trainer_mobile'), nf_trainer_email: v('nf_trainer_email'),
+    nf_office_phone: v('nf_office_phone'), nf_office_mobile: v('nf_office_mobile'), nf_office_email: v('nf_office_email'),
   };
 
   let error;
@@ -5150,6 +5400,212 @@ function sortHotel(field) {
   var active = document.getElementById('hth_' + field);
   if (active) active.classList.add('sort-' + hotelSortDir);
   loadHotel();
+}
+
+// ================= SHUTTLE (Anlage <-> Hotel) =================
+async function loadShuttle() {
+  const listEl = document.getElementById('shuttleList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="loading">Lade…</div>';
+  const dateFilter = document.getElementById('shuttleFilterDate').value;
+  const dirFilter = document.getElementById('shuttleFilterDirection').value;
+  let q = db.from('shuttle_slots').select('*').order('date', {ascending:true}).order('time', {ascending:true});
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  if (dateFilter) q = q.eq('date', dateFilter);
+  if (dirFilter) q = q.eq('direction', dirFilter);
+  const { data: slots, error } = await q;
+  if (error) { listEl.innerHTML = '<div class="card"><div class="card-body empty" style="color:var(--red)">Fehler: ' + error.message + ' (Tabellen shuttle_slots/shuttle_bookings evtl. noch nicht angelegt – siehe Hinweis unten)</div></div>'; return; }
+  if (!slots || !slots.length) { listEl.innerHTML = '<div class="card"><div class="card-body empty">Noch keine Abfahrten angelegt. Klicke oben auf „+ Neue Abfahrt".</div></div>'; return; }
+
+  const slotIds = slots.map(function(s){ return s.id; });
+  const { data: bookings } = await db.from('shuttle_bookings').select('*').in('slot_id', slotIds);
+  const partIds = Array.from(new Set((bookings||[]).map(function(b){ return b.participant_id; })));
+  let partsById = {};
+  if (partIds.length) {
+    const { data: parts } = await db.from('participants').select('id,lastname,firstname,hotel,mobile,room_number').in('id', partIds);
+    (parts||[]).forEach(function(p){ partsById[p.id] = p; });
+  }
+  const bookingsBySlot = {};
+  (bookings||[]).forEach(function(b){ (bookingsBySlot[b.slot_id] = bookingsBySlot[b.slot_id] || []).push(b); });
+
+  listEl.innerHTML = slots.map(function(slot) {
+    const slotBookings = bookingsBySlot[slot.id] || [];
+    const count = slotBookings.length;
+    const overCapacity = slot.capacity && count > slot.capacity;
+    const names = slotBookings.map(function(b) {
+      var p = partsById[b.participant_id];
+      return p ? (p.lastname + ', ' + p.firstname + (p.room_number ? ' (' + p.room_number + ')' : '')) : '–';
+    });
+    return '<div class="card" style="margin-bottom:12px">'
+      + '<div class="card-header">'
+        + '<h3>🚐 ' + fmtDate(slot.date) + ' · ' + (slot.time||'') + ' Uhr · ' + slot.direction + ' · ' + slot.hotel + '</h3>'
+        + '<div style="display:flex;gap:8px;align-items:center">'
+          + '<span class="status ' + (overCapacity ? 'cancel' : 'paid') + '">' + count + (slot.capacity ? ('/' + slot.capacity) : '') + ' Personen</span>'
+          + '<button class="btn" style="font-size:11px;padding:4px 8px" onclick="openShuttleAssignModal(\'' + slot.id + '\')">👥 Zuweisen</button>'
+          + '<button class="btn" style="font-size:11px;padding:4px 8px" onclick="openShuttleSlotModal(\'' + slot.id + '\')">Bearbeiten</button>'
+          + '<button class="btn danger" style="font-size:11px;padding:4px 8px" onclick="deleteShuttleSlot(\'' + slot.id + '\')">Löschen</button>'
+        + '</div>'
+      + '</div>'
+      + '<div class="card-body" style="font-size:13px">'
+        + (slot.vehicle_label ? '<div style="color:var(--text3);margin-bottom:6px">Fahrzeug/Fahrer: ' + slot.vehicle_label + '</div>' : '')
+        + (names.length ? names.join(' · ') : '<span style="color:var(--text3)">Noch niemand zugewiesen</span>')
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+async function exportShuttlePDF() {
+  const dateFilter = document.getElementById('shuttleFilterDate').value;
+  const dirFilter = document.getElementById('shuttleFilterDirection').value;
+  let q = db.from('shuttle_slots').select('*').order('date', {ascending:true}).order('time', {ascending:true});
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  if (dateFilter) q = q.eq('date', dateFilter);
+  if (dirFilter) q = q.eq('direction', dirFilter);
+  const { data: slots, error } = await q;
+  if (error) { toast('Fehler: ' + error.message); return; }
+  if (!slots || !slots.length) { toast('Noch keine Abfahrten angelegt'); return; }
+
+  const slotIds = slots.map(function(s){ return s.id; });
+  const { data: bookings } = await db.from('shuttle_bookings').select('*').in('slot_id', slotIds);
+  const partIds = Array.from(new Set((bookings||[]).map(function(b){ return b.participant_id; })));
+  let partsById = {};
+  if (partIds.length) {
+    const { data: parts } = await db.from('participants').select('id,lastname,firstname,hotel,mobile,room_number').in('id', partIds);
+    (parts||[]).forEach(function(p){ partsById[p.id] = p; });
+  }
+  const bookingsBySlot = {};
+  (bookings||[]).forEach(function(b){ (bookingsBySlot[b.slot_id] = bookingsBySlot[b.slot_id] || []).push(b); });
+
+  const groups = slots.map(function(slot) {
+    const slotBookings = bookingsBySlot[slot.id] || [];
+    const overCapacity = slot.capacity && slotBookings.length > slot.capacity;
+    return {
+      heading: '🚐 ' + fmtDate(slot.date) + ' · ' + (slot.time||'') + ' Uhr · ' + slot.direction + ' · ' + slot.hotel,
+      meta: slotBookings.length + (slot.capacity ? ('/' + slot.capacity) : '') + ' Personen'
+        + (overCapacity ? ' · ⚠ über Kapazität' : '')
+        + (slot.vehicle_label ? ' · Fahrzeug/Fahrer: ' + slot.vehicle_label : ''),
+      headers: ['Name','Zimmer','Mobil'],
+      rows: slotBookings.length ? slotBookings.map(function(b) {
+        var p = partsById[b.participant_id];
+        return p ? [p.lastname + ', ' + p.firstname, p.room_number||'–', p.mobile||'–'] : ['–','–','–'];
+      }) : [['– Noch niemand zugewiesen –','','']]
+    };
+  });
+  printGroupedTable('Shuttle-Plan Anlage ↔ Hotel – MG Sports Event 2026', groups);
+}
+
+async function openShuttleSlotModal(id) {
+  await loadHotelsCache();
+  var sel = document.getElementById('shuttleHotel');
+  sel.innerHTML = '<option value="">– Hotel wählen –</option>' + hotelsCache.map(function(h){ return '<option value="' + h.name + '">' + h.name + '</option>'; }).join('');
+  document.getElementById('shuttleSlotEditId').value = id || '';
+  document.getElementById('shuttleSlotModalTitle').textContent = id ? 'Abfahrt bearbeiten' : 'Neue Abfahrt';
+  if (id) {
+    const { data: slot } = await db.from('shuttle_slots').select('*').eq('id', id).single();
+    if (slot) {
+      document.getElementById('shuttleDate').value = slot.date || '';
+      document.getElementById('shuttleTime').value = slot.time || '';
+      document.getElementById('shuttleDirection').value = slot.direction || 'Hotel→Anlage';
+      document.getElementById('shuttleHotel').value = slot.hotel || '';
+      document.getElementById('shuttleCapacity').value = slot.capacity || 8;
+      document.getElementById('shuttleVehicle').value = slot.vehicle_label || '';
+    }
+  } else {
+    document.getElementById('shuttleDate').value = document.getElementById('shuttleFilterDate').value || '';
+    document.getElementById('shuttleTime').value = '';
+    document.getElementById('shuttleDirection').value = 'Hotel→Anlage';
+    document.getElementById('shuttleHotel').value = '';
+    document.getElementById('shuttleCapacity').value = 8;
+    document.getElementById('shuttleVehicle').value = '';
+  }
+  document.getElementById('shuttleSlotModal').classList.add('open');
+}
+
+async function saveShuttleSlot() {
+  var id = document.getElementById('shuttleSlotEditId').value;
+  var row = {
+    date: document.getElementById('shuttleDate').value || null,
+    time: document.getElementById('shuttleTime').value || null,
+    direction: document.getElementById('shuttleDirection').value,
+    hotel: document.getElementById('shuttleHotel').value,
+    capacity: parseInt(document.getElementById('shuttleCapacity').value) || null,
+    vehicle_label: document.getElementById('shuttleVehicle').value.trim() || null,
+  };
+  if (!row.date || !row.time || !row.hotel) { toast('Bitte Datum, Uhrzeit und Hotel angeben'); return; }
+  if (currentEventId) row.event_id = currentEventId;
+  var r = id ? await db.from('shuttle_slots').update(row).eq('id', id) : await db.from('shuttle_slots').insert(row);
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  closeModal('shuttleSlotModal');
+  toast('✅ Abfahrt gespeichert');
+  loadShuttle();
+}
+
+async function deleteShuttleSlot(id) {
+  if (!confirm('Diese Abfahrt inkl. aller Zuweisungen wirklich löschen?')) return;
+  await db.from('shuttle_bookings').delete().eq('slot_id', id);
+  await db.from('shuttle_slots').delete().eq('id', id);
+  toast('Abfahrt gelöscht');
+  loadShuttle();
+}
+
+var _shuttleAssignParticipants = [];
+var _shuttleAssignBookedIds = new Set();
+
+async function openShuttleAssignModal(slotId) {
+  document.getElementById('shuttleAssignSlotId').value = slotId;
+  document.getElementById('shuttleAssignSearch').value = '';
+  const { data: slot } = await db.from('shuttle_slots').select('*').eq('id', slotId).single();
+  if (!slot) return;
+  document.getElementById('shuttleAssignSubtitle').textContent = fmtDate(slot.date) + ' · ' + (slot.time||'') + ' Uhr · ' + slot.direction + ' · Hotel: ' + slot.hotel;
+  let pq = db.from('participants').select('id,lastname,firstname,hotel,mobile,room_number').eq('hotel', slot.hotel).neq('withdraw', 'Ja');
+  if (currentEventId) pq = pq.eq('event_id', currentEventId);
+  const { data: parts } = await pq;
+  _shuttleAssignParticipants = (parts || []).sort(function(a, b) { return (a.lastname||'').localeCompare(b.lastname||''); });
+  const { data: bookings } = await db.from('shuttle_bookings').select('participant_id').eq('slot_id', slotId);
+  _shuttleAssignBookedIds = new Set((bookings || []).map(function(b) { return b.participant_id; }));
+  renderShuttleAssignList();
+  document.getElementById('shuttleAssignModal').classList.add('open');
+}
+
+function renderShuttleAssignList() {
+  var search = document.getElementById('shuttleAssignSearch').value.toLowerCase();
+  var listEl = document.getElementById('shuttleAssignList');
+  var filtered = _shuttleAssignParticipants.filter(function(p) {
+    if (!search) return true;
+    return (p.lastname + ' ' + p.firstname).toLowerCase().includes(search);
+  });
+  listEl.innerHTML = filtered.length ? filtered.map(function(p) {
+    var checked = _shuttleAssignBookedIds.has(p.id) ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px solid var(--border2);cursor:pointer">'
+      + '<input type="checkbox" data-pid="' + p.id + '" ' + checked + ' style="width:16px;height:16px;cursor:pointer" onchange="toggleShuttleAssign(this)" />'
+      + '<span style="flex:1">' + p.lastname + ', ' + p.firstname + '</span>'
+      + '<span style="font-size:11px;color:var(--text3)">' + (p.room_number || '') + '</span>'
+    + '</label>';
+  }).join('') : '<div class="empty">Keine Teilnehmer in diesem Hotel gefunden</div>';
+  updateShuttleAssignCount();
+}
+
+function toggleShuttleAssign(cb) {
+  if (cb.checked) _shuttleAssignBookedIds.add(cb.dataset.pid);
+  else _shuttleAssignBookedIds.delete(cb.dataset.pid);
+  updateShuttleAssignCount();
+}
+
+function updateShuttleAssignCount() {
+  document.getElementById('shuttleAssignCount').textContent = _shuttleAssignBookedIds.size + ' ausgewählt';
+}
+
+async function saveShuttleAssignments() {
+  var slotId = document.getElementById('shuttleAssignSlotId').value;
+  await db.from('shuttle_bookings').delete().eq('slot_id', slotId);
+  var rows = Array.from(_shuttleAssignBookedIds).map(function(pid) { return { slot_id: slotId, participant_id: pid }; });
+  if (rows.length) {
+    var r = await db.from('shuttle_bookings').insert(rows);
+    if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  }
+  closeModal('shuttleAssignModal');
+  toast('✅ Zuweisung gespeichert');
+  loadShuttle();
 }
 
 async function loadHotel() {
@@ -5335,9 +5791,134 @@ function switchAirportTab(tab, el) {
   document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   currentAirportTab = tab;
+  var listCard = document.getElementById('airportListCard');
+  var blocksCard = document.getElementById('airportBlocksCard');
+  if (tab === 'blocks') {
+    if (listCard) listCard.style.display = 'none';
+    if (blocksCard) blocksCard.style.display = 'block';
+    loadAirportBlocks();
+    return;
+  }
+  if (listCard) listCard.style.display = 'block';
+  if (blocksCard) blocksCard.style.display = 'none';
   document.getElementById('airportTabTitle').textContent = tab === 'arrival' ? 'Ankunftsliste' : 'Abreiselist';
   loadAirport();
 }
+
+// Berechnet Abhol-Zeitpunkt = Abflugdatum+zeit minus 3 Stunden, und gruppiert Teilnehmer
+// in Blöcke, deren Abholzeit innerhalb des gewählten Zeitfensters um den Blockanfang liegt.
+async function computeAirportBlocks() {
+  let q = db.from('participants').select('*').not('departure_date', 'is', null).neq('withdraw', 'Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  const { data } = await q;
+  const windowMin = parseInt(document.getElementById('blockWindowMinutes').value) || 30;
+  const leadHoursEl = document.getElementById('blockLeadHours');
+  const leadHours = leadHoursEl ? (parseFloat(leadHoursEl.value) || 3) : 3;
+  const leadMs = leadHours * 60 * 60 * 1000;
+  const locFilterEl = document.getElementById('blockPickupLocation');
+  const locFilter = locFilterEl ? locFilterEl.value : '';
+
+  const withPickup = (data || [])
+    .filter(function(p) { return p.departure_date; })
+    .map(function(p) {
+      var depDateTime = new Date(p.departure_date + 'T' + (p.departure_time || '00:00'));
+      var pickup = new Date(depDateTime.getTime() - leadMs);
+      var loc = p.airport_pickup_location || 'Hotel';
+      return Object.assign({}, p, { _pickup: pickup, _depDateTime: depDateTime, _pickupLocation: loc });
+    })
+    .filter(function(p) { return !isNaN(p._pickup.getTime()); })
+    .filter(function(p) { return !locFilter || p._pickupLocation === locFilter; })
+    // Zuerst nach Abholort sortieren, dann nach Zeit - so werden Blöcke pro Abholort gebildet
+    .sort(function(a, b) {
+      if (a._pickupLocation !== b._pickupLocation) return a._pickupLocation.localeCompare(b._pickupLocation);
+      return a._pickup - b._pickup;
+    });
+
+  // Anchor-basierte Gruppierung: neues Element kommt in den aktuellen Block,
+  // solange es denselben Abholort UND innerhalb des Zeitfensters um die erste Abholzeit des Blocks liegt.
+  const blocks = [];
+  withPickup.forEach(function(p) {
+    var lastBlock = blocks[blocks.length - 1];
+    if (lastBlock && lastBlock.location === p._pickupLocation && (p._pickup - lastBlock.anchor) <= windowMin * 60 * 1000) {
+      lastBlock.people.push(p);
+    } else {
+      blocks.push({ anchor: p._pickup, location: p._pickupLocation, people: [p] });
+    }
+  });
+  // Für die Anzeige chronologisch (über alle Abholorte hinweg) sortieren
+  blocks.sort(function(a, b) { return a.anchor - b.anchor; });
+  return blocks;
+}
+
+async function loadAirportBlocks() {
+  const listEl = document.getElementById('airportBlocksList');
+  listEl.innerHTML = '<div class="loading">Lade…</div>';
+  const leadHoursEl = document.getElementById('blockLeadHours');
+  const leadHours = leadHoursEl ? (parseFloat(leadHoursEl.value) || 3) : 3;
+  const titleEl = document.getElementById('airportBlocksTitle');
+  if (titleEl) titleEl.textContent = '🚐 Drop-off Blöcke – Abholzeit = Abflugzeit − ' + leadHours.toString().replace('.', ',') + ' Std.';
+  const blocks = await computeAirportBlocks();
+
+  if (!blocks.length) {
+    listEl.innerHTML = '<div class="card"><div class="card-body empty">Keine Teilnehmer mit hinterlegtem Abreisedatum/-zeit gefunden.</div></div>';
+    return;
+  }
+
+  listEl.innerHTML = blocks.map(function(block, idx) {
+    var hotels = Array.from(new Set(block.people.map(function(p) { return p.hotel || '–'; })));
+    var count = block.people.length;
+    var defaultCapacity = 8;
+    var overCapacity = count > defaultCapacity;
+    var locLabel = block.location === 'Anlage' ? '🏸 Squash-Anlage' : '🏨 Hotel';
+    var rows = block.people.map(function(p) {
+      return '<tr>'
+        + '<td>' + p.lastname + ', ' + p.firstname + '</td>'
+        + '<td>' + (p.country||'–') + '</td>'
+        + '<td>' + (p.hotel||'–') + (p.room_number ? ' (' + p.room_number + ')' : '') + '</td>'
+        + '<td>' + (p.flight_out||'–') + '</td>'
+        + '<td>' + fmtDate(p.departure_date) + ' ' + (p.departure_time||'') + '</td>'
+        + '<td>' + (p.mobile||'–') + '</td>'
+        + '</tr>';
+    }).join('');
+    return '<div class="card" style="margin-bottom:14px">'
+      + '<div class="card-header">'
+        + '<h3>🚐 Block ' + (idx+1) + ' – Abholung ' + block.anchor.toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + ' Uhr ab ' + locLabel + '</h3>'
+        + '<div style="display:flex;gap:10px;align-items:center;font-size:12px">'
+          + (block.location !== 'Anlage' ? '<span style="color:var(--text3)">Hotels: ' + hotels.join(', ') + '</span>' : '')
+          + '<span class="status ' + (overCapacity ? 'cancel' : 'paid') + '">' + count + ' Personen</span>'
+          + (overCapacity ? '<span style="color:var(--red);font-weight:600">⚠ über Standardkapazität (' + defaultCapacity + ') – ggf. 2. Fahrzeug</span>' : '')
+        + '</div>'
+      + '</div>'
+      + '<div class="table-wrap"><table>'
+        + '<thead><tr><th>Name</th><th>Land</th><th>Hotel (Zimmer)</th><th>Flug-Nr.</th><th>Abflug</th><th>Mobil</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody>'
+      + '</table></div>'
+    + '</div>';
+  }).join('');
+}
+
+async function exportAirportBlocksPDF() {
+  const blocks = await computeAirportBlocks();
+  if (!blocks.length) { toast('Keine Teilnehmer mit hinterlegtem Abreisedatum/-zeit gefunden'); return; }
+  const leadHoursEl = document.getElementById('blockLeadHours');
+  const leadHours = leadHoursEl ? (parseFloat(leadHoursEl.value) || 3) : 3;
+  const defaultCapacity = 8;
+  const groups = blocks.map(function(block, idx) {
+    var locLabel = block.location === 'Anlage' ? '🏸 Squash-Anlage' : '🏨 Hotel';
+    var hotels = Array.from(new Set(block.people.map(function(p) { return p.hotel || '–'; })));
+    var overCapacity = block.people.length > defaultCapacity;
+    return {
+      heading: '🚐 Block ' + (idx+1) + ' – Abholung ' + block.anchor.toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + ' Uhr ab ' + locLabel,
+      meta: (block.location !== 'Anlage' ? 'Hotels: ' + hotels.join(', ') + ' · ' : '') + block.people.length + ' Personen' + (overCapacity ? ' · ⚠ über Standardkapazität (' + defaultCapacity + ') – ggf. 2. Fahrzeug' : ''),
+      headers: ['Name','Land','Hotel (Zimmer)','Flug-Nr.','Abflug','Mobil'],
+      rows: block.people.map(function(p) {
+        return [p.lastname + ', ' + p.firstname, p.country||'–', (p.hotel||'–') + (p.room_number ? ' (' + p.room_number + ')' : ''), p.flight_out||'–', fmtDate(p.departure_date) + ' ' + (p.departure_time||''), p.mobile||'–'];
+      })
+    };
+  });
+  printGroupedTable('Airport Drop-off Blöcke (Vorlauf ' + leadHours.toString().replace('.', ',') + ' Std.) – MG Sports Event 2026', groups);
+}
+
 
 async function loadAirport() {
   const isArrival = currentAirportTab === 'arrival';
@@ -5715,6 +6296,49 @@ async function printTable(title, headers, rows) {
   setTimeout(function() { w.print(); }, 600);
 }
 
+// Wie printTable(), aber für in Blöcke/Gruppen gegliederte Inhalte (z.B. Airport-Blöcke, Shuttle-Fahrten).
+// groups: Array von { heading: string, meta: string, headers: string[], rows: string[][] }
+async function printGroupedTable(title, groups) {
+  var logoSrc = currentEventLogoForPrint || '';
+  if (!logoSrc) {
+    var si = document.getElementById('sidebarEventLogoImg');
+    if (si && si.src && si.src.startsWith('data:')) logoSrc = si.src;
+  }
+  if (!logoSrc && currentEventId) {
+    var evR = await db.from('events').select('logo_url').eq('id', currentEventId).single();
+    if (evR.data && evR.data.logo_url) {
+      logoSrc = 'data:image/png;base64,' + evR.data.logo_url;
+      currentEventLogoForPrint = logoSrc;
+    }
+  }
+  var evtName = currentEventName || '';
+  var now = new Date();
+  var dateStr = now.toLocaleDateString('de-DE') + ' ' + now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  var logoTag = logoSrc ? '<img src="' + logoSrc + '" style="max-height:56px;max-width:110px;object-fit:contain;display:block">' : '';
+  var evtTag = evtName ? '<div style="font-size:12px;color:#444;margin-top:2px">' + evtName + '</div>' : '';
+  var totalRows = groups.reduce(function(s, g) { return s + g.rows.length; }, 0);
+  var groupsHtml = groups.map(function(g) {
+    var thCells = g.headers.map(function(h) { return '<th style="background:#185FA5;color:#fff;padding:6px 8px;text-align:left;font-size:10px;white-space:nowrap">' + h + '</th>'; }).join('');
+    var trRows = g.rows.map(function(r) { return '<tr>' + r.map(function(c) { return '<td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px">' + (c||'-') + '</td>'; }).join('') + '</tr>'; }).join('');
+    return '<div style="page-break-inside:avoid;margin-top:18px">'
+      + '<div style="font-size:14px;font-weight:bold;color:#185FA5;border-bottom:1px solid #185FA5;padding-bottom:4px;margin-bottom:2px">' + g.heading + '</div>'
+      + (g.meta ? '<div style="font-size:11px;color:#666;margin-bottom:6px">' + g.meta + '</div>' : '')
+      + '<table><thead><tr>' + thCells + '</tr></thead><tbody>' + trRows + '</tbody></table>'
+    + '</div>';
+  }).join('');
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + title + '</title>'
+    + '<style>body{font-family:Arial,sans-serif;margin:0;padding:16px}table{width:100%;border-collapse:collapse;margin-top:4px}tr:nth-child(even) td{background:#f7f7f7}.hdr{display:flex;align-items:flex-start;border-bottom:2px solid #185FA5;padding-bottom:10px;margin-bottom:4px}.hdr-left{display:flex;align-items:center;gap:12px}.hdr-title{font-size:17px;font-weight:bold;color:#185FA5}.hdr-meta{font-size:10px;color:#888;margin-top:3px}.ftr{text-align:right;font-size:9px;color:#bbb;margin-top:14px;padding-top:6px;border-top:1px solid #eee}@media print{body{padding:8px}}</style>'
+    + '</head><body>'
+    + '<div class="hdr"><div class="hdr-left">' + (logoTag ? '<div style="flex-shrink:0">' + logoTag + '</div>' : '') + '<div><div class="hdr-title">' + title + '</div>' + evtTag + '<div class="hdr-meta">Erstellt: ' + dateStr + ' &nbsp;|&nbsp; ' + groups.length + ' Gruppen, ' + totalRows + ' Eintr&auml;ge</div></div></div></div>'
+    + groupsHtml
+    + '<div class="ftr">&copy; MG Sports &amp; Eventmanagement 2026</div>'
+    + '</body></html>';
+  var w = window.open('','_blank');
+  if (!w) { var blob = new Blob([html],{type:'text/html'}); window.open(URL.createObjectURL(blob),'_blank'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  setTimeout(function() { w.print(); }, 600);
+}
+
 function showSqlModal() { document.getElementById('sqlCode').value = '-- Run setup SQL'; document.getElementById('sqlModal').classList.add('open'); }
 function copySql() { navigator.clipboard.writeText(document.getElementById('sqlCode').value); toast('SQL kopiert!'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -5724,6 +6348,148 @@ function fmtK(v) { var n=parseFloat(v)||0; return n.toLocaleString('de-DE',{mini
 function fmtDate(d) { if (!d) return '-'; try { return new Date(d).toLocaleDateString('de-DE'); } catch(e) { return d; } }
 function toast(msg) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2800); }
 function toggleDarkMode() { var isLight=document.body.classList.toggle('light-mode'); document.getElementById('modeBtn').textContent=isLight?'\uD83C\uDF19':'\u2600\uFE0F'; localStorage.setItem('mg_theme',isLight?'light':'dark'); }
+
+// ================= I18N (Deutsch / English) =================
+// Infrastruktur: data-i18n="key" auf einem Element -> Text wird beim Sprachwechsel ausgetauscht.
+// Für dynamisch (per JS) erzeugte Texte: t('key') aufrufen statt den String hart zu codieren.
+// Übersetzung erfolgt schrittweise Seite für Seite - noch nicht übersetzte Bereiche bleiben
+// vorerst auf Deutsch, das ist bewusst so und kein Fehler.
+var I18N = {
+  de: {
+    sidebar_sub: 'Turnierverwaltung 2026',
+    nav_section_overview: 'Übersicht',
+    nav_dashboard: 'Dashboard',
+    nav_participants: 'Teilnehmer',
+    nav_entry: 'Neu erfassen',
+    nav_section_admin: 'Verwaltung',
+    nav_idcard: 'ID Cards',
+    nav_packages: 'Packages',
+    nav_persons: 'Personendatenbank',
+    nav_import: 'Import',
+    nav_hotel: 'Hotelbelegung',
+    nav_shuttle: 'Shuttle',
+    nav_payments: 'Zahlungen',
+    nav_mahnlog: 'Mahnungs-Log',
+    nav_withdrawals: 'Absagen',
+    nav_waitlist: 'Warteliste',
+    nav_section_marketing: 'Marketing',
+    nav_marketing: 'Verteiler',
+    nav_section_export: 'Export',
+    nav_reports: 'Berichte & PDFs',
+    nav_airport: 'Airport Transfer',
+    nav_broadcast: 'Broadcast',
+    nav_checkin: 'Check-in',
+    nav_mealcheck: 'Meal-Check',
+    nav_section_system: 'System',
+    nav_events: 'Events',
+    nav_backup: 'Backup & Restore',
+    nav_settings: 'Einstellungen',
+    nav_users: 'Benutzer & Rollen',
+    nav_logout: 'Abmelden',
+    btn_new_entry: '+ Neu erfassen',
+    btn_new: '+ Neu',
+    loading: 'Lade…',
+    stat_received: 'Einnahmen erhalten',
+    stat_outstanding: 'Noch ausstehend',
+    stat_pkg: 'Package-Einnahmen gesamt',
+    stat_withdraw: 'Absagen',
+    stat_hotel: 'Mit Hotelbuchung',
+    stat_meal: 'Meal Packages',
+    dash_room_occupancy: 'Zimmerbelegung',
+    dash_by_event: 'Anmeldungen nach Event',
+    dash_accreditations: 'Akkreditierungen',
+    dash_recent: 'Zuletzt erfasst',
+    dash_total_active: 'Gesamt (aktiv)',
+    th_name: 'Name',
+    th_country: 'Land',
+    th_event: 'Event',
+    th_package: 'Package',
+    th_status: 'Status',
+    th_created: 'Erfasst'
+  },
+  en: {
+    sidebar_sub: 'Tournament Management 2026',
+    nav_section_overview: 'Overview',
+    nav_dashboard: 'Dashboard',
+    nav_participants: 'Participants',
+    nav_entry: 'New Entry',
+    nav_section_admin: 'Administration',
+    nav_idcard: 'ID Cards',
+    nav_packages: 'Packages',
+    nav_persons: 'Person Database',
+    nav_import: 'Import',
+    nav_hotel: 'Hotel Occupancy',
+    nav_shuttle: 'Shuttle',
+    nav_payments: 'Payments',
+    nav_mahnlog: 'Reminder Log',
+    nav_withdrawals: 'Withdrawals',
+    nav_waitlist: 'Waitlist',
+    nav_section_marketing: 'Marketing',
+    nav_marketing: 'Distribution List',
+    nav_section_export: 'Export',
+    nav_reports: 'Reports & PDFs',
+    nav_airport: 'Airport Transfer',
+    nav_broadcast: 'Broadcast',
+    nav_checkin: 'Check-in',
+    nav_mealcheck: 'Meal Check',
+    nav_section_system: 'System',
+    nav_events: 'Events',
+    nav_backup: 'Backup & Restore',
+    nav_settings: 'Settings',
+    nav_users: 'Users & Roles',
+    nav_logout: 'Log out',
+    btn_new_entry: '+ New Entry',
+    btn_new: '+ New',
+    loading: 'Loading…',
+    stat_received: 'Payments received',
+    stat_outstanding: 'Outstanding',
+    stat_pkg: 'Total package revenue',
+    stat_withdraw: 'Withdrawals',
+    stat_hotel: 'With hotel booking',
+    stat_meal: 'Meal packages',
+    dash_room_occupancy: 'Room Occupancy',
+    dash_by_event: 'Registrations by Event',
+    dash_accreditations: 'Accreditations',
+    dash_recent: 'Recently Added',
+    dash_total_active: 'Total (active)',
+    th_name: 'Name',
+    th_country: 'Country',
+    th_event: 'Event',
+    th_package: 'Package',
+    th_status: 'Status',
+    th_created: 'Created'
+  }
+};
+var currentLang = localStorage.getItem('mg_lang') || 'de';
+
+function t(key) {
+  var dict = I18N[currentLang] || I18N.de;
+  return dict[key] || (I18N.de[key] || key);
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-placeholder');
+    el.placeholder = t(key);
+  });
+  var btn = document.getElementById('langBtn');
+  if (btn) btn.textContent = currentLang === 'de' ? '🇩🇪' : '🇬🇧';
+  // Re-render dynamic dashboard widgets so their JS-generated text also updates
+  if (typeof loadDashboard === 'function' && document.getElementById('page-dashboard') && document.getElementById('page-dashboard').classList.contains('active')) {
+    loadDashboard();
+  }
+}
+
+function toggleLanguage() {
+  currentLang = currentLang === 'de' ? 'en' : 'de';
+  localStorage.setItem('mg_lang', currentLang);
+  applyTranslations();
+}
+
 function initTheme() { var s=localStorage.getItem('mg_theme'); if(s==='light'){document.body.classList.add('light-mode');var b=document.getElementById('modeBtn');if(b)b.textContent='\uD83C\uDF19';} }
 
 // GLOBALS
@@ -6580,6 +7346,14 @@ async function openPersonModal(person) {
     if(el) el.value = (person && person[f]) || '';
   });
 
+  // Load National Federation fields
+  var nfFields = ['nf_federation','nf_trainer_name','nf_trainer_phone','nf_trainer_mobile','nf_trainer_email','nf_office_phone','nf_office_mobile','nf_office_email'];
+  var nfEls = ['personNfFederation','personNfTrainerName','personNfTrainerPhone','personNfTrainerMobile','personNfTrainerEmail','personNfOfficePhone','personNfOfficeMobile','personNfOfficeEmail'];
+  nfFields.forEach(function(f,i){
+    var el = document.getElementById(nfEls[i]);
+    if(el) el.value = (person && person[f]) || '';
+  });
+
   // Load ranking fields
   var rankFields = ['rank_world','rank_euro_masters','rank_national','rank_national_fed'];
   var rankEls = ['personRankWorld','personRankEuroMasters','personRankNational','personRankNationalFed'];
@@ -6779,6 +7553,14 @@ async function savePerson() {
     visa_passport_no: document.getElementById('personVisaPassportNo')&&document.getElementById('personVisaPassportNo').value.trim()||null,
     visa_issue_date: document.getElementById('personVisaIssueDate')&&document.getElementById('personVisaIssueDate').value||null,
     visa_expiry_date: document.getElementById('personVisaExpiryDate')&&document.getElementById('personVisaExpiryDate').value||null,
+    nf_federation: document.getElementById('personNfFederation')&&document.getElementById('personNfFederation').value.trim()||null,
+    nf_trainer_name: document.getElementById('personNfTrainerName')&&document.getElementById('personNfTrainerName').value.trim()||null,
+    nf_trainer_phone: document.getElementById('personNfTrainerPhone')&&document.getElementById('personNfTrainerPhone').value.trim()||null,
+    nf_trainer_mobile: document.getElementById('personNfTrainerMobile')&&document.getElementById('personNfTrainerMobile').value.trim()||null,
+    nf_trainer_email: document.getElementById('personNfTrainerEmail')&&document.getElementById('personNfTrainerEmail').value.trim()||null,
+    nf_office_phone: document.getElementById('personNfOfficePhone')&&document.getElementById('personNfOfficePhone').value.trim()||null,
+    nf_office_mobile: document.getElementById('personNfOfficeMobile')&&document.getElementById('personNfOfficeMobile').value.trim()||null,
+    nf_office_email: document.getElementById('personNfOfficeEmail')&&document.getElementById('personNfOfficeEmail').value.trim()||null,
     squashlevels_id:document.getElementById('personSquashlevelId')&&document.getElementById('personSquashlevelId').value.trim()||null,
     squashlevels_rating:parseInt(document.getElementById('personSquashlevelRating')&&document.getElementById('personSquashlevelRating').value)||null,
     photo_url:photoUrl||null,passport_doc_url:passportUrl||null,updated_at:new Date().toISOString()
@@ -10887,7 +11669,218 @@ async function loadIdCards() {
 
   // Store for batch printing
   window._idcardCategories = categories;
+  window._idcardAllParticipants = all;
+  populateIdCardFilters();
   document.getElementById('idTotalList').textContent = all.length + ' Personen';
+}
+
+// ================= SERIENDRUCK (Filter + Blockdruck) =================
+function populateIdCardFilters() {
+  var roleSel = document.getElementById('idcardFilterRole');
+  var ageSel = document.getElementById('idcardFilterAge');
+  if (!roleSel || !ageSel) return;
+  var all = window._idcardAllParticipants || [];
+  var prevRole = roleSel.value, prevAge = ageSel.value;
+  var roles = Array.from(new Set(all.map(function(p){ return p.role; }).filter(Boolean))).sort();
+  var ages = Array.from(new Set(all.map(function(p){ return p.events; }).filter(Boolean))).sort();
+  roleSel.innerHTML = '<option value="">Alle Rollen</option>' + roles.map(function(r){ return '<option value="'+r+'">'+r+'</option>'; }).join('');
+  ageSel.innerHTML = '<option value="">Alle Altersklassen</option>' + ages.map(function(a){ return '<option value="'+a+'">'+a+'</option>'; }).join('');
+  if (roles.includes(prevRole)) roleSel.value = prevRole;
+  if (ages.includes(prevAge)) ageSel.value = prevAge;
+}
+
+var _idcardFilteredList = [];
+var _idcardBlockIndex = 0;
+
+function applyIdCardSeriendruck() {
+  var roleFilter = document.getElementById('idcardFilterRole').value;
+  var ageFilter = document.getElementById('idcardFilterAge').value;
+  var all = window._idcardAllParticipants || [];
+  _idcardFilteredList = all.filter(function(p) {
+    if (roleFilter && p.role !== roleFilter) return false;
+    if (ageFilter && p.events !== ageFilter) return false;
+    return true;
+  });
+  _idcardBlockIndex = 0;
+  renderIdCardSeriendruckResult();
+}
+
+function idCardBlockNav(dir) {
+  _idcardBlockIndex += dir;
+  renderIdCardSeriendruckResult();
+}
+
+function renderIdCardSeriendruckResult() {
+  var el = document.getElementById('idcardSeriendruckResult');
+  if (!el) return;
+  var blockSize = parseInt(document.getElementById('idcardBlockSize').value) || 10;
+  var total = _idcardFilteredList.length;
+  el.style.display = 'block';
+  if (!total) {
+    el.innerHTML = '<div style="color:var(--text3)">Klicke „Anwenden", um die Auswahl für den Seriendruck zu erstellen.</div>';
+    return;
+  }
+  var totalBlocks = Math.max(1, Math.ceil(total / blockSize));
+  if (_idcardBlockIndex >= totalBlocks) _idcardBlockIndex = totalBlocks - 1;
+  if (_idcardBlockIndex < 0) _idcardBlockIndex = 0;
+  var start = _idcardBlockIndex * blockSize;
+  var end = Math.min(start + blockSize, total);
+  var blockCount = end - start;
+
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<strong>' + total + ' Teilnehmer</strong> gefunden &nbsp;·&nbsp; Block ' + (_idcardBlockIndex+1) + ' von ' + totalBlocks + ' (Nr. ' + (start+1) + '–' + end + ')'
+    + '<button class="btn" style="font-size:11px;padding:4px 10px" onclick="idCardBlockNav(-1)" ' + (_idcardBlockIndex<=0?'disabled':'') + '>← Vorheriger Block</button>'
+    + '<button class="btn" style="font-size:11px;padding:4px 10px" onclick="idCardBlockNav(1)" ' + (_idcardBlockIndex>=totalBlocks-1?'disabled':'') + '>Nächster Block →</button>'
+    + '<button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="printIdCardsBatch(_idcardFilteredList.slice(' + start + ',' + end + ').map(function(p){return p.id;}))">🖨 Diesen Block drucken (' + blockCount + ' Stück)</button>'
+    + '</div>';
+}
+
+// Baut den HTML-Fragment eines einzelnen Passes (eine A6-Druckseite) für den Batch-Druck.
+// Farbabhängige Regeln werden inline gesetzt (nicht als globale CSS-Klasse), da pro Person
+// eine andere Rollenfarbe gilt und mehrere Pässe im selben Dokument landen.
+function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtml, sponsorHtml) {
+  var roleColors = {Player:'#185FA5',Coach:'#2E7D32',Parent:'#6a6a9e',Referee:'#c87a00',Official:'#7b3fa0','ESF Official':'#1a7a4a'};
+  var roleColor = roleColors[p.role] || '#185FA5';
+  var pkgData = packagesData && packagesData.find(function(pd){ return pd.code === p.package; });
+  var pkgCategory = pkgData ? pkgData.category : '';
+  var pkgInfo = p.package ? p.package + (pkgCategory ? ' – ' + pkgCategory : '') : '–';
+
+  var PASS_MEAL_DAYS = [{day:'Thursday',short:'THU',code:'do'},{day:'Friday',short:'FRI',code:'fr'},{day:'Saturday',short:'SAT',code:'sa'},{day:'Sunday',short:'SUN',code:'so'}];
+  var PASS_MEALS = [{label:'Lunch',key:'meal_lunch',days_key:'meal_lunch_days'},{label:'Dinner',key:'meal_dinner',days_key:'meal_dinner_days'}];
+  var mealDotsHtml = '';
+  if (p.meal_plus === 'Ja') {
+    var headerRow = '<tr><td></td>' + PASS_MEAL_DAYS.map(function(d){ return '<td style="text-align:center;font-size:5.5pt;font-weight:700;color:#185FA5;padding:0 1.5mm 1mm">' + d.short + '</td>'; }).join('') + '</tr>';
+    var mealRows = PASS_MEALS.map(function(m) {
+      var cells = PASS_MEAL_DAYS.map(function(d) {
+        var booked = p[m.key] === 'Ja' && p[m.days_key] && p[m.days_key].includes(d.code);
+        var box = booked
+          ? '<div style="width:4mm;height:4mm;background:#185FA5;border-radius:0.6mm;margin:auto;display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:6pt;font-weight:700;line-height:1">✓</span></div>'
+          : '<div style="width:4mm;height:4mm;border:1.5px solid #bbb;border-radius:0.6mm;margin:auto"></div>';
+        return '<td style="text-align:center;padding:0.5mm 1.5mm">' + box + '</td>';
+      }).join('');
+      return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + '</td>' + cells + '</tr>';
+    }).join('');
+    mealDotsHtml = '<table style="border-collapse:collapse">' + headerRow + mealRows + '</table>';
+  }
+
+  var photoHtml = photoSrc
+    ? '<img src="' + photoSrc + '" style="width:25mm;height:31mm;object-fit:cover;border-radius:2mm;border:1px solid #ddd" />'
+    : '<div style="width:25mm;height:31mm;background:#e8f0fb;border-radius:2mm;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:24px">👤</div>';
+
+  var countryFlagImg = getCountryFlagImg(p.country, 40);
+  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=' + encodeURIComponent(p.member_id || p.id);
+
+  return '<div class="pass-page"><div class="pass">'
+    + '<div class="header" style="background:' + roleColor + '">'
+    + '<div class="logo-box">' + logoHtml + '</div>'
+    + '<div><div class="event-name">' + evName + '</div><div class="event-sub">' + [evDates, evLocation].filter(Boolean).join(' · ') + '</div></div>'
+    + '</div>'
+    + '<div class="role-bar" style="background:' + roleColor + '22;border-bottom:2px solid ' + roleColor + ';color:' + roleColor + '">' + (p.role||'–') + '</div>'
+    + '<div class="body">'
+    + '<div class="photo">' + photoHtml
+    + '<div style="margin-top:1.5mm;text-align:center">' + countryFlagImg + '</div>'
+    + '<div style="font-size:6pt;color:#555;font-weight:700;text-align:center;line-height:1.2;margin-top:0.5mm">' + (COUNTRY_NAMES[p.country] || p.country || '–') + '</div>'
+    + '</div>'
+    + '<div class="info">'
+    + '<div class="name">' + (p.lastname||'–') + '</div>'
+    + '<div class="firstname">' + (p.firstname||'–') + '</div>'
+    + '<div class="field"><div class="lbl">Age Category / Event</div><div class="val" style="font-size:13pt;color:' + roleColor + '">' + (p.events||'–') + '</div></div>'
+    + '<div class="field"><div class="lbl">Package</div><div class="val">' + pkgInfo + '</div></div>'
+    + (p.coach_name ? '<div class="field"><div class="lbl">Coach</div><div class="val">' + p.coach_name + '</div></div>' : '')
+    + '</div></div>'
+    + (mealDotsHtml ? '<div class="meals"><div class="meal-lbl">Meals included</div><div class="meal-dots">' + mealDotsHtml + '</div></div>' : '')
+    + '<div class="bottom">'
+    + '<img src="' + qrUrl + '" style="width:17mm;height:17mm;flex-shrink:0" />'
+    + '<div><div class="esid-lbl">Member ID / ESID</div><div class="esid-val">' + (p.member_id||'–') + '</div></div>'
+    + '</div>'
+    + '<div class="sponsors">' + sponsorHtml + '</div>'
+    + '</div></div>';
+}
+
+// Erzeugt EINEN Druckauftrag (ein Fenster) mit mehreren A6-Pässen hintereinander -
+// statt wie zuvor ein separates Fenster pro Person zu öffnen.
+async function printIdCardsBatch(participantIds) {
+  if (!participantIds || !participantIds.length) { toast('Keine Teilnehmer in diesem Block'); return; }
+  toast('Generiere ' + participantIds.length + ' Pässe…');
+
+  var pr = await db.from('participants').select('*').in('id', participantIds);
+  var parts = pr.data || [];
+  var order = {}; participantIds.forEach(function(id, i){ order[id] = i; });
+  parts.sort(function(a, b){ return order[a.id] - order[b.id]; });
+
+  var missingMemberIds = Array.from(new Set(parts.filter(function(p){ return !p.photo_url && p.member_id; }).map(function(p){ return p.member_id; })));
+  var photoByMemberId = {};
+  if (missingMemberIds.length) {
+    var pr2 = await db.from('persons').select('member_id,photo_url').in('member_id', missingMemberIds);
+    (pr2.data || []).forEach(function(x){ if (x.photo_url) photoByMemberId[x.member_id] = x.photo_url; });
+  }
+
+  var ev = null;
+  if (currentEventId) {
+    var evR = await db.from('events').select('*').eq('id', currentEventId).single();
+    ev = evR.data;
+  }
+  await loadSponsorLogos();
+
+  var evName = ev && ev.name ? ev.name : 'European Junior Open 2026';
+  var evDates = (ev && ev.date_from ? new Date(ev.date_from).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '') + (ev && ev.date_to ? ' – ' + new Date(ev.date_to).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '');
+  var evLocation = ev && ev.location ? ev.location : '';
+  var logoHtml = ev && ev.logo_url
+    ? '<img src="data:image/png;base64,' + ev.logo_url + '" style="max-width:100%;max-height:100%;object-fit:contain" />'
+    : '<div style="font-size:20px">🏆</div>';
+  var sponsorHtml = [1,2,3,4].map(function(n) {
+    return sponsorLogos[n]
+      ? '<img src="data:image/png;base64,' + sponsorLogos[n] + '" style="max-width:18mm;max-height:10mm;object-fit:contain" />'
+      : '<div style="width:18mm;height:10mm;border:1px dashed #ddd;border-radius:1mm;display:flex;align-items:center;justify-content:center;font-size:6pt;color:#ccc">Sponsor ' + n + '</div>';
+  }).join('');
+
+  var cardsHtml = parts.map(function(p) {
+    var photoSrc = p.photo_url || photoByMemberId[p.member_id] || '';
+    return buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtml, sponsorHtml);
+  }).join('');
+
+  var sharedCss = '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:Arial,sans-serif;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    + '.pass-page{width:105mm;height:148mm;page-break-after:always;overflow:hidden}'
+    + '.pass-page:last-child{page-break-after:auto}'
+    + '.pass{width:105mm;height:148mm;display:flex;flex-direction:column;overflow:hidden}'
+    + '.header{color:#fff;padding:5mm 4mm 3mm;display:flex;align-items:center;gap:3mm;flex-shrink:0}'
+    + '.logo-box{width:14mm;height:14mm;background:rgba(255,255,255,0.15);border-radius:2mm;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}'
+    + '.event-name{font-size:10pt;font-weight:700;line-height:1.2;color:#fff}'
+    + '.event-sub{font-size:6.5pt;opacity:.85;margin-top:0.5mm;color:#fff}'
+    + '.role-bar{padding:2.5mm 3mm;font-size:11pt;font-weight:800;letter-spacing:3px;text-transform:uppercase;flex-shrink:0;text-align:center}'
+    + '.body{display:flex;flex:1;padding:3mm 4mm;gap:3mm;overflow:hidden}'
+    + '.photo{width:28mm;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:1.5mm}'
+    + '.info{flex:1;overflow:hidden}'
+    + '.name{font-size:17pt;font-weight:800;color:#1a1d23;line-height:1.1;word-break:break-word}'
+    + '.firstname{font-size:11pt;color:#555;margin-bottom:2mm}'
+    + '.field{margin-top:1.5mm}'
+    + '.lbl{font-size:5.5pt;color:#999;text-transform:uppercase;letter-spacing:.5px}'
+    + '.val{font-size:8.5pt;font-weight:600;color:#1a1d23}'
+    + '.meals{padding:2mm 4mm;border-top:1px solid #eee;flex-shrink:0}'
+    + '.meal-lbl{font-size:5.5pt;color:#999;text-transform:uppercase;margin-bottom:1mm}'
+    + '.meal-dots{display:flex;flex-wrap:wrap;gap:1mm}'
+    + '.bottom{border-top:1px solid #e0e0e0;padding:2mm 4mm;display:flex;align-items:center;gap:3mm;flex-shrink:0;background:#f7f9fc}'
+    + '.esid-lbl{font-size:5.5pt;color:#999;text-transform:uppercase}'
+    + '.esid-val{font-size:10pt;font-weight:700;font-family:monospace;color:#333}'
+    + '.sponsors{border-top:1px solid #eee;padding:2mm 4mm;display:flex;align-items:center;justify-content:space-around;gap:2mm;flex-shrink:0}'
+    + '.dl-bar{position:fixed;top:0;left:0;right:0;background:#1a1d23;padding:6px 16px;display:flex;gap:8px;align-items:center;z-index:100}'
+    + '.dl-btn{color:#fff;border:none;padding:6px 12px;border-radius:5px;font-size:11px;cursor:pointer;background:#185FA5}'
+    + '@media print{.dl-bar{display:none}}';
+
+  var fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ID Cards – ' + parts.length + ' Pässe</title>'
+    + '<style>@page{size:A6;margin:0}' + sharedCss + '</style></head><body>'
+    + '<div class="dl-bar"><span style="color:#fff;flex:1;font-size:12px">' + parts.length + ' Pässe bereit zum Drucken</span>'
+    + '<button class="dl-btn" onclick="window.print()">🖨 Alle ' + parts.length + ' drucken</button>'
+    + '<button class="dl-btn" style="background:transparent;border:1px solid #555;color:#aaa" onclick="window.close()">✕</button>'
+    + '</div>'
+    + cardsHtml
+    + '</body></html>';
+
+  var w = window.open('', '_blank');
+  if (!w) { toast('Pop-up-Blocker aktiv'); return; }
+  w.document.write(fullHtml);
+  w.document.close();
 }
 
 var _printQueue = [];
@@ -10896,30 +11889,20 @@ var _printIndex = 0;
 async function printCategoryPasses(categoryId) {
   var cat = window._idcardCategories && window._idcardCategories.find(function(c){return c.id===categoryId;});
   if (!cat || !cat.persons.length) { toast('Keine Personen in dieser Kategorie'); return; }
-  toast('Generiere ' + cat.persons.length + ' Pässe…');
-  _printQueue = cat.persons.map(function(p){return p.id;});
-  _printIndex = 0;
-  printNextInQueue();
+  var ids = cat.persons.map(function(p){return p.id;});
+  if (ids.length > 50 && !confirm(ids.length + ' Pässe auf einmal drucken? Tipp: Nutze oben den Seriendruck, um in kleineren Blöcken zu drucken.\n\nTrotzdem alle ' + ids.length + ' jetzt drucken?')) return;
+  printIdCardsBatch(ids);
 }
 
 async function printAllIdCards() {
   if (!window._idcardCategories) return;
   var all = [];
   window._idcardCategories.forEach(function(c){ all = all.concat(c.persons.map(function(p){return p.id;})); });
-  toast('Generiere ' + all.length + ' Pässe…');
-  _printQueue = all;
-  _printIndex = 0;
-  printNextInQueue();
+  if (!all.length) { toast('Keine Teilnehmer gefunden'); return; }
+  if (all.length > 50 && !confirm(all.length + ' Pässe auf einmal drucken? Tipp: Nutze oben den Seriendruck, um nach Rolle/Altersklasse zu filtern und in kleineren Blöcken zu drucken.\n\nTrotzdem alle ' + all.length + ' jetzt drucken?')) return;
+  printIdCardsBatch(all);
 }
 
-async function printNextInQueue() {
-  if (_printIndex >= _printQueue.length) { toast('✅ Alle Pässe geöffnet'); return; }
-  await generateEventpass(_printQueue[_printIndex]);
-  _printIndex++;
-  if (_printIndex < _printQueue.length) {
-    setTimeout(printNextInQueue, 800);
-  }
-}
 
 
 
@@ -11053,7 +12036,7 @@ async function exportPaymentsExcel() {
 var currentUserRole = null;
 var rolePermissions = {};
 
-var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel',
+var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
   'idcard','waitlist','users','backup'];
@@ -11066,7 +12049,7 @@ async function loadRolePermissions() {
   }
   // Default permissions if not set
   if (!rolePermissions['Admin']) rolePermissions['Admin'] = ['*'];
-  if (!rolePermissions['Turnierstab']) rolePermissions['Turnierstab'] = ['dashboard','participants','hotel','withdrawals','waitlist','reports','airport','idcard'];
+  if (!rolePermissions['Turnierstab']) rolePermissions['Turnierstab'] = ['dashboard','participants','hotel','shuttle','withdrawals','waitlist','reports','airport','idcard'];
 
   // Get current user role from app_users
   var session = await db.auth.getSession();
