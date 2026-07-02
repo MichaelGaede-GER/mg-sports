@@ -496,13 +496,14 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <button class="btn" onclick="syncParticipantsFromPersons()">🔄 Sync Personen-DB</button>
             <button class="btn" onclick="exportParticipantsExcel()">⬇ Excel Export</button>
             <button class="btn" onclick="printParticipants()">🖨 Liste drucken</button>
+            <button class="btn" onclick="bulkSetKostenlosUT()" title="Setzt bei allen Teilnehmern mit Package U oder T den Zahlungsstatus auf Kostenlos">🆓 U/T → Kostenlos</button>
           </div>
         </div>
         <div id="participantImportResult" style="display:none;margin-bottom:12px;padding:12px 16px;background:var(--green-bg);border:1px solid var(--green);border-radius:8px;font-size:13px;color:var(--green)"></div>
         <div class="filter-bar">
           <input type="search" id="filterSearch" placeholder="Suche Name, Land, ID…" oninput="loadParticipants()" />
           <select id="filterAge" onchange="loadParticipants()"><option value="">Alle Events</option><option>GU11</option><option>GU13</option><option>GU15</option><option>GU17</option><option>GU19</option><option>BU11</option><option>BU13</option><option>BU15</option><option>BU17</option><option>BU19</option></select>
-          <select id="filterStatus" onchange="loadParticipants()"><option value="">Alle Status</option><option value="Pending">⏳ Pending</option><option>Bezahlt</option><option>Ausstehend</option><option>Teilzahlung</option><option>Abgesagt</option><option>Neu</option></select>
+          <select id="filterStatus" onchange="loadParticipants()"><option value="">Alle Status</option><option value="Pending">⏳ Pending</option><option>Bezahlt</option><option>Kostenlos</option><option>Ausstehend</option><option>Teilzahlung</option><option>Rückerstattung</option><option>Abgesagt</option><option>Neu</option></select>
           <select id="filterMahnung" onchange="loadParticipants()" style="font-size:12px">
             <option value="">Alle Mahnstufen</option>
             <option value="1. Mahnung">1. Mahnung</option>
@@ -1094,7 +1095,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <div class="form-grid">
               <div class="form-group"><label>Zahlungsstatus *</label>
                 <select id="f_payment_status" onchange="checkPaymentDateRequired()">
-                  <option value="Pending">⏳ Pending</option><option>Neu</option><option>Ausstehend</option><option>Bezahlt</option><option>Teilzahlung</option><option>Rückerstattung</option>
+                  <option value="Pending">⏳ Pending</option><option>Neu</option><option>Ausstehend</option><option>Bezahlt</option><option>Kostenlos</option><option>Teilzahlung</option><option>Rückerstattung</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1293,11 +1294,24 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <!-- ABSAGEN -->
       <div class="page" id="page-withdrawals">
         <div class="page-header"><h2>Absagen & Withdrawals</h2>
+          <button class="btn" onclick="applyWithdrawPolicyStatus()" title="Setzt bei allen Abmeldungen den Zahlungsstatus gemäß Erstattungsregelung (Kostenlos / Rückerstattung / Bezahlt / Ausstehend)">💶 Zahlungsstatus nach Policy setzen</button>
           <button class="btn" onclick="exportWithdrawPDF()">PDF Withdrawals</button>
         </div>
         <div class="card">
           <div class="table-wrap"><table>
-            <thead><tr><th>Name</th><th>Land</th><th>Package</th><th>Abgemeldet am</th><th>Gesamt (€)</th><th>Erhalten (€)</th><th>Regelung</th><th>Rückzahlung / Ausstehend</th><th>Zahlung</th><th>Memo</th><th>E-Mail / Aktionen</th></tr></thead>
+            <thead><tr>
+              <th class="sortable" onclick="sortWithdrawals('lastname')" id="wth_lastname">Name <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortWithdrawals('country')" id="wth_country">Land <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortWithdrawals('package')" id="wth_package">Package <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortWithdrawals('withdraw_date')" id="wth_withdraw_date">Abgemeldet am <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortWithdrawals('total')" id="wth_total">Gesamt (€) <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortWithdrawals('amount_received')" id="wth_amount_received">Erhalten (€) <span class="sort-icon">↕</span></th>
+              <th>Regelung</th>
+              <th>Rückzahlung / Ausstehend</th>
+              <th class="sortable" onclick="sortWithdrawals('payment_status')" id="wth_payment_status">Zahlung <span class="sort-icon">↕</span></th>
+              <th>Memo</th>
+              <th>E-Mail / Aktionen</th>
+            </tr></thead>
             <tbody id="withdrawTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
@@ -1564,7 +1578,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <select id="bc_payment" style="margin-top:4px">
                   <option value="">Alle</option>
                   <option>Ausstehend</option><option>Teilzahlung</option>
-                  <option>Bezahlt</option><option>Neu</option>
+                  <option>Bezahlt</option><option>Kostenlos</option><option>Neu</option>
                 </select>
               </div>
               <button class="btn primary" onclick="loadBroadcastRecipients()">🔍 Empfänger laden</button>
@@ -3681,7 +3695,7 @@ async function toggleCheckin(cb) {
 // ============================================================
 async function checkAndTriggerMahnungen() {
   var today = new Date();
-  var q = db.from('participants').select('*').neq('withdraw','Ja').neq('payment_status','Bezahlt').neq('payment_status','Pending');
+  var q = db.from('participants').select('*').neq('withdraw','Ja').neq('payment_status','Bezahlt').neq('payment_status','Kostenlos').neq('payment_status','Pending');
   if (currentEventId) q = q.eq('event_id', currentEventId);
   var { data } = await q;
   if (!data || !data.length) { toast('Keine offenen Zahlungen'); return; }
@@ -4348,7 +4362,7 @@ async function loadDashboard() {
   // Outstanding = package_price total - received
   var totalInvoiced = active.reduce(function(s,p){ return s + (parseFloat(p.package_price)||0); }, 0);
   var totalOutstanding = Math.max(0, totalInvoiced - totalReceived);
-  var paidCount = active.filter(function(p){ return p.payment_status === 'Bezahlt' || p.payment_status === 'Vollständig'; }).length;
+  var paidCount = active.filter(function(p){ return p.payment_status === 'Bezahlt' || p.payment_status === 'Vollständig' || p.payment_status === 'Kostenlos'; }).length;
   var pendingCount = active.filter(function(p){ return p.payment_status === 'Ausstehend' || p.payment_status === 'Neu' || !p.payment_status; }).length;
 
   // Count players (paying roles) vs total
@@ -4556,7 +4570,7 @@ async function loadParticipants() {
     return '<tr>'
 + '<td style="white-space:nowrap">'
         + eb + ' ' + vb + ' ' + db2
-        + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Pending'
+        + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Kostenlos' && p.payment_status !== 'Pending'
            ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
            : '')
         + (p.mobile ? ' <button class="btn" style="font-size:11px;padding:3px 6px;background:#25D366;color:#fff;border-color:#25D366" data-mobile="'+p.mobile+'" data-name="'+p.firstname+' '+p.lastname+'" onclick="openWhatsAppDirect(this.dataset.mobile, this.dataset.name)" title="WhatsApp">💬</button>' : '')
@@ -4900,12 +4914,33 @@ async function saveEntry() {
     setTimeout(function(){ document.getElementById('f_member_id').style.borderColor = ''; }, 3000);
     return;
   }
+  // ESID duplicate check (only for new entries, not edits)
+  if (memberId && !id) {
+    var dupCheck = await db.from('participants').select('id,firstname,lastname').eq('member_id', memberId);
+    if (currentEventId) dupCheck = dupCheck.eq('event_id', currentEventId);
+    var dupResult = await dupCheck;
+    if (dupResult.data && dupResult.data.length > 0) {
+      var dup = dupResult.data[0];
+      toast('⛔ ESID bereits registriert: ' + dup.firstname + ' ' + dup.lastname + ' (' + memberId + ')');
+      document.getElementById('f_member_id').style.borderColor = 'var(--red)';
+      setTimeout(function(){ document.getElementById('f_member_id').style.borderColor = ''; }, 4000);
+      return;
+    }
+  }
   if (!package_) {
     toast('⚠️ Bitte ein Package auswählen');
     document.getElementById('f_package').focus();
     document.getElementById('f_package').style.borderColor = 'var(--red)';
     setTimeout(function(){ document.getElementById('f_package').style.borderColor = ''; }, 3000);
     return;
+  }
+
+  var isWithdrawnSave = document.getElementById('f_withdraw')?.checked;
+  var withdrawDateValSave = v('withdraw_date');
+  var computedPaymentStatus = ['U','T'].includes(v('package')) ? 'Kostenlos' : v('payment_status');
+  if (isWithdrawnSave && withdrawDateValSave) {
+    var wdStatus = computeWithdrawPaymentStatus(new Date(withdrawDateValSave), n('amount_received'));
+    if (wdStatus) computedPaymentStatus = wdStatus;
   }
 
   const row = {
@@ -4915,7 +4950,7 @@ async function saveEntry() {
     member_id: v('member_id'), role, events: v('events'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
     shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'),
-    payment_status: v('payment_status'), amount_received: n('amount_received'),
+    payment_status: computedPaymentStatus, amount_received: n('amount_received'),
     payment_date: v('payment_date')||null, total: n('total'),
     payment_link: v('payment_link'), penalty: n('penalty'),
     visa: v('visa'), express: document.getElementById('f_express').checked ? 'Ja' : 'Nein', mahnung: v('mahnung'), mahnung_date: v('mahnung_date')||null, memo: v('memo'),
@@ -5186,8 +5221,44 @@ async function loadPayments() {
   }).join('') : '<tr><td colspan="11" class="empty">Keine Einträge</td></tr>';
 }
 // WITHDRAWALS
+var withdrawSortField = 'withdraw_date';
+var withdrawSortDir = 'asc';
+
+function sortWithdrawals(field) {
+  if (withdrawSortField === field) {
+    withdrawSortDir = withdrawSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    withdrawSortField = field;
+    withdrawSortDir = 'asc';
+  }
+  document.querySelectorAll('[id^="wth_"]').forEach(function(th){th.classList.remove('sort-asc','sort-desc');});
+  var active = document.getElementById('wth_' + field);
+  if (active) active.classList.add('sort-' + withdrawSortDir);
+  loadWithdrawals();
+}
+
+async function applyWithdrawPolicyStatus() {
+  if (!confirm('Zahlungsstatus aller abgemeldeten Personen gemäß Erstattungsregelung neu setzen?\n\n(100%-Fenster: bezahlt → Rückerstattung, nicht bezahlt → Kostenlos.\n50%-Fenster: bezahlt → Rückerstattung, nicht bezahlt → Ausstehend.\nKeine-Erstattung-Fenster: bezahlt → Bezahlt, nicht bezahlt → Ausstehend.)')) return;
+  let q = db.from('participants').select('id,payment_status,amount_received,withdraw_date').eq('withdraw','Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  const { data, error } = await q;
+  if (error) { toast('Fehler: ' + error.message); return; }
+  var updates = (data||[]).map(function(p) {
+    if (!p.withdraw_date) return null;
+    var newStatus = computeWithdrawPaymentStatus(new Date(p.withdraw_date), p.amount_received);
+    if (!newStatus || newStatus === p.payment_status) return null;
+    return { id: p.id, payment_status: newStatus };
+  }).filter(Boolean);
+  if (!updates.length) { toast('Keine Änderungen nötig – bereits aktuell'); return; }
+  for (var i = 0; i < updates.length; i++) {
+    await db.from('participants').update({ payment_status: updates[i].payment_status, updated_at: new Date().toISOString() }).eq('id', updates[i].id);
+  }
+  toast('✅ ' + updates.length + ' Zahlungsstatus aktualisiert');
+  loadWithdrawals();
+}
+
 async function loadWithdrawals() {
-  let q = db.from('participants').select('*').eq('withdraw','Ja').order('withdraw_date');
+  let q = db.from('participants').select('*').eq('withdraw','Ja').order(withdrawSortField, { ascending: withdrawSortDir === 'asc', nullsFirst: false });
   if (currentEventId) q = q.eq('event_id', currentEventId);
   const { data } = await q;
   const all = data||[];
@@ -5629,7 +5700,7 @@ async function printTable(title, headers, rows) {
 function showSqlModal() { document.getElementById('sqlCode').value = '-- Run setup SQL'; document.getElementById('sqlModal').classList.add('open'); }
 function copySql() { navigator.clipboard.writeText(document.getElementById('sqlCode').value); toast('SQL kopiert!'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function statusClass(s) { if (!s) return 'new'; var m={Bezahlt:'paid',Ausstehend:'pending',Teilzahlung:'pending',Neu:'new',Abgesagt:'cancel',Pending:'partial'}; return m[s]||'new'; }
+function statusClass(s) { if (!s) return 'new'; var m={Bezahlt:'paid',Kostenlos:'paid',Ausstehend:'pending',Teilzahlung:'pending',Rückerstattung:'pending',Neu:'new',Abgesagt:'cancel',Pending:'partial'}; return m[s]||'new'; }
 function fmt(v) { return (parseFloat(v)||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u20ac'; }
 function fmtK(v) { var n=parseFloat(v)||0; return n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
 function fmtDate(d) { if (!d) return '-'; try { return new Date(d).toLocaleDateString('de-DE'); } catch(e) { return d; } }
@@ -5671,6 +5742,22 @@ let mahnTemplates = {
 var WITHDRAW_DATE_FULL = new Date('2026-06-23');
 var WITHDRAW_DATE_HALF = new Date('2026-07-05');
 var WITHDRAW_DATE_NONE = new Date('2026-07-06');
+
+// Bestimmt den Zahlungsstatus einer abgemeldeten Person anhand der Withdraw-Policy.
+// Regel: 100%-Erstattungsfenster (Abmeldung vor diesem Datum) + bereits bezahlt -> "Rückerstattung", + nichts bezahlt -> "Kostenlos".
+// 50%-Erstattungsfenster + bereits bezahlt -> "Rückerstattung", + nichts bezahlt -> "Ausstehend".
+// Keine-Erstattung-Fenster + bereits bezahlt -> "Bezahlt" (bleibt bezahlt), + nichts bezahlt -> "Ausstehend".
+function computeWithdrawPaymentStatus(withdrawDate, amountReceived) {
+  if (!withdrawDate || isNaN(withdrawDate.getTime())) return null;
+  var hasPaid = (parseFloat(amountReceived) || 0) > 0;
+  if (withdrawDate < WITHDRAW_DATE_FULL) {
+    return hasPaid ? 'Rückerstattung' : 'Kostenlos';
+  }
+  if (withdrawDate <= WITHDRAW_DATE_HALF) {
+    return hasPaid ? 'Rückerstattung' : 'Ausstehend';
+  }
+  return hasPaid ? 'Bezahlt' : 'Ausstehend';
+}
 
 async function loadWithdrawPolicy() {
   var r = await db.from('app_settings').select('value').eq('key','withdraw_policy').limit(1);
@@ -6244,7 +6331,7 @@ async function loadMahnFristen() {
   var es=new Date(ev.data.date_from); var today=new Date();
   var m1=new Date(es);m1.setDate(m1.getDate()-28); var m2=new Date(es);m2.setDate(m2.getDate()-21); var m3=new Date(es);m3.setDate(m3.getDate()-14);
   var pd=await db.from('participants').select('mahnung,payment_status,withdraw').eq('event_id',currentEventId);
-  var pending=(pd.data||[]).filter(function(p){return p.withdraw!=='Ja'&&p.payment_status!=='Bezahlt';});
+  var pending=(pd.data||[]).filter(function(p){return p.withdraw!=='Ja'&&p.payment_status!=='Bezahlt'&&p.payment_status!=='Kostenlos';});
   function chip(date,count){var ip=today>=date,dl=Math.ceil((date-today)/(1000*60*60*24));return ip?'<span style="background:var(--red-bg);color:var(--red);font-size:11px;padding:2px 8px;border-radius:10px">Faellig! ('+count+' ausstehend)</span>':dl<=7?'<span style="background:var(--amber-bg);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:10px">In '+dl+' Tagen</span>':'<span style="background:var(--green-bg);color:var(--green);font-size:11px;padding:2px 8px;border-radius:10px">In '+dl+' Tagen</span>';}
   grid.innerHTML=[{l:'1. Mahnung',d:m1,c:pending.filter(function(p){return !p.mahnung||p.mahnung==='Keine';}).length,desc:'4 Wochen vor Turnierbeginn'},{l:'2. Mahnung',d:m2,c:pending.filter(function(p){return p.mahnung==='1. Mahnung';}).length,desc:'3 Wochen'},{l:'3. Mahnung',d:m3,c:pending.filter(function(p){return p.mahnung==='2. Mahnung';}).length,desc:'2 Wochen'}].map(function(m){return '<div style="background:var(--bg2);border-radius:var(--radius);padding:14px;border:1px solid '+(today>=m.d?'var(--red)':'var(--border)')+'"><div style="font-size:13px;font-weight:600;margin-bottom:4px">'+m.l+'</div><div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+m.desc+'</div><div style="font-size:12px;color:var(--text3);margin-bottom:8px">Faellig: '+m.d.toLocaleDateString('de-DE')+'</div>'+chip(m.d,m.c)+'</div>';}).join('');
 }
@@ -6819,7 +6906,7 @@ async function runImport() {
 function updateShirtQty() { var s=document.getElementById('f_shirt')&&document.getElementById('f_shirt').value; var q=document.getElementById('f_shirt_qty'); if(!q) return; if(!s) q.value=0; else if(parseInt(q.value)===0) q.value=1; }
 function toggleFlightFields() { /* Flight fields always visible */ }
 function toggleMealDays(mealId) { var cb=document.getElementById('f_meal_'+mealId); var dd=document.getElementById('meal_'+mealId+'_days'); if(!dd) return; dd.style.display=cb&&cb.checked?'block':'none'; if(!cb||!cb.checked){['mo','di','mi','do','fr','sa','so'].forEach(function(d){var el=document.getElementById('f_meal_'+mealId+'_'+d);if(el)el.checked=false;});} }
-function checkPaymentDateRequired() { var amount=parseFloat(document.getElementById('f_amount_received')&&document.getElementById('f_amount_received').value)||0; var status=document.getElementById('f_payment_status')&&document.getElementById('f_payment_status').value; var dr=document.getElementById('paymentDateRequired'); var needsDate=amount>0||status==='Bezahlt'||status==='Teilzahlung'; if(dr) dr.style.display=needsDate?'inline':'none'; var df=document.getElementById('f_payment_date'); if(needsDate&&df&&!df.value) df.value=new Date().toISOString().slice(0,10); updateTotalBreakdown(); }
+function checkPaymentDateRequired() { var amount=parseFloat(document.getElementById('f_amount_received')&&document.getElementById('f_amount_received').value)||0; var status=document.getElementById('f_payment_status')&&document.getElementById('f_payment_status').value; var dr=document.getElementById('paymentDateRequired'); var needsDate=amount>0||status==='Bezahlt'||status==='Teilzahlung'; if(dr) dr.style.display=needsDate?'inline':'none'; var df=document.getElementById('f_payment_date'); if(needsDate&&df&&!df.value) df.value=new Date().toISOString().slice(0,10); updateTotalBreakdown(); calcWithdrawRefund(); }
 function checkMahnungDateRequired() { var m=document.getElementById('f_mahnung')&&document.getElementById('f_mahnung').value; var grp=document.getElementById('mahnungDateGroup'); var hint=document.getElementById('mahnungDateHint'); var req=document.getElementById('mahnungDateRequired'); var has=m&&m!=='Keine'; if(grp) grp.style.display=has?'flex':'none'; if(hint) hint.style.display=has?'block':'none'; if(req) req.style.display=has?'inline':'none'; var df2=document.getElementById('f_mahnung_date'); if(has&&df2&&!df2.value) df2.value=new Date().toISOString().slice(0,10); }
 function updateTotalBreakdown() {
   var pkg   = parseFloat(document.getElementById('f_package_price')&&document.getElementById('f_package_price').value)||0;
@@ -6884,7 +6971,14 @@ function calcWithdrawRefund() { var dateVal=document.getElementById('f_withdraw_
     if(wePayBack===0&&playerOwes===0) dispParts.push('<span style="color:var(--text3)">Kein Ausgleich erforderlich</span>');
     if(disp) disp.innerHTML=dispParts.join('<br>');
     if(ri) ri.value=wePayBack.toFixed(2);
-    if(di) di.value=playerOwes.toFixed(2); }
+    if(di) di.value=playerOwes.toFixed(2);
+    var wdCbLive = document.getElementById('f_withdraw');
+    if (wdCbLive && wdCbLive.checked) {
+      var psEl = document.getElementById('f_payment_status');
+      var newStatus = computeWithdrawPaymentStatus(wd, receivedVal);
+      if (psEl && newStatus) psEl.value = newStatus;
+    }
+  }
 async function calcAgeCheck() {
   var dob = document.getElementById('f_dob') && document.getElementById('f_dob').value;
   var events2 = document.getElementById('f_events') && document.getElementById('f_events').value;
@@ -9557,6 +9651,16 @@ async function fixSpielerToPlayer() {
   loadParticipants();
 }
 
+async function bulkSetKostenlosUT() {
+  if (!confirm('Alle Teilnehmer mit Package U oder T auf Zahlungsstatus "Kostenlos" setzen?')) return;
+  var q = db.from('participants').update({payment_status: 'Kostenlos', updated_at: new Date().toISOString()}).in('package', ['U','T']);
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  toast('✅ Package U & T auf "Kostenlos" gesetzt');
+  loadParticipants();
+}
+
 
 function onEventManualChange() {
   window._eventAutoFilled = false;
@@ -9632,8 +9736,8 @@ function onWithdrawCheck() {
     var dateEl = document.getElementById('f_withdraw_date');
     if (dateEl && !dateEl.value) {
       dateEl.value = new Date().toISOString().slice(0, 10);
-      calcWithdrawRefund();
     }
+    calcWithdrawRefund();
   }
   toggleWithdrawDate();
   updateTotalBreakdown();
