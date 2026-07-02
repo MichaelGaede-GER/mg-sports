@@ -520,7 +520,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <thead><tr>
   <th style="white-space:nowrap;position:sticky;left:0;z-index:2;background:var(--bg2)">Aktionen</th>
   <th style="width:40px">Foto</th>
-  <th class="sortable" onclick="sortParticipants('group_tp')" id="pth_group_tp">ID <span class="sort-icon">↕</span></th>
+  <th class="sortable" onclick="sortParticipants('group_tp')" id="pth_group_tp" style="min-width:110px">ID <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('lastname')" id="pth_lastname">Nachname <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('firstname')" id="pth_firstname">Vorname <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('country')" id="pth_country">Land <span class="sort-icon">↕</span></th>
@@ -1105,6 +1105,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <div class="form-group">
                 <label>Betrag erhalten (€)</label>
                 <input type="number" id="f_amount_received" placeholder="0.00" step="0.01" onchange="checkPaymentDateRequired()" />
+                <button type="button" class="btn" style="margin-top:6px;font-size:11px;padding:4px 10px" onclick="fillFullPayment()">✅ Voll bezahlt (Gesamtbetrag + heute)</button>
               </div>
               <div class="form-group" id="paymentDateGroup">
                 <label>Datum Zahlung <span id="paymentDateRequired" style="color:var(--red);display:none">*</span></label>
@@ -1119,6 +1120,13 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <label>Datum Mahnung <span id="mahnungDateRequired" style="color:var(--red);display:none">*</span></label>
                 <input type="date" id="f_mahnung_date" />
                 <span id="mahnungDateHint" style="font-size:11px;color:var(--amber);margin-top:4px;display:none">⚠ Datum erforderlich wenn Mahnung gesetzt</span>
+              </div>
+              <div class="form-group">
+                <label>Betrag bei Anreise <span style="font-size:11px;color:var(--text3)">(offener Betrag wird vor Ort bezahlt)</span></label>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                  <input type="checkbox" id="f_travel_amount" style="width:18px;height:18px;cursor:pointer;accent-color:var(--blue)" />
+                  <label for="f_travel_amount" style="font-size:13px;cursor:pointer;color:var(--text)">Ja, Betrag wird bei Anreise bezahlt</label>
+                </div>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>Übersicht Gesamtkosten</label>
@@ -4581,10 +4589,12 @@ async function loadParticipants() {
           ? '<img src="'+p.photo_url+'" style="width:36px;height:44px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />'
           : '<div style="width:36px;height:44px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>')
         + '</td>'
-      + '<td style="color:var(--text3)">'
-        + (p.group_tp||p.id.slice(0,8))
+      + '<td style="color:var(--text3);min-width:110px;white-space:normal;line-height:1.6">'
+        + '<div>' + (p.group_tp||p.id.slice(0,8))
         + (p.updated_at ? ' <span title="Zuletzt bearbeitet: '+new Date(p.updated_at).toLocaleString('de-DE')+'" style="color:var(--blue);font-size:11px;cursor:help">✏</span>' : '')
-        + (p.mahnung && p.mahnung !== 'Keine' ? ' <span style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700">'+p.mahnung+'</span>' : '')
+        + '</div>'
+        + (p.mahnung && p.mahnung !== 'Keine' ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700">'+p.mahnung+'</span></div>' : '')
+        + (p.travel_amount ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--amber);color:#000;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:pointer" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)" title="Betrag wird bei Anreise bezahlt – Klick zum Bearbeiten">✈ Anreise</span></div>' : '')
         + '</td>'
       + '<td>' + p.lastname + '</td>'
       + '<td>' + p.firstname + '</td>'
@@ -4864,23 +4874,30 @@ async function editEntry(id) {
 
   document.getElementById('f_amount_received').value = p.amount_received||'';
   document.getElementById('withdrawDateGroup').style.display = p.withdraw === 'Ja' ? 'flex' : 'none';
-  nav('entry');
-  // Load packages first, then set selected package
-  await loadPackagesData();
-  populatePackageSelect();
-  const pkgSel = document.getElementById('f_package');
-  if (pkgSel && p.package) {
-    pkgSel.value = p.package;
-    // If value wasn't set (option not found), try after short delay
-    if (!pkgSel.value) {
-      setTimeout(function() {
-        pkgSel.value = p.package;
-        updatePackageDetails();
-      }, 300);
-    } else {
-      updatePackageDetails();
+  // Load packages first and set selected package BEFORE nav('entry'):
+  // nav('entry') itself lazily loads+repopulates the package dropdown if packagesData is
+  // still empty, which raced with this code and could wipe the just-set selection back to "".
+  // Ensuring packagesData is already loaded here means nav('entry') skips that reload.
+  try {
+    await loadPackagesData();
+    populatePackageSelect();
+    const pkgSel = document.getElementById('f_package');
+    if (pkgSel && p.package) {
+      pkgSel.value = p.package;
+      // If value wasn't set (option not found), try after short delay
+      if (!pkgSel.value) {
+        setTimeout(function() {
+          pkgSel.value = p.package;
+          updatePackagePrice();
+        }, 300);
+      } else {
+        updatePackagePrice();
+      }
     }
+  } catch (e) {
+    console.error('Package laden fehlgeschlagen:', e);
   }
+  nav('entry');
   document.getElementById('f_package_price').value = p.package_price||'';
   document.getElementById('f_shirt_qty') && (document.getElementById('f_shirt_qty').value = p.shirt_qty||1);
   // Load coaches and set selected coach
@@ -5204,7 +5221,7 @@ async function loadPayments() {
       + '<td>' + fmt(p.amount_received) + '</td>'
       + '<td style="' + openStyle + '">' + (open>0 ? fmt(open) : '–') + '</td>'
       + '<td>' + fmtDate(p.payment_date) + '</td>'
-      + '<td><span class="status ' + statusClass(p.payment_status) + '">' + (p.payment_status||'–') + '</span></td>'
+      + '<td><span class="status ' + statusClass(getDisplayPaymentStatus(p)) + '">' + (getDisplayPaymentStatus(p)||'–') + '</span></td>'
       + '<td style="min-width:160px">'
         + '<select style="font-size:11px;padding:3px 6px;width:100%;margin-bottom:4px" data-id="'+p.id+'" onchange="updateMahnungFromPayments(this.dataset.id,this.value)">'
         + '<option value="Keine"'+((!p.mahnung||p.mahnung==='Keine')?' selected':'')+'>Keine</option>'
@@ -6919,7 +6936,33 @@ async function runImport() {
 function updateShirtQty() { var s=document.getElementById('f_shirt')&&document.getElementById('f_shirt').value; var q=document.getElementById('f_shirt_qty'); if(!q) return; if(!s) q.value=0; else if(parseInt(q.value)===0) q.value=1; }
 function toggleFlightFields() { /* Flight fields always visible */ }
 function toggleMealDays(mealId) { var cb=document.getElementById('f_meal_'+mealId); var dd=document.getElementById('meal_'+mealId+'_days'); if(!dd) return; dd.style.display=cb&&cb.checked?'block':'none'; if(!cb||!cb.checked){['mo','di','mi','do','fr','sa','so'].forEach(function(d){var el=document.getElementById('f_meal_'+mealId+'_'+d);if(el)el.checked=false;});} }
-function checkPaymentDateRequired() { var amount=parseFloat(document.getElementById('f_amount_received')&&document.getElementById('f_amount_received').value)||0; var status=document.getElementById('f_payment_status')&&document.getElementById('f_payment_status').value; var dr=document.getElementById('paymentDateRequired'); var needsDate=amount>0||status==='Bezahlt'||status==='Teilzahlung'; if(dr) dr.style.display=needsDate?'inline':'none'; var df=document.getElementById('f_payment_date'); if(needsDate&&df&&!df.value) df.value=new Date().toISOString().slice(0,10); updateTotalBreakdown(); calcWithdrawRefund(); }
+// Quick-Button: trägt den vollen Gesamtbetrag als "Betrag erhalten" ein und setzt das Zahlungsdatum auf heute.
+function fillFullPayment() {
+  var totalEl = document.getElementById('f_total');
+  var amountEl = document.getElementById('f_amount_received');
+  var dateEl = document.getElementById('f_payment_date');
+  var total = parseFloat(totalEl && totalEl.value) || 0;
+  if (amountEl) amountEl.value = total.toFixed(2);
+  if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+  checkPaymentDateRequired();
+}
+
+function checkPaymentDateRequired() {
+  var amount = parseFloat(document.getElementById('f_amount_received') && document.getElementById('f_amount_received').value) || 0;
+  var statusEl = document.getElementById('f_payment_status');
+  var isWithdrawnNow = document.getElementById('f_withdraw') && document.getElementById('f_withdraw').checked;
+  if (amount > 0 && statusEl && !isWithdrawnNow) {
+    statusEl.value = 'Bezahlt';
+  }
+  var status = statusEl && statusEl.value;
+  var dr = document.getElementById('paymentDateRequired');
+  var needsDate = amount > 0 || status === 'Bezahlt' || status === 'Teilzahlung';
+  if (dr) dr.style.display = needsDate ? 'inline' : 'none';
+  var df = document.getElementById('f_payment_date');
+  if (needsDate && df && !df.value) df.value = new Date().toISOString().slice(0, 10);
+  updateTotalBreakdown();
+  calcWithdrawRefund();
+}
 function checkMahnungDateRequired() { var m=document.getElementById('f_mahnung')&&document.getElementById('f_mahnung').value; var grp=document.getElementById('mahnungDateGroup'); var hint=document.getElementById('mahnungDateHint'); var req=document.getElementById('mahnungDateRequired'); var has=m&&m!=='Keine'; if(grp) grp.style.display=has?'flex':'none'; if(hint) hint.style.display=has?'block':'none'; if(req) req.style.display=has?'inline':'none'; var df2=document.getElementById('f_mahnung_date'); if(has&&df2&&!df2.value) df2.value=new Date().toISOString().slice(0,10); }
 function updateTotalBreakdown() {
   var pkg   = parseFloat(document.getElementById('f_package_price')&&document.getElementById('f_package_price').value)||0;
@@ -9630,7 +9673,7 @@ async function applyEntrySync() {
       pkgSel.value = savedPackage;
       var pkgPrice = document.getElementById('f_package_price');
       if (pkgPrice && savedPackagePrice) pkgPrice.value = savedPackagePrice;
-      updatePackageDetails();
+      updatePackagePrice();
     }
   }, 100);
   updateEntrySquashlevelLink();
