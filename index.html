@@ -4464,7 +4464,7 @@ async function loadDashboard() {
       <td>${p.country||'–'}</td>
       <td>${p.events||'–'}</td>
       <td>${p.package ? `<span class="badge">${p.package}</span>` : '–'}</td>
-      <td><span class="status ${statusClass(p.payment_status)}">${p.payment_status||'Neu'}</span></td>
+      <td><span class="status ${statusClass(getDisplayPaymentStatus(p))}">${getDisplayPaymentStatus(p)||'Neu'}</span></td>
       <td style="color:var(--text3)">${fmtDate(p.created_at)}</td>
     </tr>`).join('') : '<tr><td colspan="6" class="empty">Noch keine Einträge</td></tr>';
 }
@@ -4553,7 +4553,8 @@ async function loadParticipants() {
   document.getElementById('cntParticipants').textContent = rows.length;
 
   function makeRow(p) {
-    var sb = '<span class="status ' + statusClass(p.payment_status) + '">' + (p.payment_status||'Neu') + '</span>';
+    var pStatus = getDisplayPaymentStatus(p);
+    var sb = '<span class="status ' + statusClass(pStatus) + '">' + (pStatus||'Neu') + '</span>';
     // Icons in order: Package(badge) · Meal · Hotel · Ankunft · Abflug
     var icons = [];
     if (p.meal_plus === 'Ja') icons.push('🍽');
@@ -5296,7 +5297,7 @@ async function loadWithdrawals() {
         + (playerOwesAmt > 0 ? '<span style="color:var(--red)">→ ' + fmt(playerOwesAmt) + '</span>' : '')
         + (wePayBackAmt === 0 && playerOwesAmt === 0 ? '<span style="color:var(--text3)">–</span>' : '')
         + '</td>'
-      + '<td><span class="status ' + statusClass(p.payment_status) + '">' + (p.payment_status||'–') + '</span></td>'
+      + '<td><span class="status ' + statusClass(getDisplayPaymentStatus(p)) + '">' + (getDisplayPaymentStatus(p)||'–') + '</span></td>'
       + '<td style="font-size:12px">' + (p.memo||'–') + '</td>'
       + '<td>'
         + '<select style="font-size:11px;padding:2px 6px;margin-bottom:4px;width:100%" data-id="'+p.id+'" onchange="setWithdrawEmailStatus(this.dataset.id, this.value)">'
@@ -5758,6 +5759,18 @@ function computeWithdrawPaymentStatus(withdrawDate, amountReceived) {
   }
   return hasPaid ? 'Bezahlt' : 'Ausstehend';
 }
+
+// Liefert den anzuzeigenden Zahlungsstatus: bei abgemeldeten Personen wird er live
+// nach der Withdraw-Policy berechnet, damit Teilnehmerliste und Absagen-Liste
+// immer übereinstimmen - unabhängig davon, ob der gespeicherte Wert bereits aktualisiert wurde.
+function getDisplayPaymentStatus(p) {
+  if (p && p.withdraw === 'Ja' && p.withdraw_date) {
+    var computed = computeWithdrawPaymentStatus(new Date(p.withdraw_date), p.amount_received);
+    if (computed) return computed;
+  }
+  return p ? p.payment_status : null;
+}
+
 
 async function loadWithdrawPolicy() {
   var r = await db.from('app_settings').select('value').eq('key','withdraw_policy').limit(1);
