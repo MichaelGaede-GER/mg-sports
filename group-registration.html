@@ -109,10 +109,10 @@
         </label>
         <div class="form-grid cols-3">
           <div class="form-group"><label>Transport Option</label>
-            <select id="g_ams_bus"><option value="">– Please select –</option><option>Bus</option><option>Zug</option><option value="Auto">Car / Own transport</option><option value="Flugzeug">Airplane</option></select>
+            <select id="g_ams_bus" disabled><option value="Flugzeug" selected>Airplane (only option – airport pickup service)</option></select>
           </div>
           <div class="form-group"><label>Airport Transfer</label>
-            <select id="g_airport_plus"><option value="Nein">No</option><option value="Ja – Ankunft">Yes – Arrival only</option><option value="Ja – Abflug">Yes – Departure only</option><option value="Ja – Beide">Yes – Both</option></select>
+            <select id="g_airport_plus"><option value="Nein">No</option><option value="Ja – Ankunft">Yes – Arrival only</option><option value="Ja – Abflug">Yes – Departure only</option><option value="Ja – Beide" selected>Yes – Both</option></select>
           </div>
           <div class="form-group"><label>Visa Required?</label>
             <select id="g_visa"><option>Nicht erforderlich</option><option>Erforderlich</option><option>Wird beantragt</option></select>
@@ -179,6 +179,8 @@ var ROOM_MAX = { 'Einzelzimmer': 1, 'Doppelzimmer': 2, 'Dreibettzimmer': 3 };
 var ROOM_TYPES = ['Einzelzimmer', 'Doppelzimmer', 'Dreibettzimmer'];
 var participantCounter = 0;
 var participantIds = []; // order of rows currently in DOM
+var roomShareGroups = {}; // anchorId -> { roomType, members: [ids] }
+var roomShareOf = {};     // memberId -> anchorId (only set for non-anchor sharers)
 
 var COUNTRIES = [["AFG","Afghanistan"],["ALB","Albania"],["ALG","Algeria"],["AND","Andorra"],["AGO","Angola"],["ANT","Antigua and Barbuda"],["ARG","Argentina"],["ARM","Armenia"],["AUS","Australia"],["AUT","Austria"],["AZE","Azerbaijan"],["BAH","Bahamas"],["BRN","Bahrain"],["BAN","Bangladesh"],["BAR","Barbados"],["BLR","Belarus"],["BEL","Belgium"],["BIZ","Belize"],["BEN","Benin"],["BHU","Bhutan"],["BOL","Bolivia"],["BIH","Bosnia and Herzegovina"],["BOT","Botswana"],["BRA","Brazil"],["BRU","Brunei"],["BUL","Bulgaria"],["BUR","Burkina Faso"],["BDI","Burundi"],["CAM","Cambodia"],["CMR","Cameroon"],["CAN","Canada"],["CPV","Cape Verde"],["CAF","Central African Republic"],["CHA","Chad"],["CHI","Chile"],["CHN","China"],["TPE","Chinese Taipei"],["COL","Colombia"],["COM","Comoros"],["CGO","Congo"],["COD","Congo DR"],["CRC","Costa Rica"],["CRO","Croatia"],["CUB","Cuba"],["CYP","Cyprus"],["CZE","Czech Republic"],["CIV","Côte d'Ivoire"],["DEN","Denmark"],["DJI","Djibouti"],["DMA","Dominica"],["DOM","Dominican Republic"],["ECU","Ecuador"],["EGY","Egypt"],["ESA","El Salvador"],["ENG","England"],["GEQ","Equatorial Guinea"],["ERI","Eritrea"],["EST","Estonia"],["SWZ","Eswatini"],["ETH","Ethiopia"],["FIJ","Fiji"],["FIN","Finland"],["FRA","France"],["GAB","Gabon"],["GAM","Gambia"],["GEO","Georgia"],["GER","Germany"],["GHA","Ghana"],["GBR","Great Britain"],["GRE","Greece"],["GRN","Grenada"],["GTM","Guatemala"],["GUI","Guinea"],["GBS","Guinea-Bissau"],["GUY","Guyana"],["HAI","Haiti"],["HON","Honduras"],["HKG","Hong Kong"],["HUN","Hungary"],["ISL","Iceland"],["IND","India"],["INA","Indonesia"],["IRI","Iran"],["IRQ","Iraq"],["IRL","Ireland"],["ISR","Israel"],["ITA","Italy"],["JAM","Jamaica"],["JPN","Japan"],["JOR","Jordan"],["KAZ","Kazakhstan"],["KEN","Kenya"],["PRK","Korea North"],["KOR","Korea South"],["KUW","Kuwait"],["KGZ","Kyrgyzstan"],["LAO","Laos"],["LAT","Latvia"],["LIB","Lebanon"],["LES","Lesotho"],["LBA","Libya"],["LIE","Liechtenstein"],["LTU","Lithuania"],["LUX","Luxembourg"],["MAD","Madagascar"],["MAW","Malawi"],["MAS","Malaysia"],["MDV","Maldives"],["MLI","Mali"],["MLT","Malta"],["MRI","Mauritius"],["MEX","Mexico"],["MDA","Moldova"],["MON","Monaco"],["MGL","Mongolia"],["MNE","Montenegro"],["MAR","Morocco"],["MOZ","Mozambique"],["MYA","Myanmar"],["NAM","Namibia"],["NEP","Nepal"],["NED","Netherlands"],["NZL","New Zealand"],["NCA","Nicaragua"],["NIG","Niger"],["NGR","Nigeria"],["MKD","North Macedonia"],["NOR","Norway"],["OMA","Oman"],["PAK","Pakistan"],["PLE","Palestine"],["PAN","Panama"],["PNG","Papua New Guinea"],["PAR","Paraguay"],["PER","Peru"],["PHI","Philippines"],["POL","Poland"],["POR","Portugal"],["QAT","Qatar"],["ROU","Romania"],["RUS","Russia"],["RWA","Rwanda"],["SKN","Saint Kitts and Nevis"],["LCA","Saint Lucia"],["VIN","Saint Vincent and the Grenadines"],["SAM","Samoa"],["SMR","San Marino"],["STP","Sao Tome and Principe"],["KSA","Saudi Arabia"],["SCO","Scotland"],["SEN","Senegal"],["SRB","Serbia"],["SEY","Seychelles"],["SLE","Sierra Leone"],["SGP","Singapore"],["SVK","Slovakia"],["SLO","Slovenia"],["SOL","Solomon Islands"],["SOM","Somalia"],["RSA","South Africa"],["SSD","South Sudan"],["ESP","Spain"],["SRI","Sri Lanka"],["SUD","Sudan"],["SUR","Suriname"],["SWE","Sweden"],["SUI","Switzerland"],["SYR","Syria"],["TJK","Tajikistan"],["TAN","Tanzania"],["THA","Thailand"],["TLS","Timor-Leste"],["TOG","Togo"],["TGA","Tonga"],["TTO","Trinidad and Tobago"],["TUN","Tunisia"],["TUR","Turkey"],["TKM","Turkmenistan"],["UGA","Uganda"],["UKR","Ukraine"],["UAE","United Arab Emirates"],["USA","United States"],["URU","Uruguay"],["UZB","Uzbekistan"],["VAN","Vanuatu"],["VEN","Venezuela"],["VIE","Vietnam"],["WAL","Wales"],["YEM","Yemen"],["ZAM","Zambia"],["ZIM","Zimbabwe"]];
 var COUNTRY_OPTIONS_HTML = '<option value="">– Select –</option>' + COUNTRIES.map(function(c) { return '<option value="' + c[0] + '">' + c[1] + ' (' + c[0] + ')</option>'; }).join('');
@@ -226,9 +228,7 @@ async function init() {
 }
 
 async function loadPackages() {
-  var q = db.from('packages').select('*').order('code');
-  if (eventId) q = q.eq('event_id', eventId);
-  var r = await q;
+  var r = await db.from('packages').select('*').order('code');
   packagesCache = r.data || [];
 }
 
@@ -265,6 +265,7 @@ function renderRoomBadges() {
   document.getElementById('roomAvailUpdated').textContent = '(live)';
   // Re-render room selects in existing rows so full types show as disabled
   participantIds.forEach(function(id) { populateRoomTypeSelect(id); });
+  refreshAllShareSelects();
 }
 
 // ---------- PARTICIPANT ROWS ----------
@@ -281,8 +282,8 @@ function addParticipantRow() {
     + '<button type="button" class="btn danger small" onclick="removeParticipantRow(' + id + ')">Remove</button></div>'
     + '<div class="participant-body">'
     + '<div class="form-grid">'
-    + '<div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" id="p_lastname_' + id + '" /></div>'
-    + '<div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" id="p_firstname_' + id + '" /></div>'
+    + '<div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" id="p_lastname_' + id + '" oninput="refreshAllShareSelects()" /></div>'
+    + '<div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" id="p_firstname_' + id + '" oninput="refreshAllShareSelects()" /></div>'
     + '<div class="form-group"><label>Country <span class="req">*</span></label><select id="p_country_' + id + '">' + COUNTRY_OPTIONS_HTML + '</select></div>'
     + '<div class="form-group"><label>Date of Birth <span class="req">*</span></label><input type="date" id="p_dob_' + id + '" onchange="calcAgeCategory(' + id + ')" /></div>'
     + '<div class="form-group"><label>Gender <span class="req">*</span></label><select id="p_gender_' + id + '" onchange="calcAgeCategory(' + id + ')"><option value="">– Select –</option><option value="Weiblich">Female</option><option value="Männlich">Male</option></select></div>'
@@ -294,9 +295,9 @@ function addParticipantRow() {
     + '<div class="form-group"><label>Age Category / Event</label><select id="p_events_' + id + '"><option value="">– Auto / Select –</option><option>GU13</option><option>BU13</option><option>GU15</option><option>BU15</option><option>GU17</option><option>BU17</option><option>GU19</option><option>BU19</option></select></div>'
     + '<div class="form-group"><label>Shirt Size</label><select id="p_shirt_' + id + '"><option value="">– No shirt –</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select></div>'
     + '<div class="form-group"><label>Package <span class="req">*</span></label><select id="p_package_' + id + '" onchange="onPackageChange(' + id + ')"><option value="">Loading…</option></select></div>'
-    + '<div class="form-group"><label>Room Type</label><select id="p_roomtype_' + id + '" onchange="loadRoomAvailability()"><option value="">– No room needed –</option></select></div>'
+    + '<div class="form-group"><label>Room Type</label><select id="p_roomtype_' + id + '" onchange="onRoomTypeChange(' + id + ')"><option value="">– No room needed –</option></select></div>'
+    + '<div class="form-group"><label>Share Room With</label><select id="p_shareroom_' + id + '" onchange="onShareRoomChange(' + id + ')"><option value="">– Not sharing / own room –</option></select></div>'
     + '</div>'
-    + '<label class="checkbox-row" style="margin-top:12px"><input type="checkbox" id="p_meal_' + id + '" /><span>Book meal package for this participant</span></label>'
     + '<span class="travel-toggle" onclick="toggleIndividualTravel(' + id + ')" id="p_traveltoggle_' + id + '">✈️ This person travels differently from the group defaults</span>'
     + '<div class="travel-fields" id="p_travelfields_' + id + '">'
     + '<div class="form-grid cols-3">'
@@ -315,15 +316,19 @@ function addParticipantRow() {
   document.getElementById('participantsContainer').appendChild(wrap);
   populatePackageSelect(id);
   populateRoomTypeSelect(id);
+  refreshAllShareSelects();
   updateParticipantCountLabel();
 }
 
 function removeParticipantRow(id) {
+  clearShareAssignment(id);
+  releaseAsAnchor(id);
   var el = document.getElementById('p_card_' + id);
   if (el) el.remove();
   participantIds = participantIds.filter(function(x) { return x !== id; });
   renumberParticipants();
   updateParticipantCountLabel();
+  refreshAllShareSelects();
   loadRoomAvailability();
 }
 
@@ -361,6 +366,97 @@ function populateRoomTypeSelect(id) {
 }
 
 function onPackageChange(id) { /* placeholder for future package-specific logic */ }
+
+function onRoomTypeChange(id) {
+  // If this participant is an anchor for a shared room, keep their members in sync
+  if (roomShareGroups[id]) {
+    roomShareGroups[id].roomType = document.getElementById('p_roomtype_' + id).value;
+    roomShareGroups[id].members.forEach(function(m) {
+      if (m !== id) {
+        var msel = document.getElementById('p_roomtype_' + m);
+        if (msel) msel.value = roomShareGroups[id].roomType;
+      }
+    });
+  }
+  refreshAllShareSelects();
+  loadRoomAvailability();
+}
+
+function clearShareAssignment(id) {
+  var anchor = roomShareOf[id];
+  if (anchor && roomShareGroups[anchor]) {
+    roomShareGroups[anchor].members = roomShareGroups[anchor].members.filter(function(m) { return m !== id; });
+    if (roomShareGroups[anchor].members.length <= 1) delete roomShareGroups[anchor];
+  }
+  delete roomShareOf[id];
+  var rtSel = document.getElementById('p_roomtype_' + id);
+  if (rtSel) rtSel.disabled = false;
+}
+
+function releaseAsAnchor(id) {
+  // Called when the anchor participant itself is removed; frees up their members
+  if (roomShareGroups[id]) {
+    roomShareGroups[id].members.forEach(function(m) {
+      if (m !== id) {
+        delete roomShareOf[m];
+        var msel = document.getElementById('p_roomtype_' + m);
+        if (msel) msel.disabled = false;
+      }
+    });
+    delete roomShareGroups[id];
+  }
+}
+
+function onShareRoomChange(id) {
+  clearShareAssignment(id);
+  var val = document.getElementById('p_shareroom_' + id).value;
+  if (val) {
+    var anchor = parseInt(val, 10);
+    var anchorRoomType = document.getElementById('p_roomtype_' + anchor).value;
+    if (!roomShareGroups[anchor]) roomShareGroups[anchor] = { roomType: anchorRoomType, members: [anchor] };
+    roomShareGroups[anchor].members.push(id);
+    roomShareOf[id] = anchor;
+    var rtSel = document.getElementById('p_roomtype_' + id);
+    rtSel.value = roomShareGroups[anchor].roomType;
+    rtSel.disabled = true;
+  }
+  refreshAllShareSelects();
+  loadRoomAvailability();
+}
+
+function participantLabel(id) {
+  var fn = (document.getElementById('p_firstname_' + id) || {}).value || '';
+  var ln = (document.getElementById('p_lastname_' + id) || {}).value || '';
+  var name = (fn.trim() + ' ' + ln.trim()).trim();
+  return name || ('Participant #' + (participantIds.indexOf(id) + 1));
+}
+
+function refreshAllShareSelects() {
+  participantIds.forEach(function(id, idx) {
+    var sel = document.getElementById('p_shareroom_' + id);
+    if (!sel) return;
+    var currentVal = roomShareOf[id] ? String(roomShareOf[id]) : '';
+    var candidates = [];
+    var seenAnchors = {};
+    for (var i = 0; i < idx; i++) {
+      var otherId = participantIds[i];
+      var anchor = roomShareOf[otherId] || otherId;
+      if (seenAnchors[anchor]) continue;
+      seenAnchors[anchor] = true;
+      var rtSel = document.getElementById('p_roomtype_' + anchor);
+      var rt = roomShareGroups[anchor] ? roomShareGroups[anchor].roomType : (rtSel ? rtSel.value : '');
+      if (!rt || rt === 'Einzelzimmer') continue;
+      var members = roomShareGroups[anchor] ? roomShareGroups[anchor].members : [anchor];
+      var isCurrentSelection = String(anchor) === currentVal;
+      if (members.length >= (ROOM_MAX[rt] || 1) && !isCurrentSelection) continue; // room full, hide
+      candidates.push({ id: anchor, label: participantLabel(anchor) + ' (' + rt + ', ' + members.length + '/' + ROOM_MAX[rt] + ')' });
+    }
+    sel.innerHTML = '<option value="">– Not sharing / own room –</option>' + candidates.map(function(c) {
+      return '<option value="' + c.id + '">' + c.label + '</option>';
+    }).join('');
+    sel.value = currentVal;
+  });
+}
 
 function toggleIndividualTravel(id) {
   var fields = document.getElementById('p_travelfields_' + id);
@@ -483,7 +579,7 @@ async function submitGroupRegistration() {
       shirt: v('p_shirt_' + id) || null,
       package: pPackage, package_price: packagePrice,
       room_type: roomType,
-      meal_plus: document.getElementById('p_meal_' + id).checked ? 'Ja' : 'Nein',
+      meal_plus: 'Nein',
       ams_bus: travel.ams_bus, airport_plus: travel.airport_plus,
       arrival_date: travel.arrival_date, arrival_time: travel.arrival_time, flight_in: travel.flight_in,
       departure_date: travel.departure_date, departure_time: travel.departure_time, flight_out: travel.flight_out,
