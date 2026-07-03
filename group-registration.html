@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Group Registration – European Junior Open 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #185FA5; --blue-bg: #e8f0fb; --green: #2E7D32; --green-bg: #e8f5e9;
+    --red: #c62828; --red-bg: #fdecea; --amber:#b26a00; --amber-bg:#fff4e0; --border: #dde2ec; --radius: 8px;
+    --bg: #fff; --bg2: #f7f9fc; --text: #1a1d23; --text2: #5a6272; --text3: #9aa3b2;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg2); color: var(--text); min-height: 100vh; }
+  .header { background: var(--blue); color: #fff; padding: 24px 32px; text-align: center; }
+  .header h1 { font-size: 22px; font-weight: 700; }
+  .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .container { max-width: 900px; margin: 32px auto; padding: 0 16px 80px; }
+  .card { background: var(--bg); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; overflow: hidden; }
+  .card-header { padding: 14px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; display:flex; align-items:center; justify-content:space-between; }
+  .card-body { padding: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: var(--text2); }
+  label .req { color: var(--red); margin-left: 2px; }
+  input, select, textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color .15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+  input.error, select.error { border-color: var(--red); background: var(--red-bg); }
+  .submit-btn { width: 100%; padding: 14px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+  .submit-btn:hover { opacity: 0.9; }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn { padding: 8px 14px; background: var(--bg); color: var(--text); border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn:hover { border-color: var(--blue); color: var(--blue); }
+  .btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.primary:hover { opacity: 0.9; color:#fff; }
+  .btn.danger { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+  .btn.small { padding: 5px 10px; font-size: 12px; }
+  .success-box { display: none; background: var(--green-bg); border: 1.5px solid var(--green); border-radius: 12px; padding: 32px; text-align: center; }
+  .success-box h2 { color: var(--green); font-size: 22px; margin-bottom: 8px; }
+  .success-box p { color: var(--text2); font-size: 14px; line-height: 1.6; }
+  .error-box { display: none; background: var(--red-bg); border: 1px solid var(--red); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: var(--red); white-space: pre-line; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1d23; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; z-index: 999; }
+  .checkbox-row { display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; }
+  .checkbox-row input { width:18px; height:18px; accent-color: var(--blue); flex-shrink:0; }
+  .room-badges { display:flex; flex-wrap:wrap; gap:10px; }
+  .room-badge { flex:1; min-width:150px; border:1.5px solid var(--border); border-radius:var(--radius); padding:10px 14px; }
+  .room-badge .rb-type { font-size:12px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.3px; }
+  .room-badge .rb-count { font-size:20px; font-weight:800; margin-top:2px; }
+  .room-badge.ok .rb-count { color: var(--green); }
+  .room-badge.low .rb-count { color: var(--amber); }
+  .room-badge.full .rb-count { color: var(--red); }
+  .participant-card { border:1.5px solid var(--border); border-radius:12px; margin-bottom:16px; overflow:hidden; }
+  .participant-head { background:var(--blue-bg); padding:10px 16px; display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; color:var(--blue); }
+  .participant-body { padding:16px; }
+  .travel-toggle { margin-top:10px; font-size:12px; color:var(--blue); cursor:pointer; text-decoration:underline; display:inline-block; }
+  .travel-fields { display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--border); }
+  .travel-fields.open { display:block; }
+  .esid-hint { font-size:11px; color:#888; margin-top:3px; }
+  .add-participant-btn { width:100%; padding:12px; border:2px dashed var(--border); border-radius:var(--radius); background:var(--bg2); color:var(--text2); font-size:13px; font-weight:600; cursor:pointer; margin-top:4px; }
+  .add-participant-btn:hover { border-color:var(--blue); color:var(--blue); }
+  .group-summary-line { font-size:12px; color:var(--text3); margin-top:2px; }
+  @media (max-width: 600px) { .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="pageTitle">🎾 Group Registration</h1>
+  <p>Register a full team or delegation in one go — please fill in all required fields</p>
+</div>
+
+<div class="container">
+  <div id="successBox" class="success-box">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <h2>Group Registration Submitted!</h2>
+    <p>Thank you. Your group has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
+    <p style="margin-top:16px;font-size:12px;color:var(--text3)">Group Code: <strong id="groupCodeOut">–</strong> · <span id="groupCountOut"></span> participant(s)</p>
+  </div>
+
+  <div id="formContainer">
+    <div id="errorBox" class="error-box"></div>
+    <div id="noEventBox" class="error-box" style="display:none">⚠️ No active tournament found. Please contact the organizer.</div>
+
+    <!-- GROUP LEADER -->
+    <div class="card">
+      <div class="card-header">👤 Group Leader / Contact</div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" id="g_lastname" placeholder="Last name" /></div>
+          <div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" id="g_firstname" placeholder="First name" /></div>
+          <div class="form-group"><label>Federation / Club</label><input type="text" id="g_federation" placeholder="e.g. German Squash Federation" /></div>
+          <div class="form-group"><label>Mobile <span class="req">*</span></label><input type="tel" id="g_mobile" placeholder="+49 151 …" /></div>
+          <div class="form-group full"><label>E-Mail <span class="req">*</span></label><input type="email" id="g_email" placeholder="contact@email.com" /></div>
+          <div class="form-group full"><label>Notes</label><textarea id="g_memo" rows="2" placeholder="Anything the organizer should know about this group"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHARED TRAVEL DEFAULTS -->
+    <div class="card">
+      <div class="card-header">✈️ Shared Travel Details (default for all participants)</div>
+      <div class="card-body">
+        <label class="checkbox-row" style="margin-bottom:14px">
+          <input type="checkbox" id="g_sameTravel" checked onchange="onSameTravelToggle()" />
+          <span>Use these travel details for all participants (can be overridden per person below)</span>
+        </label>
+        <div class="form-grid cols-3">
+          <div class="form-group"><label>Transport Option</label>
+            <select id="g_ams_bus"><option value="">– Please select –</option><option>Bus</option><option>Zug</option><option value="Auto">Car / Own transport</option><option value="Flugzeug">Airplane</option></select>
+          </div>
+          <div class="form-group"><label>Airport Transfer</label>
+            <select id="g_airport_plus"><option value="Nein">No</option><option value="Ja – Ankunft">Yes – Arrival only</option><option value="Ja – Abflug">Yes – Departure only</option><option value="Ja – Beide">Yes – Both</option></select>
+          </div>
+          <div class="form-group"><label>Visa Required?</label>
+            <select id="g_visa"><option>Nicht erforderlich</option><option>Erforderlich</option><option>Wird beantragt</option></select>
+          </div>
+          <div class="form-group"><label>Arrival Date</label><input type="date" id="g_arrival_date" /></div>
+          <div class="form-group"><label>Arrival Time</label><input type="time" id="g_arrival_time" /></div>
+          <div class="form-group"><label>Incoming Flight No.</label><input type="text" id="g_flight_in" placeholder="e.g. LH1234" /></div>
+          <div class="form-group"><label>Departure Date</label><input type="date" id="g_departure_date" /></div>
+          <div class="form-group"><label>Departure Time</label><input type="time" id="g_departure_time" /></div>
+          <div class="form-group"><label>Outgoing Flight No.</label><input type="text" id="g_flight_out" placeholder="e.g. LH5678" /></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROOM AVAILABILITY -->
+    <div class="card">
+      <div class="card-header">🏨 Hotel Room Availability <span style="font-weight:400;text-transform:none;font-size:11px" id="roomAvailUpdated"></span></div>
+      <div class="card-body">
+        <div id="roomBadges" class="room-badges"><p style="color:var(--text3);font-size:13px">Loading availability…</p></div>
+        <p style="font-size:11px;color:var(--text3);margin-top:10px">Availability reflects current bookings for this tournament and updates when you submit. Exact room numbers are assigned by the organizer after registration.</p>
+      </div>
+    </div>
+
+    <!-- PARTICIPANTS -->
+    <div class="card">
+      <div class="card-header">
+        <span>🧑‍🤝‍🧑 Participants</span>
+        <span class="group-summary-line" id="participantCountLabel">0 participant(s)</span>
+      </div>
+      <div class="card-body">
+        <div id="participantsContainer"></div>
+        <button type="button" class="add-participant-btn" onclick="addParticipantRow()">+ Add Participant</button>
+      </div>
+    </div>
+
+    <!-- CONSENT -->
+    <div class="card">
+      <div class="card-header">📋 Declaration</div>
+      <div class="card-body">
+        <label class="checkbox-row" style="align-items:flex-start;line-height:1.6">
+          <input type="checkbox" id="g_consent" style="margin-top:2px" />
+          <span>I confirm that all information provided for this group is correct and I agree, on behalf of all listed participants, to the <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">tournament regulations and withdrawal policy</a>. I understand that this registration is subject to confirmation by the organizer.</span>
+        </label>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitGroupRegistration()">Submit Group Registration</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://xngiyfqbjyhnmgukhanj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZ2l5ZnFianlobm1ndWtoYW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDEwMzksImV4cCI6MjA5NzgxNzAzOX0.CjzN8HH9cxJRtc9wrBPwTsw2ayPf7em_LeCM7HBQLxQ';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+var eventId = null;
+var packagesCache = [];
+var roomCapacity = {};   // { 'Einzelzimmer': totalSlots, ... }
+var roomUsed = {};       // { 'Einzelzimmer': usedSlots, ... }
+var ROOM_MAX = { 'Einzelzimmer': 1, 'Doppelzimmer': 2, 'Dreibettzimmer': 3 };
+var ROOM_TYPES = ['Einzelzimmer', 'Doppelzimmer', 'Dreibettzimmer'];
+var participantCounter = 0;
+var participantIds = []; // order of rows currently in DOM
+
+var COUNTRIES = [["AFG","Afghanistan"],["ALB","Albania"],["ALG","Algeria"],["AND","Andorra"],["AGO","Angola"],["ANT","Antigua and Barbuda"],["ARG","Argentina"],["ARM","Armenia"],["AUS","Australia"],["AUT","Austria"],["AZE","Azerbaijan"],["BAH","Bahamas"],["BRN","Bahrain"],["BAN","Bangladesh"],["BAR","Barbados"],["BLR","Belarus"],["BEL","Belgium"],["BIZ","Belize"],["BEN","Benin"],["BHU","Bhutan"],["BOL","Bolivia"],["BIH","Bosnia and Herzegovina"],["BOT","Botswana"],["BRA","Brazil"],["BRU","Brunei"],["BUL","Bulgaria"],["BUR","Burkina Faso"],["BDI","Burundi"],["CAM","Cambodia"],["CMR","Cameroon"],["CAN","Canada"],["CPV","Cape Verde"],["CAF","Central African Republic"],["CHA","Chad"],["CHI","Chile"],["CHN","China"],["TPE","Chinese Taipei"],["COL","Colombia"],["COM","Comoros"],["CGO","Congo"],["COD","Congo DR"],["CRC","Costa Rica"],["CRO","Croatia"],["CUB","Cuba"],["CYP","Cyprus"],["CZE","Czech Republic"],["CIV","Côte d'Ivoire"],["DEN","Denmark"],["DJI","Djibouti"],["DMA","Dominica"],["DOM","Dominican Republic"],["ECU","Ecuador"],["EGY","Egypt"],["ESA","El Salvador"],["ENG","England"],["GEQ","Equatorial Guinea"],["ERI","Eritrea"],["EST","Estonia"],["SWZ","Eswatini"],["ETH","Ethiopia"],["FIJ","Fiji"],["FIN","Finland"],["FRA","France"],["GAB","Gabon"],["GAM","Gambia"],["GEO","Georgia"],["GER","Germany"],["GHA","Ghana"],["GBR","Great Britain"],["GRE","Greece"],["GRN","Grenada"],["GTM","Guatemala"],["GUI","Guinea"],["GBS","Guinea-Bissau"],["GUY","Guyana"],["HAI","Haiti"],["HON","Honduras"],["HKG","Hong Kong"],["HUN","Hungary"],["ISL","Iceland"],["IND","India"],["INA","Indonesia"],["IRI","Iran"],["IRQ","Iraq"],["IRL","Ireland"],["ISR","Israel"],["ITA","Italy"],["JAM","Jamaica"],["JPN","Japan"],["JOR","Jordan"],["KAZ","Kazakhstan"],["KEN","Kenya"],["PRK","Korea North"],["KOR","Korea South"],["KUW","Kuwait"],["KGZ","Kyrgyzstan"],["LAO","Laos"],["LAT","Latvia"],["LIB","Lebanon"],["LES","Lesotho"],["LBA","Libya"],["LIE","Liechtenstein"],["LTU","Lithuania"],["LUX","Luxembourg"],["MAD","Madagascar"],["MAW","Malawi"],["MAS","Malaysia"],["MDV","Maldives"],["MLI","Mali"],["MLT","Malta"],["MRI","Mauritius"],["MEX","Mexico"],["MDA","Moldova"],["MON","Monaco"],["MGL","Mongolia"],["MNE","Montenegro"],["MAR","Morocco"],["MOZ","Mozambique"],["MYA","Myanmar"],["NAM","Namibia"],["NEP","Nepal"],["NED","Netherlands"],["NZL","New Zealand"],["NCA","Nicaragua"],["NIG","Niger"],["NGR","Nigeria"],["MKD","North Macedonia"],["NOR","Norway"],["OMA","Oman"],["PAK","Pakistan"],["PLE","Palestine"],["PAN","Panama"],["PNG","Papua New Guinea"],["PAR","Paraguay"],["PER","Peru"],["PHI","Philippines"],["POL","Poland"],["POR","Portugal"],["QAT","Qatar"],["ROU","Romania"],["RUS","Russia"],["RWA","Rwanda"],["SKN","Saint Kitts and Nevis"],["LCA","Saint Lucia"],["VIN","Saint Vincent and the Grenadines"],["SAM","Samoa"],["SMR","San Marino"],["STP","Sao Tome and Principe"],["KSA","Saudi Arabia"],["SCO","Scotland"],["SEN","Senegal"],["SRB","Serbia"],["SEY","Seychelles"],["SLE","Sierra Leone"],["SGP","Singapore"],["SVK","Slovakia"],["SLO","Slovenia"],["SOL","Solomon Islands"],["SOM","Somalia"],["RSA","South Africa"],["SSD","South Sudan"],["ESP","Spain"],["SRI","Sri Lanka"],["SUD","Sudan"],["SUR","Suriname"],["SWE","Sweden"],["SUI","Switzerland"],["SYR","Syria"],["TJK","Tajikistan"],["TAN","Tanzania"],["THA","Thailand"],["TLS","Timor-Leste"],["TOG","Togo"],["TGA","Tonga"],["TTO","Trinidad and Tobago"],["TUN","Tunisia"],["TUR","Turkey"],["TKM","Turkmenistan"],["UGA","Uganda"],["UKR","Ukraine"],["UAE","United Arab Emirates"],["USA","United States"],["URU","Uruguay"],["UZB","Uzbekistan"],["VAN","Vanuatu"],["VEN","Venezuela"],["VIE","Vietnam"],["WAL","Wales"],["YEM","Yemen"],["ZAM","Zambia"],["ZIM","Zimbabwe"]];
+var COUNTRY_OPTIONS_HTML = '<option value="">– Select –</option>' + COUNTRIES.map(function(c) { return '<option value="' + c[0] + '">' + c[1] + ' (' + c[0] + ')</option>'; }).join('');
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 3000);
+}
+function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+// ---------- INIT ----------
+async function init() {
+  // 1) Event: URL param ?event=<uuid> overrides the active event
+  var params = new URLSearchParams(window.location.search);
+  var paramEvent = params.get('event');
+
+  if (paramEvent) {
+    eventId = paramEvent;
+  } else {
+    var evR = await db.from('app_settings').select('value').eq('key', 'active_event').limit(1);
+    if (evR.data && evR.data[0]) {
+      try { eventId = JSON.parse(evR.data[0].value).id; } catch(e) {}
+    }
+  }
+
+  if (!eventId) {
+    document.getElementById('noEventBox').style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+    return;
+  }
+
+  var evFull = await db.from('events').select('*').eq('id', eventId).single();
+  if (evFull.data) {
+    document.getElementById('pageTitle').textContent = '🎾 ' + evFull.data.name + ' – Group Registration';
+    document.title = 'Group Registration – ' + evFull.data.name;
+  }
+
+  await loadPackages();
+  await loadRoomAvailability();
+
+  // Start with 2 participant rows to make the "group" nature obvious
+  addParticipantRow();
+  addParticipantRow();
+}
+
+async function loadPackages() {
+  var q = db.from('packages').select('*').order('code');
+  if (eventId) q = q.eq('event_id', eventId);
+  var r = await q;
+  packagesCache = r.data || [];
+}
+
+async function loadRoomAvailability() {
+  roomCapacity = {}; roomUsed = {};
+  ROOM_TYPES.forEach(function(t) { roomCapacity[t] = 0; roomUsed[t] = 0; });
+
+  var rq = db.from('hotel_rooms').select('room_type').eq('event_id', eventId);
+  var rr = await rq;
+  (rr.data || []).forEach(function(room) {
+    if (ROOM_MAX[room.room_type]) roomCapacity[room.room_type] = (roomCapacity[room.room_type] || 0) + ROOM_MAX[room.room_type];
+  });
+
+  var pq = db.from('participants').select('room_type').eq('event_id', eventId).neq('withdraw', 'Ja').not('room_type', 'is', null);
+  var pr = await pq;
+  (pr.data || []).forEach(function(p) {
+    if (p.room_type) roomUsed[p.room_type] = (roomUsed[p.room_type] || 0) + 1;
+  });
+
+  renderRoomBadges();
+}
+
+function roomFree(type) { return Math.max(0, (roomCapacity[type] || 0) - (roomUsed[type] || 0)); }
+
+function renderRoomBadges() {
+  var el = document.getElementById('roomBadges');
+  el.innerHTML = ROOM_TYPES.map(function(t) {
+    var total = roomCapacity[t] || 0;
+    var free = roomFree(t);
+    var cls = free <= 0 ? 'full' : free <= 2 ? 'low' : 'ok';
+    var label = free <= 0 ? 'FULLY BOOKED' : free + ' / ' + total + ' free';
+    return '<div class="room-badge ' + cls + '"><div class="rb-type">' + t + '</div><div class="rb-count">' + label + '</div></div>';
+  }).join('');
+  document.getElementById('roomAvailUpdated').textContent = '(live)';
+  // Re-render room selects in existing rows so full types show as disabled
+  participantIds.forEach(function(id) { populateRoomTypeSelect(id); });
+}
+
+// ---------- PARTICIPANT ROWS ----------
+function addParticipantRow() {
+  participantCounter++;
+  var id = participantCounter;
+  participantIds.push(id);
+
+  var wrap = document.createElement('div');
+  wrap.className = 'participant-card';
+  wrap.id = 'p_card_' + id;
+  wrap.innerHTML =
+    '<div class="participant-head"><span>Participant #' + participantIds.length + '</span>'
+    + '<button type="button" class="btn danger small" onclick="removeParticipantRow(' + id + ')">Remove</button></div>'
+    + '<div class="participant-body">'
+    + '<div class="form-grid">'
+    + '<div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" id="p_lastname_' + id + '" /></div>'
+    + '<div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" id="p_firstname_' + id + '" /></div>'
+    + '<div class="form-group"><label>Country <span class="req">*</span></label><select id="p_country_' + id + '">' + COUNTRY_OPTIONS_HTML + '</select></div>'
+    + '<div class="form-group"><label>Date of Birth <span class="req">*</span></label><input type="date" id="p_dob_' + id + '" onchange="calcAgeCategory(' + id + ')" /></div>'
+    + '<div class="form-group"><label>Gender <span class="req">*</span></label><select id="p_gender_' + id + '" onchange="calcAgeCategory(' + id + ')"><option value="">– Select –</option><option value="Weiblich">Female</option><option value="Männlich">Male</option></select></div>'
+    + '<div class="form-group"><label>Member ID / ESID <span class="req">*</span></label><input type="text" id="p_member_id_' + id + '" placeholder="ES473686007" /><div class="esid-hint">Format: ES + 9 digits</div></div>'
+    + '<div class="form-group"><label>Passport / ID Number</label><input type="text" id="p_passport_id_' + id + '" /></div>'
+    + '<div class="form-group"><label>Mobile</label><input type="tel" id="p_mobile_' + id + '" placeholder="optional, defaults to group contact" /></div>'
+    + '<div class="form-group"><label>E-Mail</label><input type="email" id="p_email_' + id + '" placeholder="optional, defaults to group contact" /></div>'
+    + '<div class="form-group"><label>Role <span class="req">*</span></label><select id="p_role_' + id + '"><option value="">– Select –</option><option>Player</option><option>Coach</option><option>Parent</option><option>Referee</option><option>Official</option><option>ESF Official</option></select></div>'
+    + '<div class="form-group"><label>Age Category / Event</label><select id="p_events_' + id + '"><option value="">– Auto / Select –</option><option>GU13</option><option>BU13</option><option>GU15</option><option>BU15</option><option>GU17</option><option>BU17</option><option>GU19</option><option>BU19</option></select></div>'
+    + '<div class="form-group"><label>Shirt Size</label><select id="p_shirt_' + id + '"><option value="">– No shirt –</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select></div>'
+    + '<div class="form-group"><label>Package <span class="req">*</span></label><select id="p_package_' + id + '" onchange="onPackageChange(' + id + ')"><option value="">Loading…</option></select></div>'
+    + '<div class="form-group"><label>Room Type</label><select id="p_roomtype_' + id + '" onchange="loadRoomAvailability()"><option value="">– No room needed –</option></select></div>'
+    + '</div>'
+    + '<label class="checkbox-row" style="margin-top:12px"><input type="checkbox" id="p_meal_' + id + '" /><span>Book meal package for this participant</span></label>'
+    + '<span class="travel-toggle" onclick="toggleIndividualTravel(' + id + ')" id="p_traveltoggle_' + id + '">✈️ This person travels differently from the group defaults</span>'
+    + '<div class="travel-fields" id="p_travelfields_' + id + '">'
+    + '<div class="form-grid cols-3">'
+    + '<div class="form-group"><label>Transport</label><select id="p_ams_bus_' + id + '"><option value="">– Please select –</option><option>Bus</option><option>Zug</option><option value="Auto">Car / Own transport</option><option value="Flugzeug">Airplane</option></select></div>'
+    + '<div class="form-group"><label>Airport Transfer</label><select id="p_airport_plus_' + id + '"><option value="Nein">No</option><option value="Ja – Ankunft">Arrival only</option><option value="Ja – Abflug">Departure only</option><option value="Ja – Beide">Both</option></select></div>'
+    + '<div class="form-group"><label>Visa</label><select id="p_visa_' + id + '"><option>Nicht erforderlich</option><option>Erforderlich</option><option>Wird beantragt</option></select></div>'
+    + '<div class="form-group"><label>Arrival Date</label><input type="date" id="p_arrival_date_' + id + '" /></div>'
+    + '<div class="form-group"><label>Arrival Time</label><input type="time" id="p_arrival_time_' + id + '" /></div>'
+    + '<div class="form-group"><label>Incoming Flight</label><input type="text" id="p_flight_in_' + id + '" /></div>'
+    + '<div class="form-group"><label>Departure Date</label><input type="date" id="p_departure_date_' + id + '" /></div>'
+    + '<div class="form-group"><label>Departure Time</label><input type="time" id="p_departure_time_' + id + '" /></div>'
+    + '<div class="form-group"><label>Outgoing Flight</label><input type="text" id="p_flight_out_' + id + '" /></div>'
+    + '</div></div>'
+    + '</div>';
+
+  document.getElementById('participantsContainer').appendChild(wrap);
+  populatePackageSelect(id);
+  populateRoomTypeSelect(id);
+  updateParticipantCountLabel();
+}
+
+function removeParticipantRow(id) {
+  var el = document.getElementById('p_card_' + id);
+  if (el) el.remove();
+  participantIds = participantIds.filter(function(x) { return x !== id; });
+  renumberParticipants();
+  updateParticipantCountLabel();
+  loadRoomAvailability();
+}
+
+function renumberParticipants() {
+  participantIds.forEach(function(id, idx) {
+    var card = document.getElementById('p_card_' + id);
+    if (card) card.querySelector('.participant-head span').textContent = 'Participant #' + (idx + 1);
+  });
+}
+
+function updateParticipantCountLabel() {
+  document.getElementById('participantCountLabel').textContent = participantIds.length + ' participant(s)';
+}
+
+function populatePackageSelect(id) {
+  var sel = document.getElementById('p_package_' + id);
+  if (!sel) return;
+  if (!packagesCache.length) { sel.innerHTML = '<option value="">No packages available</option>'; return; }
+  sel.innerHTML = '<option value="">– Select package –</option>' + packagesCache.map(function(p) {
+    return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + p.code + (p.category ? ' – ' + p.category : '') + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
+  }).join('');
+}
+
+function populateRoomTypeSelect(id) {
+  var sel = document.getElementById('p_roomtype_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">– No room needed –</option>' + ROOM_TYPES.map(function(t) {
+    var free = roomFree(t);
+    // Don't lock out the type the person already has selected, otherwise they get stuck
+    var disabled = free <= 0 && t !== cur;
+    return '<option value="' + t + '"' + (disabled ? ' disabled' : '') + '>' + t + (disabled ? ' – FULLY BOOKED' : ' (' + free + ' free)') + '</option>';
+  }).join('');
+  if (cur) sel.value = cur;
+}
+
+function onPackageChange(id) { /* placeholder for future package-specific logic */ }
+
+function toggleIndividualTravel(id) {
+  var fields = document.getElementById('p_travelfields_' + id);
+  fields.classList.toggle('open');
+}
+
+function calcAgeCategory(id) {
+  var dob = document.getElementById('p_dob_' + id).value;
+  var gender = document.getElementById('p_gender_' + id).value;
+  if (!dob || !gender) return;
+  var today = new Date();
+  var birth = new Date(dob);
+  var age = today.getFullYear() - birth.getFullYear();
+  var mo = today.getMonth() - birth.getMonth();
+  if (mo < 0 || (mo === 0 && today.getDate() < birth.getDate())) age--;
+  var cls = age <= 12 ? 'U13' : age <= 14 ? 'U15' : age <= 16 ? 'U17' : age <= 18 ? 'U19' : '';
+  if (!cls) return;
+  var prefix = gender === 'Weiblich' ? 'G' : gender === 'Männlich' ? 'B' : '';
+  var cat = prefix + cls;
+  var sel = document.getElementById('p_events_' + id);
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === cat) { sel.value = cat; break; }
+  }
+}
+
+function onSameTravelToggle() {
+  // purely informational toggle; per-row override link always available regardless
+}
+
+// ---------- SUBMIT ----------
+async function submitGroupRegistration() {
+  var errors = [];
+
+  var leaderRequired = [['g_lastname','Group Leader Last Name'],['g_firstname','Group Leader First Name'],['g_mobile','Group Leader Mobile'],['g_email','Group Leader E-Mail']];
+  leaderRequired.forEach(function(f) {
+    var el = document.getElementById(f[0]);
+    if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
+  });
+
+  if (!participantIds.length) errors.push('At least one participant is required');
+  if (!document.getElementById('g_consent').checked) errors.push('Declaration (please accept the terms)');
+
+  var esidsInGroup = [];
+  var rows = [];
+  var useSameTravel = document.getElementById('g_sameTravel').checked;
+  var groupTravel = {
+    ams_bus: v('g_ams_bus') || null,
+    airport_plus: v('g_airport_plus') || null,
+    visa: v('g_visa') || null,
+    arrival_date: v('g_arrival_date') || null,
+    arrival_time: v('g_arrival_time') || null,
+    flight_in: v('g_flight_in') || null,
+    departure_date: v('g_departure_date') || null,
+    departure_time: v('g_departure_time') || null,
+    flight_out: v('g_flight_out') || null
+  };
+
+  // Requested room types (to re-check capacity right before insert)
+  var requestedRoomCounts = {};
+
+  participantIds.forEach(function(id, idx) {
+    var pFirst = document.getElementById('p_firstname_' + id).value.trim();
+    var pLast = document.getElementById('p_lastname_' + id).value.trim();
+    var pCountry = document.getElementById('p_country_' + id).value;
+    var pDob = document.getElementById('p_dob_' + id).value;
+    var pGender = document.getElementById('p_gender_' + id).value;
+    var pEsid = document.getElementById('p_member_id_' + id).value.trim();
+    var pRole = document.getElementById('p_role_' + id).value;
+    var pPackage = document.getElementById('p_package_' + id).value;
+    var label = 'Participant #' + (idx + 1);
+
+    var esidEl = document.getElementById('p_member_id_' + id);
+    if (pEsid && !/^ES[0-9]{9}$/.test(pEsid)) {
+      errors.push(label + ': ESID must be ES + 9 digits');
+      esidEl.classList.add('error');
+    } else { esidEl.classList.remove('error'); }
+
+    [['p_lastname_'+id, label+': Last Name'], ['p_firstname_'+id, label+': First Name'], ['p_country_'+id, label+': Country'],
+     ['p_dob_'+id, label+': Date of Birth'], ['p_gender_'+id, label+': Gender'], ['p_member_id_'+id, label+': Member ID / ESID'],
+     ['p_role_'+id, label+': Role'], ['p_package_'+id, label+': Package']].forEach(function(f) {
+      var el = document.getElementById(f[0]);
+      if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
+    });
+
+    if (pEsid) {
+      if (esidsInGroup.indexOf(pEsid) !== -1) errors.push(label + ': duplicate ESID within this group (' + pEsid + ')');
+      esidsInGroup.push(pEsid);
+    }
+
+    var packageEl = document.getElementById('p_package_' + id);
+    var packagePrice = null;
+    if (packageEl.selectedOptions && packageEl.selectedOptions[0]) {
+      packagePrice = parseFloat(packageEl.selectedOptions[0].getAttribute('data-price')) || null;
+    }
+
+    var roomType = document.getElementById('p_roomtype_' + id).value || null;
+    if (roomType) requestedRoomCounts[roomType] = (requestedRoomCounts[roomType] || 0) + 1;
+
+    var individualOpen = document.getElementById('p_travelfields_' + id).classList.contains('open');
+    var travel = (!useSameTravel || individualOpen) ? {
+      ams_bus: v('p_ams_bus_' + id) || groupTravel.ams_bus,
+      airport_plus: v('p_airport_plus_' + id) || groupTravel.airport_plus,
+      visa: v('p_visa_' + id) || groupTravel.visa,
+      arrival_date: v('p_arrival_date_' + id) || groupTravel.arrival_date,
+      arrival_time: v('p_arrival_time_' + id) || groupTravel.arrival_time,
+      flight_in: v('p_flight_in_' + id) || groupTravel.flight_in,
+      departure_date: v('p_departure_date_' + id) || groupTravel.departure_date,
+      departure_time: v('p_departure_time_' + id) || groupTravel.departure_time,
+      flight_out: v('p_flight_out_' + id) || groupTravel.flight_out
+    } : groupTravel;
+
+    rows.push({
+      event_id: eventId,
+      lastname: pLast, firstname: pFirst, country: pCountry,
+      dob: pDob || null, gender: pGender, member_id: pEsid,
+      passport_id: v('p_passport_id_' + id) || null,
+      mobile: v('p_mobile_' + id) || v('g_mobile') || null,
+      email: v('p_email_' + id) || v('g_email') || null,
+      role: pRole, events: v('p_events_' + id) || null,
+      shirt: v('p_shirt_' + id) || null,
+      package: pPackage, package_price: packagePrice,
+      room_type: roomType,
+      meal_plus: document.getElementById('p_meal_' + id).checked ? 'Ja' : 'Nein',
+      ams_bus: travel.ams_bus, airport_plus: travel.airport_plus,
+      arrival_date: travel.arrival_date, arrival_time: travel.arrival_time, flight_in: travel.flight_in,
+      departure_date: travel.departure_date, departure_time: travel.departure_time, flight_out: travel.flight_out,
+      visa: travel.visa,
+      memo: v('g_memo') || null,
+      payment_status: 'Pending',
+      updated_at: new Date().toISOString()
+    });
+  });
+
+  var errBox = document.getElementById('errorBox');
+  if (errors.length) {
+    errBox.style.display = 'block';
+    errBox.innerHTML = '⚠️ Please fix the following:\n• ' + errors.join('\n• ');
+    errBox.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  errBox.style.display = 'none';
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  // Re-check room capacity right before insert (best-effort, not a hard lock)
+  await loadRoomAvailability();
+  var capacityErrors = [];
+  Object.keys(requestedRoomCounts).forEach(function(type) {
+    if (requestedRoomCounts[type] > roomFree(type)) {
+      capacityErrors.push(type + ': only ' + roomFree(type) + ' free, but ' + requestedRoomCounts[type] + ' requested in this group');
+    }
+  });
+  if (capacityErrors.length) {
+    btn.disabled = false; btn.textContent = 'Submit Group Registration';
+    errBox.style.display = 'block';
+    errBox.innerHTML = '⛔ Room availability changed, please adjust:\n• ' + capacityErrors.join('\n• ');
+    errBox.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  // Duplicate ESID check against existing DB records
+  var dupQ = await db.from('participants').select('member_id,firstname,lastname').in('member_id', esidsInGroup);
+  if (dupQ.data && dupQ.data.length) {
+    btn.disabled = false; btn.textContent = 'Submit Group Registration';
+    errBox.style.display = 'block';
+    errBox.innerHTML = '⛔ These ESIDs are already registered:\n• ' + dupQ.data.map(function(d) { return d.member_id + ' (' + d.firstname + ' ' + d.lastname + ')'; }).join('\n• ');
+    errBox.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  // Build a group code and attach to every row
+  function slug(s) { return (s || 'GROUP').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'GROUP'; }
+  var groupCode = 'GRP-' + slug(v('g_lastname')) + '-' + Math.random().toString(16).slice(2, 6).toUpperCase();
+  rows.forEach(function(r) { r.group_tp = groupCode; });
+
+  var r = await db.from('participants').insert(rows).select();
+  if (r.error) {
+    btn.disabled = false; btn.textContent = 'Submit Group Registration';
+    errBox.style.display = 'block';
+    errBox.innerHTML = '❌ Error: ' + r.error.message;
+    errBox.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  document.getElementById('formContainer').style.display = 'none';
+  document.getElementById('successBox').style.display = 'block';
+  document.getElementById('groupCodeOut').textContent = groupCode;
+  document.getElementById('groupCountOut').textContent = rows.length;
+  document.getElementById('successBox').scrollIntoView({ behavior: 'smooth' });
+}
+
+init();
+</script>
+</body>
+</html>
