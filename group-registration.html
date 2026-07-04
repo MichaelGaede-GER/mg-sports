@@ -636,23 +636,35 @@ async function loadHotels() {
   hotelsCache = r.data || [];
 }
 
+var roomAvailabilityPromise = null;
 async function loadRoomAvailability() {
-  roomCapacity = {}; roomUsed = {};
-  ROOM_TYPES.forEach(function(t) { roomCapacity[t] = 0; roomUsed[t] = 0; });
+  // Guard against overlapping calls: if a load is already in flight, just wait for it
+  // instead of starting a second parallel fetch (which could otherwise cause the
+  // capacity counters to be summed twice).
+  if (roomAvailabilityPromise) return roomAvailabilityPromise;
+  roomAvailabilityPromise = (async function() {
+    roomCapacity = {}; roomUsed = {};
+    ROOM_TYPES.forEach(function(t) { roomCapacity[t] = 0; roomUsed[t] = 0; });
 
-  var rq = db.from('hotel_rooms').select('room_type').eq('event_id', eventId);
-  var rr = await rq;
-  (rr.data || []).forEach(function(room) {
-    if (ROOM_MAX[room.room_type]) roomCapacity[room.room_type] = (roomCapacity[room.room_type] || 0) + ROOM_MAX[room.room_type];
-  });
+    var rq = db.from('hotel_rooms').select('room_type').eq('event_id', eventId);
+    var rr = await rq;
+    (rr.data || []).forEach(function(room) {
+      if (ROOM_MAX[room.room_type]) roomCapacity[room.room_type] = (roomCapacity[room.room_type] || 0) + ROOM_MAX[room.room_type];
+    });
 
-  var pq = db.from('participants').select('room_type').eq('event_id', eventId).neq('withdraw', 'Ja').not('room_type', 'is', null);
-  var pr = await pq;
-  (pr.data || []).forEach(function(p) {
-    if (p.room_type) roomUsed[p.room_type] = (roomUsed[p.room_type] || 0) + 1;
-  });
+    var pq = db.from('participants').select('room_type').eq('event_id', eventId).neq('withdraw', 'Ja').not('room_type', 'is', null);
+    var pr = await pq;
+    (pr.data || []).forEach(function(p) {
+      if (p.room_type) roomUsed[p.room_type] = (roomUsed[p.room_type] || 0) + 1;
+    });
 
-  renderRoomBadges();
+    renderRoomBadges();
+  })();
+  try {
+    await roomAvailabilityPromise;
+  } finally {
+    roomAvailabilityPromise = null;
+  }
 }
 
 function roomFree(type) { return Math.max(0, (roomCapacity[type] || 0) - (roomUsed[type] || 0)); }
@@ -660,10 +672,12 @@ function roomFree(type) { return Math.max(0, (roomCapacity[type] || 0) - (roomUs
 function renderRoomBadges() {
   var el = document.getElementById('roomBadges');
   el.innerHTML = ROOM_TYPES.map(function(rt) {
-    var total = roomCapacity[rt] || 0;
-    var free = roomFree(rt);
-    var cls = free <= 0 ? 'full' : free <= 2 ? 'low' : 'ok';
-    var label = free <= 0 ? t('ra_full') : free + ' / ' + total + ' ' + t('ra_free_suffix');
+    var perRoom = ROOM_MAX[rt] || 1;
+    var totalRooms = Math.round((roomCapacity[rt] || 0) / perRoom);
+    var usedRooms = Math.ceil((roomUsed[rt] || 0) / perRoom);
+    var freeRooms = Math.max(0, totalRooms - usedRooms);
+    var cls = freeRooms <= 0 ? 'full' : freeRooms <= 2 ? 'low' : 'ok';
+    var label = freeRooms <= 0 ? t('ra_full') : freeRooms + ' / ' + totalRooms + ' ' + t('ra_free_suffix');
     var typeLabel = (ROOM_TYPE_LABELS[LANG] && ROOM_TYPE_LABELS[LANG][rt]) || rt;
     return '<div class="room-badge ' + cls + '"><div class="rb-type">' + typeLabel + '</div><div class="rb-count">' + label + '</div></div>';
   }).join('');
@@ -828,9 +842,13 @@ function populateRoomTypeSelect(id) {
   var cur = sel.value;
   var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
   sel.innerHTML = '<option value="">' + t('ph_select_roomtype') + '</option>' + ROOM_TYPES.map(function(rt) {
-    var free = roomFree(rt);
+    var free = roomFree(rt); // slot-based: still governs whether a new person can join (incl. sharing)
     var disabled = free <= 0 && rt !== cur;
-    return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + free + ' ' + t('ra_free_suffix') + ')') + '</option>';
+    var perRoom = ROOM_MAX[rt] || 1;
+    var totalRooms = Math.round((roomCapacity[rt] || 0) / perRoom);
+    var usedRooms = Math.ceil((roomUsed[rt] || 0) / perRoom);
+    var freeRooms = Math.max(0, totalRooms - usedRooms);
+    return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + freeRooms + ' ' + t('ra_free_suffix') + ')') + '</option>';
   }).join('');
   if (cur) sel.value = cur;
 }
