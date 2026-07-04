@@ -13,9 +13,12 @@
     --bg: #fff; --bg2: #f7f9fc; --text: #1a1d23; --text2: #5a6272; --text3: #9aa3b2;
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg2); color: var(--text); min-height: 100vh; }
-  .header { background: var(--blue); color: #fff; padding: 24px 32px; text-align: center; }
+  .header { background: var(--blue); color: #fff; padding: 24px 32px; text-align: center; position: relative; }
   .header h1 { font-size: 22px; font-weight: 700; }
   .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .lang-switch { position: absolute; top: 14px; right: 16px; display: flex; gap: 4px; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px; }
+  .lang-btn { border: none; background: transparent; color: #fff; opacity: 0.7; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 16px; cursor: pointer; }
+  .lang-btn.active { background: #fff; color: var(--blue); opacity: 1; }
   .container { max-width: 900px; margin: 32px auto; padding: 0 16px 80px; }
   .card { background: var(--bg); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; overflow: hidden; }
   .card-header { padding: 14px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; display:flex; align-items:center; justify-content:space-between; }
@@ -68,98 +71,116 @@
 <body>
 
 <div class="header">
+  <div class="lang-switch">
+    <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" id="langBtnDe" onclick="setLang('de')">DE</button>
+  </div>
   <h1 id="pageTitle">🎾 Group Registration</h1>
-  <p>Register a full team or delegation in one go — please fill in all required fields</p>
+  <p data-i18n="header_subtitle">Register a full team or delegation in one go — please fill in all required fields</p>
 </div>
 
 <div class="container">
   <div id="successBox" class="success-box">
     <div style="font-size:48px;margin-bottom:12px">✅</div>
-    <h2>Group Registration Submitted!</h2>
-    <p>Thank you. Your group has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
-    <p style="margin-top:16px;font-size:12px;color:var(--text3)">Group Code: <strong id="groupCodeOut">–</strong> · <span id="groupCountOut"></span> participant(s)</p>
+    <h2 data-i18n="success_title">Group Registration Submitted!</h2>
+    <p data-i18n-html="success_text">Thank you. Your group has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
+    <p style="margin-top:16px;font-size:12px;color:var(--text3)"><span data-i18n="success_groupcode">Group Code:</span> <strong id="groupCodeOut">–</strong> · <span id="groupCountOut"></span> <span data-i18n="success_participants_suffix">participant(s)</span></p>
   </div>
 
   <div id="formContainer">
     <div id="errorBox" class="error-box"></div>
-    <div id="noEventBox" class="error-box" style="display:none">⚠️ No active tournament found. Please contact the organizer.</div>
+    <div id="noEventBox" class="error-box" style="display:none" data-i18n="no_event">⚠️ No active tournament found. Please contact the organizer.</div>
 
     <!-- GROUP LEADER -->
     <div class="card">
-      <div class="card-header">👤 Group Leader / Contact</div>
+      <div class="card-header" data-i18n="gl_header">👤 Group Leader / Contact</div>
       <div class="card-body">
         <div class="form-grid">
-          <div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" id="g_lastname" placeholder="Last name" /></div>
-          <div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" id="g_firstname" placeholder="First name" /></div>
-          <div class="form-group"><label>Federation / Club</label><input type="text" id="g_federation" placeholder="e.g. German Squash Federation" /></div>
-          <div class="form-group"><label>Mobile <span class="req">*</span></label><input type="tel" id="g_mobile" placeholder="+49 151 …" /></div>
-          <div class="form-group full"><label>E-Mail <span class="req">*</span></label><input type="email" id="g_email" placeholder="contact@email.com" /></div>
-          <div class="form-group full"><label>Notes</label><textarea id="g_memo" rows="2" placeholder="Anything the organizer should know about this group"></textarea></div>
+          <div class="form-group"><label data-i18n="f_lastname">Last Name <span class="req">*</span></label><input type="text" id="g_lastname" data-i18n-ph="f_lastname_ph" placeholder="Last name" /></div>
+          <div class="form-group"><label data-i18n="f_firstname">First Name <span class="req">*</span></label><input type="text" id="g_firstname" data-i18n-ph="f_firstname_ph" placeholder="First name" /></div>
+          <div class="form-group"><label data-i18n="gl_federation">Federation / Club</label><input type="text" id="g_federation" data-i18n-ph="gl_federation_ph" placeholder="e.g. German Squash Federation" /></div>
+          <div class="form-group"><label data-i18n="f_mobile">Mobile <span class="req">*</span></label><input type="tel" id="g_mobile" placeholder="+49 151 …" /></div>
+          <div class="form-group full"><label data-i18n="f_email">E-Mail <span class="req">*</span></label><input type="email" id="g_email" data-i18n-ph="gl_email_ph" placeholder="contact@email.com" /></div>
+          <div class="form-group full"><label data-i18n="gl_notes">Notes</label><textarea id="g_memo" rows="2" data-i18n-ph="gl_notes_ph" placeholder="Anything the organizer should know about this group"></textarea></div>
         </div>
       </div>
     </div>
 
     <!-- SHARED TRAVEL DEFAULTS -->
     <div class="card">
-      <div class="card-header">✈️ Shared Travel Details (default for all participants)</div>
+      <div class="card-header" data-i18n="st_header">✈️ Shared Travel Details (default for all participants)</div>
       <div class="card-body">
         <label class="checkbox-row" style="margin-bottom:14px">
           <input type="checkbox" id="g_sameTravel" checked onchange="onSameTravelToggle()" />
-          <span>Use these travel details for all participants (can be overridden per person below)</span>
+          <span data-i18n="st_sametravel">Use these travel details for all participants (can be overridden per person below)</span>
         </label>
         <div class="form-grid cols-3">
-          <div class="form-group"><label>Transport Option</label>
-            <select id="g_ams_bus" disabled><option value="Flugzeug" selected>Airplane (only option – airport pickup service)</option></select>
+          <div class="form-group"><label data-i18n="st_transport">Transport Option</label>
+            <select id="g_ams_bus" disabled><option value="Flugzeug" selected data-i18n="st_transport_only">Airplane (only option)</option></select>
+            <div class="esid-hint" data-i18n="st_airport_hint">Airport Hamburg pick up and drop off only</div>
           </div>
-          <div class="form-group"><label>Airport Transfer</label>
-            <select id="g_airport_plus"><option value="Nein">No</option><option value="Ja – Ankunft">Yes – Arrival only</option><option value="Ja – Abflug">Yes – Departure only</option><option value="Ja – Beide" selected>Yes – Both</option></select>
+          <div class="form-group"><label data-i18n="st_airport_transfer">Airport Transfer</label>
+            <select id="g_airport_plus" disabled><option value="Nein" selected>No</option></select>
           </div>
-          <div class="form-group"><label>Visa Required?</label>
-            <select id="g_visa"><option>Nicht erforderlich</option><option>Erforderlich</option><option>Wird beantragt</option></select>
-          </div>
-          <div class="form-group"><label>Arrival Date</label><input type="date" id="g_arrival_date" /></div>
-          <div class="form-group"><label>Arrival Time</label><input type="time" id="g_arrival_time" /></div>
-          <div class="form-group"><label>Incoming Flight No.</label><input type="text" id="g_flight_in" placeholder="e.g. LH1234" /></div>
-          <div class="form-group"><label>Departure Date</label><input type="date" id="g_departure_date" /></div>
-          <div class="form-group"><label>Departure Time</label><input type="time" id="g_departure_time" /></div>
-          <div class="form-group"><label>Outgoing Flight No.</label><input type="text" id="g_flight_out" placeholder="e.g. LH5678" /></div>
+        </div>
+        <div class="form-grid cols-3" style="margin-top:14px">
+          <div class="form-group"><label data-i18n="f_arrival_date">Arrival Date</label><input type="date" id="g_arrival_date" /></div>
+          <div class="form-group"><label data-i18n="f_arrival_time">Arrival Time</label><input type="time" id="g_arrival_time" oninput="updateGroupAirportTransfer()" /></div>
+          <div class="form-group"><label data-i18n="f_flight_in">Incoming Flight No.</label><input type="text" id="g_flight_in" data-i18n-ph="st_flight_in_ph" placeholder="e.g. LH1234" /></div>
+        </div>
+        <div class="form-grid cols-3" style="margin-top:14px">
+          <div class="form-group"><label data-i18n="f_departure_date">Departure Date</label><input type="date" id="g_departure_date" /></div>
+          <div class="form-group"><label data-i18n="f_departure_time">Departure Time</label><input type="time" id="g_departure_time" oninput="updateGroupAirportTransfer()" /></div>
+          <div class="form-group"><label data-i18n="f_flight_out">Outgoing Flight No.</label><input type="text" id="g_flight_out" data-i18n-ph="st_flight_out_ph" placeholder="e.g. LH5678" /></div>
         </div>
       </div>
     </div>
 
     <!-- ROOM AVAILABILITY -->
     <div class="card">
-      <div class="card-header">🏨 Hotel Room Availability <span style="font-weight:400;text-transform:none;font-size:11px" id="roomAvailUpdated"></span></div>
+      <div class="card-header"><span data-i18n="ra_header">🏨 Hotel Room Availability</span> <span style="font-weight:400;text-transform:none;font-size:11px" id="roomAvailUpdated"></span></div>
       <div class="card-body">
-        <div id="roomBadges" class="room-badges"><p style="color:var(--text3);font-size:13px">Loading availability…</p></div>
-        <p style="font-size:11px;color:var(--text3);margin-top:10px">Availability reflects current bookings for this tournament and updates when you submit. Exact room numbers are assigned by the organizer after registration.</p>
+        <div id="roomBadges" class="room-badges"><p style="color:var(--text3);font-size:13px" data-i18n="ra_loading">Loading availability…</p></div>
+        <p style="font-size:11px;color:var(--text3);margin-top:10px" data-i18n="ra_note">Availability reflects current bookings for this tournament and updates when you submit. Exact room numbers are assigned by the organizer after registration.</p>
       </div>
     </div>
 
     <!-- PARTICIPANTS -->
     <div class="card">
       <div class="card-header">
-        <span>🧑‍🤝‍🧑 Participants</span>
+        <span data-i18n="pt_header">🧑‍🤝‍🧑 Participants</span>
         <span class="group-summary-line" id="participantCountLabel">0 participant(s)</span>
       </div>
       <div class="card-body">
         <div id="participantsContainer"></div>
-        <button type="button" class="add-participant-btn" onclick="addParticipantRow()">+ Add Participant</button>
+        <button type="button" class="add-participant-btn" onclick="addParticipantRow()" data-i18n="pt_add_btn">+ Add Participant</button>
+      </div>
+    </div>
+
+    <!-- ACCESS CODE (only required if package T - Tournament Team is booked) -->
+    <div class="card" id="accessCodeCard" style="display:none">
+      <div class="card-header" data-i18n="code_header">🔑 Access Code</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label data-i18n="code_label">Access Code (required for Tournament Team package) <span class="req">*</span></label>
+          <input type="text" id="g_accessCode" data-i18n-ph="code_ph" placeholder="Enter code" />
+          <div class="esid-hint" data-i18n="code_hint">This package requires an access code provided by the organizer.</div>
+        </div>
       </div>
     </div>
 
     <!-- CONSENT -->
     <div class="card">
-      <div class="card-header">📋 Declaration</div>
+      <div class="card-header" data-i18n="decl_header">📋 Declaration</div>
       <div class="card-body">
         <label class="checkbox-row" style="align-items:flex-start;line-height:1.6">
           <input type="checkbox" id="g_consent" style="margin-top:2px" />
-          <span>I confirm that all information provided for this group is correct and I agree, on behalf of all listed participants, to the <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">tournament regulations and withdrawal policy</a>. I understand that this registration is subject to confirmation by the organizer.</span>
+          <span id="declText" data-i18n-html="decl_text">I confirm that all information provided for this group is correct and I agree, on behalf of all listed participants, to the <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">tournament regulations and withdrawal policy</a>. I understand that this registration is subject to confirmation by the organizer.</span>
         </label>
       </div>
     </div>
 
-    <button class="submit-btn" id="submitBtn" onclick="submitGroupRegistration()">Submit Group Registration</button>
+    <button class="submit-btn" id="submitBtn" onclick="submitGroupRegistration()" data-i18n="submit_btn">Submit Group Registration</button>
   </div>
 </div>
 
@@ -172,6 +193,10 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 var eventId = null;
+var eventEndDate = null;
+var eventNameRaw = '';
+var hotelsCache = [];
+var ageClassesCache = ['GU11', 'GU13', 'GU15', 'GU17', 'GU19', 'BU11', 'BU13', 'BU15', 'BU17', 'BU19'];
 var packagesCache = [];
 var roomCapacity = {};   // { 'Einzelzimmer': totalSlots, ... }
 var roomUsed = {};       // { 'Einzelzimmer': usedSlots, ... }
@@ -182,18 +207,352 @@ var participantIds = []; // order of rows currently in DOM
 var roomShareGroups = {}; // anchorId -> { roomType, members: [ids] }
 var roomShareOf = {};     // memberId -> anchorId (only set for non-anchor sharers)
 
+// ---------- I18N ----------
+var LANG = 'en';
+
+var I18N = {
+en: {
+  header_subtitle: "Register a full team or delegation in one go — please fill in all required fields",
+  no_event: "⚠️ No active tournament found. Please contact the organizer.",
+  gl_header: "👤 Group Leader / Contact",
+  gl_federation: "Federation / Club",
+  gl_federation_ph: "e.g. German Squash Federation",
+  gl_email_ph: "contact@email.com",
+  gl_notes: "Notes",
+  gl_notes_ph: "Anything the organizer should know about this group",
+  st_header: "✈️ Shared Travel Details (default for all participants)",
+  st_sametravel: "Use these travel details for all participants (can be overridden per person below)",
+  st_transport: "Transport Option",
+  st_transport_only: "Airplane (only option)",
+  st_airport_hint: "Airport Hamburg pick up and drop off only",
+  st_airport_transfer: "Airport Transfer",
+  st_flight_in_ph: "e.g. LH1234",
+  st_flight_out_ph: "e.g. LH5678",
+  ra_header: "🏨 Hotel Room Availability",
+  ra_live: "(live)",
+  ra_loading: "Loading availability…",
+  ra_note: "Availability reflects current bookings for this tournament and updates when you submit. Exact room numbers are assigned by the organizer after registration.",
+  ra_full: "FULLY BOOKED",
+  ra_free_suffix: "free",
+  pt_header: "🧑‍🤝‍🧑 Participants",
+  pt_count_suffix: "participant(s)",
+  pt_add_btn: "+ Add Participant",
+  pt_remove: "Remove",
+  pt_participant_prefix: "Participant #",
+  decl_header: "📋 Declaration",
+  decl_text: 'I confirm that all information provided for this group is correct and I agree, on behalf of all listed participants, to the <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">tournament regulations and withdrawal policy</a>. I understand that this registration is subject to confirmation by the organizer.',
+  submit_btn: "Submit Group Registration",
+  submitting: "Submitting…",
+  success_title: "Group Registration Submitted!",
+  success_text: "Thank you. Your group has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.",
+  success_groupcode: "Group Code:",
+  success_participants_suffix: "participant(s)",
+
+  f_lastname: 'Last Name <span class="req">*</span>',
+  f_lastname_ph: "Last name",
+  f_firstname: 'First Name <span class="req">*</span>',
+  f_firstname_ph: "First name",
+  f_country: 'Country <span class="req">*</span>',
+  f_dob: 'Date of Birth <span class="req">*</span>',
+  f_gender: 'Gender <span class="req">*</span>',
+  f_member_id: 'Member ID / ESID <span class="req">*</span>',
+  f_member_id_ph: "ES473686007",
+  f_member_id_hint: "Format: ES + 9 digits",
+  f_passport: "Passport / ID Number",
+  f_mobile: 'Mobile <span class="req">*</span>',
+  f_mobile_optional: "Mobile",
+  f_mobile_ph: "optional, defaults to group contact",
+  f_email: 'E-Mail <span class="req">*</span>',
+  f_email_optional: "E-Mail",
+  f_email_ph: "optional, defaults to group contact",
+  f_role: 'Role <span class="req">*</span>',
+  f_age_category: "Age Category / Event",
+  f_shirt: 'Shirt Size <span class="req">*</span>',
+  f_package: 'Package <span class="req">*</span>',
+  f_roomtype: 'Room Type <span class="req">*</span>',
+  f_shareroom: "Share Room With",
+  f_hotel: 'Hotel <span class="req">*</span>',
+  f_checkin: 'Check-in Date <span class="req">*</span>',
+  f_checkout: 'Check-out Date <span class="req">*</span>',
+  f_travel_toggle: "✈️ This person travels differently from the group defaults",
+  f_transport: "Transport",
+  f_airport_transfer: "Airport Transfer",
+  f_visa: "Visa",
+  f_arrival_date: "Arrival Date",
+  f_arrival_time: "Arrival Time",
+  f_flight_in: "Incoming Flight No.",
+  f_flight_in_short: "Incoming Flight",
+  f_departure_date: "Departure Date",
+  f_departure_time: "Departure Time",
+  f_flight_out: "Outgoing Flight No.",
+  f_flight_out_short: "Outgoing Flight",
+
+  ph_select: "– Select –",
+  ph_select_package: "– Select package –",
+  ph_select_roomtype: "– Select room type –",
+  ph_select_hotel: "– Select hotel –",
+  ph_select_size: "– Select size –",
+  ph_not_sharing: "– Not sharing / own room –",
+  ph_auto_select: "– Auto / Select –",
+  ph_loading: "Loading…",
+
+  hint_no_nights: "No nights defined for this package – set check-out manually",
+  hint_nights_from_pkg: " nights (from package ",
+  hint_synced: "Synced with roommate's dates",
+  hint_p1_placeholder: "Automatically filled once a roommate has been assigned.",
+  hint_sharing_with: "Sharing room with: ",
+  hint_no_packages: "No packages available",
+  hint_no_player_packages: "No player packages available",
+  hint_no_adult_packages: "No adult packages available",
+  hint_no_hotel_configured: "No hotel configured for this event",
+
+  err_fix_following: "⚠️ Please fix the following:",
+  err_esid_format: "ESID must be ES + 9 digits",
+  err_duplicate_esid_group: "duplicate ESID within this group",
+  err_room_capacity_changed: "⛔ Room availability changed, please adjust:",
+  err_only_free: "only",
+  err_requested_in_group: "free, but",
+  err_requested_suffix: "requested in this group",
+  err_esid_already_registered: "⛔ These ESIDs are already registered:",
+  err_generic: "❌ Error: ",
+  err_at_least_one_participant: "At least one participant is required",
+  err_declaration: "Declaration (please accept the terms)",
+  err_group_leader_lastname: "Group Leader Last Name",
+  err_group_leader_firstname: "Group Leader First Name",
+  err_group_leader_mobile: "Group Leader Mobile",
+  err_group_leader_email: "Group Leader E-Mail",
+
+  code_header: "🔑 Access Code",
+  code_label: 'Access Code (required for Tournament Team package) <span class="req">*</span>',
+  code_ph: "Enter code",
+  code_hint: "This package requires an access code provided by the organizer.",
+  err_access_code: "Invalid access code for the Tournament Team package (T)"
+},
+de: {
+  header_subtitle: "Melde ein ganzes Team oder eine Delegation auf einmal an — bitte alle Pflichtfelder ausfüllen",
+  no_event: "⚠️ Kein aktives Turnier gefunden. Bitte den Veranstalter kontaktieren.",
+  gl_header: "👤 Gruppenleiter / Kontakt",
+  gl_federation: "Verband / Verein",
+  gl_federation_ph: "z. B. Deutscher Squash-Verband",
+  gl_email_ph: "kontakt@email.com",
+  gl_notes: "Notizen",
+  gl_notes_ph: "Alles, was der Veranstalter über diese Gruppe wissen sollte",
+  st_header: "✈️ Gemeinsame Reisedaten (Standard für alle Teilnehmer)",
+  st_sametravel: "Diese Reisedaten für alle Teilnehmer verwenden (kann unten pro Person überschrieben werden)",
+  st_transport: "Transportmittel",
+  st_transport_only: "Flugzeug (einzige Option)",
+  st_airport_hint: "Nur Abholung/Bringservice Flughafen Hamburg",
+  st_airport_transfer: "Flughafentransfer",
+  st_flight_in_ph: "z. B. LH1234",
+  st_flight_out_ph: "z. B. LH5678",
+  ra_header: "🏨 Verfügbare Hotelzimmer",
+  ra_live: "(live)",
+  ra_loading: "Verfügbarkeit wird geladen…",
+  ra_note: "Die Verfügbarkeit spiegelt die aktuellen Buchungen für dieses Turnier wider und aktualisiert sich beim Absenden. Die genaue Zimmernummer wird nach der Anmeldung vom Veranstalter zugewiesen.",
+  ra_full: "AUSGEBUCHT",
+  ra_free_suffix: "frei",
+  pt_header: "🧑‍🤝‍🧑 Teilnehmer",
+  pt_count_suffix: "Teilnehmer",
+  pt_add_btn: "+ Teilnehmer hinzufügen",
+  pt_remove: "Entfernen",
+  pt_participant_prefix: "Teilnehmer #",
+  decl_header: "📋 Erklärung",
+  decl_text: 'Ich bestätige, dass alle Angaben zu dieser Gruppe korrekt sind, und stimme im Namen aller aufgeführten Teilnehmer den <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">Turnierregeln und der Rücktrittsregelung</a> zu. Mir ist bewusst, dass diese Anmeldung der Bestätigung durch den Veranstalter bedarf.',
+  submit_btn: "Gruppenanmeldung absenden",
+  submitting: "Wird gesendet…",
+  success_title: "Gruppenanmeldung gesendet!",
+  success_text: "Vielen Dank. Deine Gruppe wurde empfangen und wartet nun auf <strong>Bestätigung</strong>.<br>Der Veranstalter wird sich in Kürze bei euch melden.",
+  success_groupcode: "Gruppencode:",
+  success_participants_suffix: "Teilnehmer",
+
+  f_lastname: 'Nachname <span class="req">*</span>',
+  f_lastname_ph: "Nachname",
+  f_firstname: 'Vorname <span class="req">*</span>',
+  f_firstname_ph: "Vorname",
+  f_country: 'Land <span class="req">*</span>',
+  f_dob: 'Geburtsdatum <span class="req">*</span>',
+  f_gender: 'Geschlecht <span class="req">*</span>',
+  f_member_id: 'Mitglieds-ID / ESID <span class="req">*</span>',
+  f_member_id_ph: "ES473686007",
+  f_member_id_hint: "Format: ES + 9 Ziffern",
+  f_passport: "Reisepass- / Ausweisnummer",
+  f_mobile: 'Mobil <span class="req">*</span>',
+  f_mobile_optional: "Mobil",
+  f_mobile_ph: "optional, sonst Gruppenkontakt",
+  f_email: 'E-Mail <span class="req">*</span>',
+  f_email_optional: "E-Mail",
+  f_email_ph: "optional, sonst Gruppenkontakt",
+  f_role: 'Rolle <span class="req">*</span>',
+  f_age_category: "Altersklasse / Event",
+  f_shirt: 'Shirtgröße <span class="req">*</span>',
+  f_package: 'Package <span class="req">*</span>',
+  f_roomtype: 'Zimmertyp <span class="req">*</span>',
+  f_shareroom: "Zimmer teilen mit",
+  f_hotel: 'Hotel <span class="req">*</span>',
+  f_checkin: 'Check-in Datum <span class="req">*</span>',
+  f_checkout: 'Check-out Datum <span class="req">*</span>',
+  f_travel_toggle: "✈️ Diese Person reist abweichend von den Gruppen-Standardwerten",
+  f_transport: "Transport",
+  f_airport_transfer: "Flughafentransfer",
+  f_visa: "Visum",
+  f_arrival_date: "Ankunftsdatum",
+  f_arrival_time: "Ankunftszeit",
+  f_flight_in: "Ankunftsflug Nr.",
+  f_flight_in_short: "Ankunftsflug",
+  f_departure_date: "Abreisedatum",
+  f_departure_time: "Abreisezeit",
+  f_flight_out: "Abflug Nr.",
+  f_flight_out_short: "Abflug",
+
+  ph_select: "– Auswählen –",
+  ph_select_package: "– Package wählen –",
+  ph_select_roomtype: "– Zimmertyp wählen –",
+  ph_select_hotel: "– Hotel wählen –",
+  ph_select_size: "– Größe wählen –",
+  ph_not_sharing: "– Kein geteiltes Zimmer / eigenes Zimmer –",
+  ph_auto_select: "– Automatisch / Auswählen –",
+  ph_loading: "Wird geladen…",
+
+  hint_no_nights: "Keine Nächte für dieses Package hinterlegt – Check-out bitte manuell setzen",
+  hint_nights_from_pkg: " Nächte (aus Package ",
+  hint_synced: "Synchronisiert mit den Daten des Zimmerpartners",
+  hint_p1_placeholder: "Wird automatisch ausgefüllt, sobald ein Zimmerpartner zugeordnet wurde.",
+  hint_sharing_with: "Teilt Zimmer mit: ",
+  hint_no_packages: "Keine Packages verfügbar",
+  hint_no_player_packages: "Keine Player-Packages verfügbar",
+  hint_no_adult_packages: "Keine Adult-Packages verfügbar",
+  hint_no_hotel_configured: "Kein Hotel für dieses Event hinterlegt",
+
+  err_fix_following: "⚠️ Bitte folgende Punkte korrigieren:",
+  err_esid_format: "ESID muss ES + 9 Ziffern sein",
+  err_duplicate_esid_group: "doppelte ESID innerhalb dieser Gruppe",
+  err_room_capacity_changed: "⛔ Zimmerverfügbarkeit hat sich geändert, bitte anpassen:",
+  err_only_free: "nur",
+  err_requested_in_group: "frei, aber",
+  err_requested_suffix: "in dieser Gruppe angefragt",
+  err_esid_already_registered: "⛔ Diese ESIDs sind bereits registriert:",
+  err_generic: "❌ Fehler: ",
+  err_at_least_one_participant: "Mindestens ein Teilnehmer ist erforderlich",
+  err_declaration: "Erklärung (bitte den Bedingungen zustimmen)",
+  err_group_leader_lastname: "Nachname Gruppenleiter",
+  err_group_leader_firstname: "Vorname Gruppenleiter",
+  err_group_leader_mobile: "Mobilnummer Gruppenleiter",
+  err_group_leader_email: "E-Mail Gruppenleiter",
+
+  code_header: "🔑 Zugangscode",
+  code_label: 'Zugangscode (erforderlich für Package "Tournament Team") <span class="req">*</span>',
+  code_ph: "Code eingeben",
+  code_hint: "Für dieses Package wird ein vom Veranstalter bereitgestellter Zugangscode benötigt.",
+  err_access_code: "Ungültiger Zugangscode für das Package \"Tournament Team\" (T)"
+}
+};
+
+var ROLE_LABELS = {
+  en: { Player: 'Player', Coach: 'Coach', Parent: 'Parent', Referee: 'Referee', Official: 'Official', 'ESF Official': 'ESF Official' },
+  de: { Player: 'Spieler', Coach: 'Trainer', Parent: 'Elternteil', Referee: 'Schiedsrichter', Official: 'Offizieller', 'ESF Official': 'ESF-Offizieller' }
+};
+var GENDER_LABELS = {
+  en: { Weiblich: 'Female', 'Männlich': 'Male' },
+  de: { Weiblich: 'Weiblich', 'Männlich': 'Männlich' }
+};
+var ROOM_TYPE_LABELS = {
+  en: { Einzelzimmer: 'Single Room', Doppelzimmer: 'Double Room', Dreibettzimmer: 'Triple Room' },
+  de: { Einzelzimmer: 'Einzelzimmer', Doppelzimmer: 'Doppelzimmer', Dreibettzimmer: 'Dreibettzimmer' }
+};
+var VISA_LABELS = {
+  en: { 'Nicht erforderlich': 'Not required', 'Erforderlich': 'Required', 'Wird beantragt': 'Being applied for' },
+  de: { 'Nicht erforderlich': 'Nicht erforderlich', 'Erforderlich': 'Erforderlich', 'Wird beantragt': 'Wird beantragt' }
+};
+var AIRPORT_LABELS = {
+  en: { 'Ja – Beide': 'Yes – Both', 'Ja – Ankunft': 'Yes – Arrival only', 'Ja – Abflug': 'Yes – Departure only', 'Nein': 'No' },
+  de: { 'Ja – Beide': 'Ja – Beide', 'Ja – Ankunft': 'Ja – Ankunft', 'Ja – Abflug': 'Ja – Abflug', 'Nein': 'Nein' }
+};
+
+function t(key) {
+  return (I18N[LANG] && I18N[LANG][key] !== undefined) ? I18N[LANG][key] : ((I18N.en && I18N.en[key] !== undefined) ? I18N.en[key] : key);
+}
+
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    el.innerHTML = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+    el.innerHTML = t(el.getAttribute('data-i18n-html'));
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el) {
+    el.placeholder = t(el.getAttribute('data-i18n-ph'));
+  });
+  document.getElementById('langBtnEn').classList.toggle('active', LANG === 'en');
+  document.getElementById('langBtnDe').classList.toggle('active', LANG === 'de');
+  document.documentElement.lang = LANG;
+}
+
+function setLang(lang) {
+  LANG = lang === 'de' ? 'de' : 'en';
+  try { localStorage.setItem('groupRegLang', LANG); } catch (e) {}
+  applyStaticTranslations();
+  refreshDynamicTranslations();
+}
+
+function refreshDynamicTranslations() {
+  renderRoomBadges();
+  participantIds.forEach(function(id) {
+    populatePackageSelect(id);
+    populateRoomTypeSelect(id);
+    populateHotelSelect(id);
+    populateEventsSelect(id);
+    populateGenderSelect(id);
+    populateVisaSelect(id);
+    calcAgeCategory(id); // safe/idempotent; refreshes role option labels too
+    calcCheckout(id);
+  });
+  refreshAllShareSelects();
+  updateGroupAirportTransfer();
+  participantIds.forEach(function(id) { updateParticipantAirportTransfer(id); });
+}
+
 var COUNTRIES = [["AFG","Afghanistan"],["ALB","Albania"],["ALG","Algeria"],["AND","Andorra"],["AGO","Angola"],["ANT","Antigua and Barbuda"],["ARG","Argentina"],["ARM","Armenia"],["AUS","Australia"],["AUT","Austria"],["AZE","Azerbaijan"],["BAH","Bahamas"],["BRN","Bahrain"],["BAN","Bangladesh"],["BAR","Barbados"],["BLR","Belarus"],["BEL","Belgium"],["BIZ","Belize"],["BEN","Benin"],["BHU","Bhutan"],["BOL","Bolivia"],["BIH","Bosnia and Herzegovina"],["BOT","Botswana"],["BRA","Brazil"],["BRU","Brunei"],["BUL","Bulgaria"],["BUR","Burkina Faso"],["BDI","Burundi"],["CAM","Cambodia"],["CMR","Cameroon"],["CAN","Canada"],["CPV","Cape Verde"],["CAF","Central African Republic"],["CHA","Chad"],["CHI","Chile"],["CHN","China"],["TPE","Chinese Taipei"],["COL","Colombia"],["COM","Comoros"],["CGO","Congo"],["COD","Congo DR"],["CRC","Costa Rica"],["CRO","Croatia"],["CUB","Cuba"],["CYP","Cyprus"],["CZE","Czech Republic"],["CIV","Côte d'Ivoire"],["DEN","Denmark"],["DJI","Djibouti"],["DMA","Dominica"],["DOM","Dominican Republic"],["ECU","Ecuador"],["EGY","Egypt"],["ESA","El Salvador"],["ENG","England"],["GEQ","Equatorial Guinea"],["ERI","Eritrea"],["EST","Estonia"],["SWZ","Eswatini"],["ETH","Ethiopia"],["FIJ","Fiji"],["FIN","Finland"],["FRA","France"],["GAB","Gabon"],["GAM","Gambia"],["GEO","Georgia"],["GER","Germany"],["GHA","Ghana"],["GBR","Great Britain"],["GRE","Greece"],["GRN","Grenada"],["GTM","Guatemala"],["GUI","Guinea"],["GBS","Guinea-Bissau"],["GUY","Guyana"],["HAI","Haiti"],["HON","Honduras"],["HKG","Hong Kong"],["HUN","Hungary"],["ISL","Iceland"],["IND","India"],["INA","Indonesia"],["IRI","Iran"],["IRQ","Iraq"],["IRL","Ireland"],["ISR","Israel"],["ITA","Italy"],["JAM","Jamaica"],["JPN","Japan"],["JOR","Jordan"],["KAZ","Kazakhstan"],["KEN","Kenya"],["PRK","Korea North"],["KOR","Korea South"],["KUW","Kuwait"],["KGZ","Kyrgyzstan"],["LAO","Laos"],["LAT","Latvia"],["LIB","Lebanon"],["LES","Lesotho"],["LBA","Libya"],["LIE","Liechtenstein"],["LTU","Lithuania"],["LUX","Luxembourg"],["MAD","Madagascar"],["MAW","Malawi"],["MAS","Malaysia"],["MDV","Maldives"],["MLI","Mali"],["MLT","Malta"],["MRI","Mauritius"],["MEX","Mexico"],["MDA","Moldova"],["MON","Monaco"],["MGL","Mongolia"],["MNE","Montenegro"],["MAR","Morocco"],["MOZ","Mozambique"],["MYA","Myanmar"],["NAM","Namibia"],["NEP","Nepal"],["NED","Netherlands"],["NZL","New Zealand"],["NCA","Nicaragua"],["NIG","Niger"],["NGR","Nigeria"],["MKD","North Macedonia"],["NOR","Norway"],["OMA","Oman"],["PAK","Pakistan"],["PLE","Palestine"],["PAN","Panama"],["PNG","Papua New Guinea"],["PAR","Paraguay"],["PER","Peru"],["PHI","Philippines"],["POL","Poland"],["POR","Portugal"],["QAT","Qatar"],["ROU","Romania"],["RUS","Russia"],["RWA","Rwanda"],["SKN","Saint Kitts and Nevis"],["LCA","Saint Lucia"],["VIN","Saint Vincent and the Grenadines"],["SAM","Samoa"],["SMR","San Marino"],["STP","Sao Tome and Principe"],["KSA","Saudi Arabia"],["SCO","Scotland"],["SEN","Senegal"],["SRB","Serbia"],["SEY","Seychelles"],["SLE","Sierra Leone"],["SGP","Singapore"],["SVK","Slovakia"],["SLO","Slovenia"],["SOL","Solomon Islands"],["SOM","Somalia"],["RSA","South Africa"],["SSD","South Sudan"],["ESP","Spain"],["SRI","Sri Lanka"],["SUD","Sudan"],["SUR","Suriname"],["SWE","Sweden"],["SUI","Switzerland"],["SYR","Syria"],["TJK","Tajikistan"],["TAN","Tanzania"],["THA","Thailand"],["TLS","Timor-Leste"],["TOG","Togo"],["TGA","Tonga"],["TTO","Trinidad and Tobago"],["TUN","Tunisia"],["TUR","Turkey"],["TKM","Turkmenistan"],["UGA","Uganda"],["UKR","Ukraine"],["UAE","United Arab Emirates"],["USA","United States"],["URU","Uruguay"],["UZB","Uzbekistan"],["VAN","Vanuatu"],["VEN","Venezuela"],["VIE","Vietnam"],["WAL","Wales"],["YEM","Yemen"],["ZAM","Zambia"],["ZIM","Zimbabwe"]];
-var COUNTRY_OPTIONS_HTML = '<option value="">– Select –</option>' + COUNTRIES.map(function(c) { return '<option value="' + c[0] + '">' + c[1] + ' (' + c[0] + ')</option>'; }).join('');
+
+function countryOptionsHtml() {
+  return '<option value="">' + t('ph_select') + '</option>' + COUNTRIES.map(function(c) { return '<option value="' + c[0] + '">' + c[1] + ' (' + c[0] + ')</option>'; }).join('');
+}
 
 function toast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.style.display = 'block';
-  setTimeout(function() { t.style.display = 'none'; }, 3000);
+  var elx = document.getElementById('toast');
+  elx.textContent = msg; elx.style.display = 'block';
+  setTimeout(function() { elx.style.display = 'none'; }, 3000);
 }
 function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
 
+function computeAirportTransfer(arrivalTime, departureTime) {
+  var hasArr = !!arrivalTime, hasDep = !!departureTime;
+  if (hasArr && hasDep) return 'Ja – Beide';
+  if (hasArr) return 'Ja – Ankunft';
+  if (hasDep) return 'Ja – Abflug';
+  return 'Nein';
+}
+function airportTransferLabel(val) {
+  return (AIRPORT_LABELS[LANG] && AIRPORT_LABELS[LANG][val]) || val;
+}
+function updateGroupAirportTransfer() {
+  var val = computeAirportTransfer(v('g_arrival_time'), v('g_departure_time'));
+  document.getElementById('g_airport_plus').innerHTML = '<option value="' + val + '" selected>' + airportTransferLabel(val) + '</option>';
+}
+function updateParticipantAirportTransfer(id) {
+  var sel = document.getElementById('p_airport_plus_' + id);
+  if (!sel) return;
+  var val = computeAirportTransfer(v('p_arrival_time_' + id), v('p_departure_time_' + id));
+  sel.innerHTML = '<option value="' + val + '" selected>' + airportTransferLabel(val) + '</option>';
+}
+
 // ---------- INIT ----------
 async function init() {
+  try {
+    var savedLang = localStorage.getItem('groupRegLang');
+    if (savedLang) LANG = savedLang;
+  } catch (e) {}
+  applyStaticTranslations();
+
   // 1) Event: URL param ?event=<uuid> overrides the active event
   var params = new URLSearchParams(window.location.search);
   var paramEvent = params.get('event');
@@ -215,12 +574,20 @@ async function init() {
 
   var evFull = await db.from('events').select('*').eq('id', eventId).single();
   if (evFull.data) {
-    document.getElementById('pageTitle').textContent = '🎾 ' + evFull.data.name + ' – Group Registration';
-    document.title = 'Group Registration – ' + evFull.data.name;
+    eventNameRaw = evFull.data.name;
+    document.getElementById('pageTitle').textContent = '🎾 ' + eventNameRaw + ' – Group Registration';
+    document.title = 'Group Registration – ' + eventNameRaw;
+    if (evFull.data.date_to) eventEndDate = new Date(evFull.data.date_to);
+  }
+
+  var ageR = await db.from('app_settings').select('value').eq('key', 'age_classes').limit(1);
+  if (ageR.data && ageR.data[0]) {
+    try { ageClassesCache = JSON.parse(ageR.data[0].value); } catch (e) {}
   }
 
   await loadPackages();
   await loadRoomAvailability();
+  await loadHotels();
 
   // Start with 2 participant rows to make the "group" nature obvious
   addParticipantRow();
@@ -230,6 +597,13 @@ async function init() {
 async function loadPackages() {
   var r = await db.from('packages').select('*').order('code');
   packagesCache = r.data || [];
+}
+
+async function loadHotels() {
+  var q = db.from('hotels').select('*').order('name');
+  if (eventId) q = q.eq('event_id', eventId);
+  var r = await q;
+  hotelsCache = r.data || [];
 }
 
 async function loadRoomAvailability() {
@@ -255,14 +629,15 @@ function roomFree(type) { return Math.max(0, (roomCapacity[type] || 0) - (roomUs
 
 function renderRoomBadges() {
   var el = document.getElementById('roomBadges');
-  el.innerHTML = ROOM_TYPES.map(function(t) {
-    var total = roomCapacity[t] || 0;
-    var free = roomFree(t);
+  el.innerHTML = ROOM_TYPES.map(function(rt) {
+    var total = roomCapacity[rt] || 0;
+    var free = roomFree(rt);
     var cls = free <= 0 ? 'full' : free <= 2 ? 'low' : 'ok';
-    var label = free <= 0 ? 'FULLY BOOKED' : free + ' / ' + total + ' free';
-    return '<div class="room-badge ' + cls + '"><div class="rb-type">' + t + '</div><div class="rb-count">' + label + '</div></div>';
+    var label = free <= 0 ? t('ra_full') : free + ' / ' + total + ' ' + t('ra_free_suffix');
+    var typeLabel = (ROOM_TYPE_LABELS[LANG] && ROOM_TYPE_LABELS[LANG][rt]) || rt;
+    return '<div class="room-badge ' + cls + '"><div class="rb-type">' + typeLabel + '</div><div class="rb-count">' + label + '</div></div>';
   }).join('');
-  document.getElementById('roomAvailUpdated').textContent = '(live)';
+  document.getElementById('roomAvailUpdated').textContent = t('ra_live');
   // Re-render room selects in existing rows so full types show as disabled
   participantIds.forEach(function(id) { populateRoomTypeSelect(id); });
   refreshAllShareSelects();
@@ -278,46 +653,77 @@ function addParticipantRow() {
   wrap.className = 'participant-card';
   wrap.id = 'p_card_' + id;
   wrap.innerHTML =
-    '<div class="participant-head"><span>Participant #' + participantIds.length + '</span>'
-    + '<button type="button" class="btn danger small" onclick="removeParticipantRow(' + id + ')">Remove</button></div>'
+    '<div class="participant-head"><span>' + t('pt_participant_prefix') + participantIds.length + '</span>'
+    + '<button type="button" class="btn danger small" onclick="removeParticipantRow(' + id + ')">' + t('pt_remove') + '</button></div>'
     + '<div class="participant-body">'
     + '<div class="form-grid">'
-    + '<div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" id="p_lastname_' + id + '" oninput="refreshAllShareSelects()" /></div>'
-    + '<div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" id="p_firstname_' + id + '" oninput="refreshAllShareSelects()" /></div>'
-    + '<div class="form-group"><label>Country <span class="req">*</span></label><select id="p_country_' + id + '">' + COUNTRY_OPTIONS_HTML + '</select></div>'
-    + '<div class="form-group"><label>Date of Birth <span class="req">*</span></label><input type="date" id="p_dob_' + id + '" onchange="calcAgeCategory(' + id + ')" /></div>'
-    + '<div class="form-group"><label>Gender <span class="req">*</span></label><select id="p_gender_' + id + '" onchange="calcAgeCategory(' + id + ')"><option value="">– Select –</option><option value="Weiblich">Female</option><option value="Männlich">Male</option></select></div>'
-    + '<div class="form-group"><label>Member ID / ESID <span class="req">*</span></label><input type="text" id="p_member_id_' + id + '" placeholder="ES473686007" /><div class="esid-hint">Format: ES + 9 digits</div></div>'
-    + '<div class="form-group"><label>Passport / ID Number</label><input type="text" id="p_passport_id_' + id + '" /></div>'
-    + '<div class="form-group"><label>Mobile</label><input type="tel" id="p_mobile_' + id + '" placeholder="optional, defaults to group contact" /></div>'
-    + '<div class="form-group"><label>E-Mail</label><input type="email" id="p_email_' + id + '" placeholder="optional, defaults to group contact" /></div>'
-    + '<div class="form-group"><label>Role <span class="req">*</span></label><select id="p_role_' + id + '"><option value="">– Select –</option><option>Player</option><option>Coach</option><option>Parent</option><option>Referee</option><option>Official</option><option>ESF Official</option></select></div>'
-    + '<div class="form-group"><label>Age Category / Event</label><select id="p_events_' + id + '"><option value="">– Auto / Select –</option><option>GU13</option><option>BU13</option><option>GU15</option><option>BU15</option><option>GU17</option><option>BU17</option><option>GU19</option><option>BU19</option></select></div>'
-    + '<div class="form-group"><label>Shirt Size</label><select id="p_shirt_' + id + '"><option value="">– No shirt –</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select></div>'
-    + '<div class="form-group"><label>Package <span class="req">*</span></label><select id="p_package_' + id + '" onchange="onPackageChange(' + id + ')"><option value="">Loading…</option></select></div>'
-    + '<div class="form-group"><label>Room Type</label><select id="p_roomtype_' + id + '" onchange="onRoomTypeChange(' + id + ')"><option value="">– No room needed –</option></select></div>'
-    + '<div class="form-group"><label>Share Room With</label><select id="p_shareroom_' + id + '" onchange="onShareRoomChange(' + id + ')"><option value="">– Not sharing / own room –</option></select></div>'
+    + '<div class="form-group"><label data-i18n="f_lastname">' + t('f_lastname') + '</label><input type="text" id="p_lastname_' + id + '" oninput="refreshAllShareSelects()" /></div>'
+    + '<div class="form-group"><label data-i18n="f_firstname">' + t('f_firstname') + '</label><input type="text" id="p_firstname_' + id + '" oninput="refreshAllShareSelects()" /></div>'
+    + '<div class="form-group"><label data-i18n="f_country">' + t('f_country') + '</label><select id="p_country_' + id + '"></select></div>'
+    + '<div class="form-group"><label data-i18n="f_dob">' + t('f_dob') + '</label><input type="date" id="p_dob_' + id + '" onchange="calcAgeCategory(' + id + ')" /></div>'
+    + '<div class="form-group"><label data-i18n="f_gender">' + t('f_gender') + '</label><select id="p_gender_' + id + '" onchange="calcAgeCategory(' + id + ')"></select></div>'
+    + '<div class="form-group"><label data-i18n="f_member_id">' + t('f_member_id') + '</label><input type="text" id="p_member_id_' + id + '" data-i18n-ph="f_member_id_ph" placeholder="' + t('f_member_id_ph') + '" /><div class="esid-hint" data-i18n="f_member_id_hint">' + t('f_member_id_hint') + '</div></div>'
+    + '<div class="form-group"><label data-i18n="f_passport">' + t('f_passport') + '</label><input type="text" id="p_passport_id_' + id + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_mobile_optional">' + t('f_mobile_optional') + '</label><input type="tel" id="p_mobile_' + id + '" data-i18n-ph="f_mobile_ph" placeholder="' + t('f_mobile_ph') + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_email_optional">' + t('f_email_optional') + '</label><input type="email" id="p_email_' + id + '" data-i18n-ph="f_email_ph" placeholder="' + t('f_email_ph') + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_role">' + t('f_role') + '</label><select id="p_role_' + id + '" onchange="onRoleChange(' + id + ')"></select></div>'
+    + '<div class="form-group"><label data-i18n="f_age_category">' + t('f_age_category') + '</label><select id="p_events_' + id + '"><option value="">' + t('ph_auto_select') + '</option></select></div>'
+    + '<div class="form-group" id="p_shirt_wrap_' + id + '" style="display:none"><label data-i18n="f_shirt">' + t('f_shirt') + '</label><select id="p_shirt_' + id + '"></select></div>'
+    + '<div class="form-group"><label data-i18n="f_package">' + t('f_package') + '</label><select id="p_package_' + id + '" onchange="onPackageChange(' + id + ')"><option value="">' + t('ph_loading') + '</option></select></div>'
+    + '<div class="form-group" id="p_roomtype_wrap_' + id + '" style="display:none"><label data-i18n="f_roomtype">' + t('f_roomtype') + '</label><select id="p_roomtype_' + id + '" onchange="onRoomTypeChange(' + id + ')"></select></div>'
+    + '<div class="form-group" id="p_shareroom_wrap_' + id + '" style="display:none"><label data-i18n="f_shareroom">' + t('f_shareroom') + '</label><select id="p_shareroom_' + id + '" onchange="onShareRoomChange(' + id + ')"></select></div>'
+    + '<div class="form-group full" id="p_hotel_wrap_' + id + '" style="display:none"><label data-i18n="f_hotel">' + t('f_hotel') + '</label><select id="p_hotel_' + id + '"></select></div>'
+    + '<div class="form-group" id="p_checkin_wrap_' + id + '" style="display:none;grid-column:1"><label data-i18n="f_checkin">' + t('f_checkin') + '</label><input type="date" id="p_checkin_' + id + '" onchange="calcCheckout(' + id + ')" /></div>'
+    + '<div class="form-group" id="p_checkout_wrap_' + id + '" style="display:none"><label data-i18n="f_checkout">' + t('f_checkout') + '</label><input type="date" id="p_checkout_' + id + '" /><div class="esid-hint" id="p_checkout_hint_' + id + '"></div></div>'
     + '</div>'
-    + '<span class="travel-toggle" onclick="toggleIndividualTravel(' + id + ')" id="p_traveltoggle_' + id + '">✈️ This person travels differently from the group defaults</span>'
+    + '<span class="travel-toggle" onclick="toggleIndividualTravel(' + id + ')" id="p_traveltoggle_' + id + '" data-i18n="f_travel_toggle">' + t('f_travel_toggle') + '</span>'
     + '<div class="travel-fields" id="p_travelfields_' + id + '">'
     + '<div class="form-grid cols-3">'
-    + '<div class="form-group"><label>Transport</label><select id="p_ams_bus_' + id + '"><option value="">– Please select –</option><option>Bus</option><option>Zug</option><option value="Auto">Car / Own transport</option><option value="Flugzeug">Airplane</option></select></div>'
-    + '<div class="form-group"><label>Airport Transfer</label><select id="p_airport_plus_' + id + '"><option value="Nein">No</option><option value="Ja – Ankunft">Arrival only</option><option value="Ja – Abflug">Departure only</option><option value="Ja – Beide">Both</option></select></div>'
-    + '<div class="form-group"><label>Visa</label><select id="p_visa_' + id + '"><option>Nicht erforderlich</option><option>Erforderlich</option><option>Wird beantragt</option></select></div>'
-    + '<div class="form-group"><label>Arrival Date</label><input type="date" id="p_arrival_date_' + id + '" /></div>'
-    + '<div class="form-group"><label>Arrival Time</label><input type="time" id="p_arrival_time_' + id + '" /></div>'
-    + '<div class="form-group"><label>Incoming Flight</label><input type="text" id="p_flight_in_' + id + '" /></div>'
-    + '<div class="form-group"><label>Departure Date</label><input type="date" id="p_departure_date_' + id + '" /></div>'
-    + '<div class="form-group"><label>Departure Time</label><input type="time" id="p_departure_time_' + id + '" /></div>'
-    + '<div class="form-group"><label>Outgoing Flight</label><input type="text" id="p_flight_out_' + id + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_transport">' + t('f_transport') + '</label><select id="p_ams_bus_' + id + '" disabled><option value="Flugzeug" selected data-i18n="st_transport_only">' + t('st_transport_only') + '</option></select><div class="esid-hint" data-i18n="st_airport_hint">' + t('st_airport_hint') + '</div></div>'
+    + '<div class="form-group"><label data-i18n="f_airport_transfer">' + t('f_airport_transfer') + '</label><select id="p_airport_plus_' + id + '" disabled><option value="Nein" selected>No</option></select></div>'
+    + '<div class="form-group"><label data-i18n="f_visa">' + t('f_visa') + '</label><select id="p_visa_' + id + '"></select></div>'
+    + '<div class="form-group"><label data-i18n="f_arrival_date">' + t('f_arrival_date') + '</label><input type="date" id="p_arrival_date_' + id + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_arrival_time">' + t('f_arrival_time') + '</label><input type="time" id="p_arrival_time_' + id + '" oninput="updateParticipantAirportTransfer(' + id + ')" /></div>'
+    + '<div class="form-group"><label data-i18n="f_flight_in_short">' + t('f_flight_in_short') + '</label><input type="text" id="p_flight_in_' + id + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_departure_date">' + t('f_departure_date') + '</label><input type="date" id="p_departure_date_' + id + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_departure_time">' + t('f_departure_time') + '</label><input type="time" id="p_departure_time_' + id + '" oninput="updateParticipantAirportTransfer(' + id + ')" /></div>'
+    + '<div class="form-group"><label data-i18n="f_flight_out_short">' + t('f_flight_out_short') + '</label><input type="text" id="p_flight_out_' + id + '" /></div>'
     + '</div></div>'
     + '</div>';
 
   document.getElementById('participantsContainer').appendChild(wrap);
+  document.getElementById('p_country_' + id).innerHTML = countryOptionsHtml();
+  populateGenderSelect(id);
+  populateVisaSelect(id);
+  populateRoleSelect(id, false);
   populatePackageSelect(id);
   populateRoomTypeSelect(id);
+  populateHotelSelect(id);
+  populateEventsSelect(id);
   refreshAllShareSelects();
   updateParticipantCountLabel();
+}
+
+function populateGenderSelect(id) {
+  var sel = document.getElementById('p_gender_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  var labels = GENDER_LABELS[LANG] || GENDER_LABELS.en;
+  sel.innerHTML = '<option value="">' + t('ph_select') + '</option>'
+    + '<option value="Weiblich">' + labels.Weiblich + '</option>'
+    + '<option value="Männlich">' + labels['Männlich'] + '</option>';
+  if (cur) sel.value = cur;
+}
+
+function populateVisaSelect(id) {
+  var sel = document.getElementById('p_visa_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  var labels = VISA_LABELS[LANG] || VISA_LABELS.en;
+  sel.innerHTML = ['Nicht erforderlich', 'Erforderlich', 'Wird beantragt'].map(function(v2) {
+    return '<option value="' + v2 + '">' + labels[v2] + '</option>';
+  }).join('');
+  if (cur) sel.value = cur;
 }
 
 function removeParticipantRow(id) {
@@ -330,42 +736,199 @@ function removeParticipantRow(id) {
   updateParticipantCountLabel();
   refreshAllShareSelects();
   loadRoomAvailability();
+  updateAccessCodeVisibility();
 }
 
 function renumberParticipants() {
   participantIds.forEach(function(id, idx) {
     var card = document.getElementById('p_card_' + id);
-    if (card) card.querySelector('.participant-head span').textContent = 'Participant #' + (idx + 1);
+    if (card) card.querySelector('.participant-head span').textContent = t('pt_participant_prefix') + (idx + 1);
   });
 }
 
 function updateParticipantCountLabel() {
-  document.getElementById('participantCountLabel').textContent = participantIds.length + ' participant(s)';
+  document.getElementById('participantCountLabel').textContent = participantIds.length + ' ' + t('pt_count_suffix');
+}
+
+var ROLE_OPTIONS_FULL = ['Player', 'Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+var ROLE_OPTIONS_ADULT = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+var ADULT_ROLES = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+
+function populateRoleSelect(id, isAdult) {
+  var sel = document.getElementById('p_role_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  var opts = isAdult ? ROLE_OPTIONS_ADULT : ROLE_OPTIONS_FULL;
+  var labels = ROLE_LABELS[LANG] || ROLE_LABELS.en;
+  sel.innerHTML = '<option value="">' + t('ph_select') + '</option>' + opts.map(function(o) { return '<option value="' + o + '">' + labels[o] + '</option>'; }).join('');
+  if (isAdult && (!cur || cur === 'Player')) {
+    sel.value = 'Coach';
+  } else if (opts.indexOf(cur) !== -1) {
+    sel.value = cur;
+  }
+  onRoleChange(id);
 }
 
 function populatePackageSelect(id) {
   var sel = document.getElementById('p_package_' + id);
   if (!sel) return;
-  if (!packagesCache.length) { sel.innerHTML = '<option value="">No packages available</option>'; return; }
-  sel.innerHTML = '<option value="">– Select package –</option>' + packagesCache.map(function(p) {
+  var cur = sel.value;
+  var roleEl = document.getElementById('p_role_' + id);
+  var role = roleEl ? roleEl.value : '';
+  var filterWord = null, emptyMsg = t('hint_no_packages');
+  if (role === 'Player') { filterWord = 'player'; emptyMsg = t('hint_no_player_packages'); }
+  else if (ADULT_ROLES.indexOf(role) !== -1) { filterWord = 'adult'; emptyMsg = t('hint_no_adult_packages'); }
+  var list = filterWord ? packagesCache.filter(function(p) { return (p.category || '').toLowerCase().indexOf(filterWord) !== -1; }) : packagesCache;
+  if (!list.length) { sel.innerHTML = '<option value="">' + emptyMsg + '</option>'; return; }
+  sel.innerHTML = '<option value="">' + t('ph_select_package') + '</option>' + list.map(function(p) {
     return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + p.code + (p.category ? ' – ' + p.category : '') + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
   }).join('');
+  if (cur && list.some(function(p) { return p.code === cur; })) {
+    sel.value = cur;
+  } else {
+    updateRoomFieldsVisibility(id);
+    calcCheckout(id);
+  }
 }
 
 function populateRoomTypeSelect(id) {
   var sel = document.getElementById('p_roomtype_' + id);
   if (!sel) return;
   var cur = sel.value;
-  sel.innerHTML = '<option value="">– No room needed –</option>' + ROOM_TYPES.map(function(t) {
-    var free = roomFree(t);
-    // Don't lock out the type the person already has selected, otherwise they get stuck
-    var disabled = free <= 0 && t !== cur;
-    return '<option value="' + t + '"' + (disabled ? ' disabled' : '') + '>' + t + (disabled ? ' – FULLY BOOKED' : ' (' + free + ' free)') + '</option>';
+  var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+  sel.innerHTML = '<option value="">' + t('ph_select_roomtype') + '</option>' + ROOM_TYPES.map(function(rt) {
+    var free = roomFree(rt);
+    var disabled = free <= 0 && rt !== cur;
+    return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + free + ' ' + t('ra_free_suffix') + ')') + '</option>';
   }).join('');
   if (cur) sel.value = cur;
 }
 
-function onPackageChange(id) { /* placeholder for future package-specific logic */ }
+function populateHotelSelect(id) {
+  var sel = document.getElementById('p_hotel_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  if (!hotelsCache.length) { sel.innerHTML = '<option value="">' + t('hint_no_hotel_configured') + '</option>'; return; }
+  sel.innerHTML = '<option value="">' + t('ph_select_hotel') + '</option>' + hotelsCache.map(function(h) {
+    return '<option value="' + h.name + '">' + h.name + '</option>';
+  }).join('');
+  if (cur && hotelsCache.some(function(h) { return h.name === cur; })) sel.value = cur;
+  else if (hotelsCache.length === 1) sel.value = hotelsCache[0].name;
+}
+
+function onPackageChange(id) {
+  updateRoomFieldsVisibility(id);
+  applyPackageRoomType(id);
+  calcCheckout(id);
+  updateAccessCodeVisibility();
+}
+
+function updateAccessCodeVisibility() {
+  var needsCode = participantIds.some(function(pid) {
+    var el = document.getElementById('p_package_' + pid);
+    return el && el.value === 'T';
+  });
+  var card = document.getElementById('accessCodeCard');
+  if (card) card.style.display = needsCode ? '' : 'none';
+}
+
+// Packages carry a room_type in the package management (e.g. "Einzelzimmer").
+// If the person isn't currently locked into a shared room, take that value over automatically.
+function applyPackageRoomType(id) {
+  var pkgCode = document.getElementById('p_package_' + id).value;
+  var pkg = packagesCache.find(function(p) { return p.code === pkgCode; });
+  var rtSel = document.getElementById('p_roomtype_' + id);
+  var wrap = document.getElementById('p_roomtype_wrap_' + id);
+  if (!pkg || !rtSel || roomShareOf[id]) return;
+  if (wrap && wrap.style.display === 'none') return; // package has no nights, room fields not shown
+  if (ROOM_TYPES.indexOf(pkg.room_type) !== -1) {
+    rtSel.value = pkg.room_type;
+    onRoomTypeChange(id);
+  }
+}
+
+function updateRoomFieldsVisibility(id) {
+  var pkgCode = document.getElementById('p_package_' + id).value;
+  var pkg = packagesCache.find(function(p) { return p.code === pkgCode; });
+  var nights = pkg ? parseInt(pkg.nights, 10) : NaN;
+  var show = !isNaN(nights) && nights >= 1;
+  ['p_roomtype_wrap_', 'p_hotel_wrap_', 'p_checkin_wrap_', 'p_checkout_wrap_'].forEach(function(prefix) {
+    var elx = document.getElementById(prefix + id);
+    if (elx) elx.style.display = show ? '' : 'none';
+  });
+  if (!show) {
+    clearShareAssignment(id);
+    releaseAsAnchor(id);
+    var rtSel = document.getElementById('p_roomtype_' + id); if (rtSel) { rtSel.value = ''; rtSel.disabled = false; }
+    var hoSel = document.getElementById('p_hotel_' + id); if (hoSel) hoSel.value = '';
+    var ciEl = document.getElementById('p_checkin_' + id); if (ciEl) ciEl.value = '';
+    var coEl = document.getElementById('p_checkout_' + id); if (coEl) coEl.value = '';
+    var hintEl = document.getElementById('p_checkout_hint_' + id); if (hintEl) hintEl.textContent = '';
+  }
+  updateShareRoomVisibility(id);
+  if (!show) {
+    refreshAllShareSelects();
+    loadRoomAvailability();
+  }
+}
+
+// Share Room With is only relevant for shareable room types (Doppel-/Dreibettzimmer).
+// A Dreibettzimmer allows up to 2 additional roommates (each picks this person as their
+// anchor from their own row) — capacity is enforced centrally via ROOM_MAX in refreshAllShareSelects().
+function updateShareRoomVisibility(id) {
+  var wrap = document.getElementById('p_shareroom_wrap_' + id);
+  if (!wrap) return;
+  var roomWrap = document.getElementById('p_roomtype_wrap_' + id);
+  var overallVisible = roomWrap && roomWrap.style.display !== 'none';
+  var rtEl = document.getElementById('p_roomtype_' + id);
+  var rt = rtEl ? rtEl.value : '';
+  var show = overallVisible && rt && rt !== 'Einzelzimmer';
+  wrap.style.display = show ? '' : 'none';
+  if (!show) {
+    clearShareAssignment(id);
+    releaseAsAnchor(id);
+    var shSel = document.getElementById('p_shareroom_' + id);
+    if (shSel) shSel.value = '';
+  }
+}
+
+function calcCheckout(id) {
+  var checkinEl = document.getElementById('p_checkin_' + id);
+  var checkoutEl = document.getElementById('p_checkout_' + id);
+  var hintEl = document.getElementById('p_checkout_hint_' + id);
+  var pkgCode = document.getElementById('p_package_' + id).value;
+  var checkinVal = checkinEl ? checkinEl.value : '';
+  if (!hintEl) return;
+  if (!checkinVal || !pkgCode) { hintEl.textContent = ''; return; }
+  var pkg = packagesCache.find(function(p) { return p.code === pkgCode; });
+  var nights = pkg ? parseInt(pkg.nights, 10) : NaN;
+  if (!pkg || isNaN(nights) || nights <= 0) { hintEl.textContent = t('hint_no_nights'); return; }
+  var d = new Date(checkinVal + 'T00:00:00');
+  d.setDate(d.getDate() + nights);
+  var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  checkoutEl.value = iso;
+  hintEl.textContent = nights + t('hint_nights_from_pkg') + pkgCode + ')';
+  syncRoommateDates(id);
+}
+
+// Keeps roommates' check-in/check-out/hotel in sync whenever the anchor's data changes
+function syncRoommateDates(anchorId) {
+  if (!roomShareGroups[anchorId]) return;
+  var ciVal = document.getElementById('p_checkin_' + anchorId).value;
+  var coVal = document.getElementById('p_checkout_' + anchorId).value;
+  var hoVal = document.getElementById('p_hotel_' + anchorId) ? document.getElementById('p_hotel_' + anchorId).value : '';
+  roomShareGroups[anchorId].members.forEach(function(m) {
+    if (m === anchorId) return;
+    var mCi = document.getElementById('p_checkin_' + m);
+    var mCo = document.getElementById('p_checkout_' + m);
+    var mHo = document.getElementById('p_hotel_' + m);
+    var mHint = document.getElementById('p_checkout_hint_' + m);
+    if (mCi) mCi.value = ciVal;
+    if (mCo) mCo.value = coVal;
+    if (mHo) mHo.value = hoVal;
+    if (mHint) mHint.textContent = t('hint_synced');
+  });
+}
 
 function onRoomTypeChange(id) {
   // If this participant is an anchor for a shared room, keep their members in sync
@@ -378,6 +941,7 @@ function onRoomTypeChange(id) {
       }
     });
   }
+  updateShareRoomVisibility(id);
   refreshAllShareSelects();
   loadRoomAvailability();
 }
@@ -391,6 +955,10 @@ function clearShareAssignment(id) {
   delete roomShareOf[id];
   var rtSel = document.getElementById('p_roomtype_' + id);
   if (rtSel) rtSel.disabled = false;
+  var ciEl = document.getElementById('p_checkin_' + id); if (ciEl) ciEl.disabled = false;
+  var coEl = document.getElementById('p_checkout_' + id); if (coEl) coEl.disabled = false;
+  var hoEl = document.getElementById('p_hotel_' + id); if (hoEl) hoEl.disabled = false;
+  var hintEl = document.getElementById('p_checkout_hint_' + id); if (hintEl) hintEl.textContent = '';
 }
 
 function releaseAsAnchor(id) {
@@ -401,6 +969,10 @@ function releaseAsAnchor(id) {
         delete roomShareOf[m];
         var msel = document.getElementById('p_roomtype_' + m);
         if (msel) msel.disabled = false;
+        var mCi = document.getElementById('p_checkin_' + m); if (mCi) mCi.disabled = false;
+        var mCo = document.getElementById('p_checkout_' + m); if (mCo) mCo.disabled = false;
+        var mHo = document.getElementById('p_hotel_' + m); if (mHo) mHo.disabled = false;
+        var mHint = document.getElementById('p_checkout_hint_' + m); if (mHint) mHint.textContent = '';
       }
     });
     delete roomShareGroups[id];
@@ -419,6 +991,19 @@ function onShareRoomChange(id) {
     var rtSel = document.getElementById('p_roomtype_' + id);
     rtSel.value = roomShareGroups[anchor].roomType;
     rtSel.disabled = true;
+
+    // Take over the roommate's check-in/check-out/hotel and keep them synced going forward
+    var anchorCi = document.getElementById('p_checkin_' + anchor).value;
+    var anchorCo = document.getElementById('p_checkout_' + anchor).value;
+    var anchorHo = document.getElementById('p_hotel_' + anchor) ? document.getElementById('p_hotel_' + anchor).value : '';
+    var ciEl = document.getElementById('p_checkin_' + id);
+    var coEl = document.getElementById('p_checkout_' + id);
+    var hoEl = document.getElementById('p_hotel_' + id);
+    var hintEl = document.getElementById('p_checkout_hint_' + id);
+    if (ciEl) { ciEl.value = anchorCi; ciEl.disabled = true; }
+    if (coEl) { coEl.value = anchorCo; coEl.disabled = true; }
+    if (hoEl) { hoEl.value = anchorHo; hoEl.disabled = true; }
+    if (hintEl) hintEl.textContent = t('hint_synced');
   }
   refreshAllShareSelects();
   loadRoomAvailability();
@@ -428,13 +1013,29 @@ function participantLabel(id) {
   var fn = (document.getElementById('p_firstname_' + id) || {}).value || '';
   var ln = (document.getElementById('p_lastname_' + id) || {}).value || '';
   var name = (fn.trim() + ' ' + ln.trim()).trim();
-  return name || ('Participant #' + (participantIds.indexOf(id) + 1));
+  return name || (t('pt_participant_prefix') + (participantIds.indexOf(id) + 1));
 }
 
 function refreshAllShareSelects() {
+  var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
   participantIds.forEach(function(id, idx) {
     var sel = document.getElementById('p_shareroom_' + id);
     if (!sel) return;
+
+    // Participant #1 has no one to choose from — this field only ever gets filled
+    // automatically once someone else picks them as a roommate. Lock it and sync it.
+    if (idx === 0) {
+      sel.disabled = true;
+      var grp = roomShareGroups[id];
+      if (grp && grp.members.length > 1) {
+        var others = grp.members.filter(function(m) { return m !== id; }).map(function(m) { return participantLabel(m); });
+        sel.innerHTML = '<option value="" selected>' + t('hint_sharing_with') + others.join(', ') + '</option>';
+      } else {
+        sel.innerHTML = '<option value="" selected>' + t('hint_p1_placeholder') + '</option>';
+      }
+      return;
+    }
+
     var currentVal = roomShareOf[id] ? String(roomShareOf[id]) : '';
     var candidates = [];
     var seenAnchors = {};
@@ -449,9 +1050,10 @@ function refreshAllShareSelects() {
       var members = roomShareGroups[anchor] ? roomShareGroups[anchor].members : [anchor];
       var isCurrentSelection = String(anchor) === currentVal;
       if (members.length >= (ROOM_MAX[rt] || 1) && !isCurrentSelection) continue; // room full, hide
-      candidates.push({ id: anchor, label: participantLabel(anchor) + ' (' + rt + ', ' + members.length + '/' + ROOM_MAX[rt] + ')' });
+      candidates.push({ id: anchor, label: participantLabel(anchor) + ' (' + (labels[rt] || rt) + ', ' + members.length + '/' + ROOM_MAX[rt] + ')' });
     }
-    sel.innerHTML = '<option value="">– Not sharing / own room –</option>' + candidates.map(function(c) {
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">' + t('ph_not_sharing') + '</option>' + candidates.map(function(c) {
       return '<option value="' + c.id + '">' + c.label + '</option>';
     }).join('');
     sel.value = currentVal;
@@ -463,23 +1065,73 @@ function toggleIndividualTravel(id) {
   fields.classList.toggle('open');
 }
 
+function populateEventsSelect(id) {
+  var sel = document.getElementById('p_events_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">' + t('ph_auto_select') + '</option>'
+    + ageClassesCache.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+  if (cur) sel.value = cur;
+}
+
 function calcAgeCategory(id) {
   var dob = document.getElementById('p_dob_' + id).value;
   var gender = document.getElementById('p_gender_' + id).value;
   if (!dob || !gender) return;
-  var today = new Date();
+
+  // Age is calculated as of tournament end date (same rule as the main event management tool)
+  var te = eventEndDate || new Date();
   var birth = new Date(dob);
-  var age = today.getFullYear() - birth.getFullYear();
-  var mo = today.getMonth() - birth.getMonth();
-  if (mo < 0 || (mo === 0 && today.getDate() < birth.getDate())) age--;
-  var cls = age <= 12 ? 'U13' : age <= 14 ? 'U15' : age <= 16 ? 'U17' : age <= 18 ? 'U19' : '';
-  if (!cls) return;
+  var age = te.getFullYear() - birth.getFullYear();
+  var mo = te.getMonth() - birth.getMonth();
+  if (mo < 0 || (mo === 0 && te.getDate() < birth.getDate())) age--;
+
+  // 0-10 → U11, 11-12 → U13, 13-14 → U15, 15-16 → U17, 17-18 → U19, 19+ → Adult Pass
+  var ageClass;
+  if (age >= 19) ageClass = 'Adult';
+  else if (age >= 17) ageClass = 'U19';
+  else if (age >= 15) ageClass = 'U17';
+  else if (age >= 13) ageClass = 'U15';
+  else if (age >= 11) ageClass = 'U13';
+  else ageClass = 'U11';
+
+  var isAdult = ageClass === 'Adult';
   var prefix = gender === 'Weiblich' ? 'G' : gender === 'Männlich' ? 'B' : '';
-  var cat = prefix + cls;
+  var cat = isAdult ? 'Adult Pass' : prefix + ageClass;
+
   var sel = document.getElementById('p_events_' + id);
-  for (var i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].value === cat) { sel.value = cat; break; }
+  if (isAdult) {
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; break; }
+    }
+  } else {
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === cat) { sel.value = cat; break; }
+    }
   }
+
+  populateRoleSelect(id, isAdult);
+}
+
+function onRoleChange(id) {
+  var role = document.getElementById('p_role_' + id).value;
+  var wrap = document.getElementById('p_shirt_wrap_' + id);
+  var show = role === 'Player';
+  if (wrap) wrap.style.display = show ? '' : 'none';
+  if (!show) {
+    var shirtEl = document.getElementById('p_shirt_' + id);
+    if (shirtEl) shirtEl.value = '';
+  }
+  populateShirtSelect(id);
+  populatePackageSelect(id);
+}
+
+function populateShirtSelect(id) {
+  var sel = document.getElementById('p_shirt_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">' + t('ph_select_size') + '</option>' + ['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(function(s) { return '<option>' + s + '</option>'; }).join('');
+  if (cur) sel.value = cur;
 }
 
 function onSameTravelToggle() {
@@ -490,14 +1142,14 @@ function onSameTravelToggle() {
 async function submitGroupRegistration() {
   var errors = [];
 
-  var leaderRequired = [['g_lastname','Group Leader Last Name'],['g_firstname','Group Leader First Name'],['g_mobile','Group Leader Mobile'],['g_email','Group Leader E-Mail']];
+  var leaderRequired = [['g_lastname', t('err_group_leader_lastname')], ['g_firstname', t('err_group_leader_firstname')], ['g_mobile', t('err_group_leader_mobile')], ['g_email', t('err_group_leader_email')]];
   leaderRequired.forEach(function(f) {
     var el = document.getElementById(f[0]);
     if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
   });
 
-  if (!participantIds.length) errors.push('At least one participant is required');
-  if (!document.getElementById('g_consent').checked) errors.push('Declaration (please accept the terms)');
+  if (!participantIds.length) errors.push(t('err_at_least_one_participant'));
+  if (!document.getElementById('g_consent').checked) errors.push(t('err_declaration'));
 
   var esidsInGroup = [];
   var rows = [];
@@ -505,7 +1157,7 @@ async function submitGroupRegistration() {
   var groupTravel = {
     ams_bus: v('g_ams_bus') || null,
     airport_plus: v('g_airport_plus') || null,
-    visa: v('g_visa') || null,
+    visa: null,
     arrival_date: v('g_arrival_date') || null,
     arrival_time: v('g_arrival_time') || null,
     flight_in: v('g_flight_in') || null,
@@ -526,23 +1178,57 @@ async function submitGroupRegistration() {
     var pEsid = document.getElementById('p_member_id_' + id).value.trim();
     var pRole = document.getElementById('p_role_' + id).value;
     var pPackage = document.getElementById('p_package_' + id).value;
-    var label = 'Participant #' + (idx + 1);
+    var label = t('pt_participant_prefix') + (idx + 1);
 
     var esidEl = document.getElementById('p_member_id_' + id);
     if (pEsid && !/^ES[0-9]{9}$/.test(pEsid)) {
-      errors.push(label + ': ESID must be ES + 9 digits');
+      errors.push(label + ': ' + t('err_esid_format'));
       esidEl.classList.add('error');
     } else { esidEl.classList.remove('error'); }
 
-    [['p_lastname_'+id, label+': Last Name'], ['p_firstname_'+id, label+': First Name'], ['p_country_'+id, label+': Country'],
-     ['p_dob_'+id, label+': Date of Birth'], ['p_gender_'+id, label+': Gender'], ['p_member_id_'+id, label+': Member ID / ESID'],
-     ['p_role_'+id, label+': Role'], ['p_package_'+id, label+': Package']].forEach(function(f) {
+    var reqFieldLabels = {
+      lastname: t('f_lastname').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      firstname: t('f_firstname').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      country: t('f_country').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      dob: t('f_dob').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      gender: t('f_gender').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      member_id: t('f_member_id').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      role: t('f_role').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      package: t('f_package').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      shirt: t('f_shirt').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      roomtype: t('f_roomtype').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      hotel: t('f_hotel').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      checkin: t('f_checkin').replace(/<[^>]+>/g, '').replace('*', '').trim(),
+      checkout: t('f_checkout').replace(/<[^>]+>/g, '').replace('*', '').trim()
+    };
+
+    [['p_lastname_'+id, label+': '+reqFieldLabels.lastname], ['p_firstname_'+id, label+': '+reqFieldLabels.firstname], ['p_country_'+id, label+': '+reqFieldLabels.country],
+     ['p_dob_'+id, label+': '+reqFieldLabels.dob], ['p_gender_'+id, label+': '+reqFieldLabels.gender], ['p_member_id_'+id, label+': '+reqFieldLabels.member_id],
+     ['p_role_'+id, label+': '+reqFieldLabels.role], ['p_package_'+id, label+': '+reqFieldLabels.package]].forEach(function(f) {
       var el = document.getElementById(f[0]);
       if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
     });
 
+    // Shirt Size is only required while it's actually shown (Role = Player)
+    var shirtWrap = document.getElementById('p_shirt_wrap_' + id);
+    if (shirtWrap && shirtWrap.style.display !== 'none') {
+      var shirtEl = document.getElementById('p_shirt_' + id);
+      if (!shirtEl.value.trim()) { errors.push(label + ': ' + reqFieldLabels.shirt); shirtEl.classList.add('error'); } else { shirtEl.classList.remove('error'); }
+    }
+
+    // Room Type, Hotel, Check-in and Check-out are only required while the room block is shown
+    // (i.e. the selected package includes nights)
+    var roomWrap = document.getElementById('p_roomtype_wrap_' + id);
+    if (roomWrap && roomWrap.style.display !== 'none') {
+      [['p_roomtype_'+id, label+': '+reqFieldLabels.roomtype], ['p_hotel_'+id, label+': '+reqFieldLabels.hotel],
+       ['p_checkin_'+id, label+': '+reqFieldLabels.checkin], ['p_checkout_'+id, label+': '+reqFieldLabels.checkout]].forEach(function(f) {
+        var el = document.getElementById(f[0]);
+        if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
+      });
+    }
+
     if (pEsid) {
-      if (esidsInGroup.indexOf(pEsid) !== -1) errors.push(label + ': duplicate ESID within this group (' + pEsid + ')');
+      if (esidsInGroup.indexOf(pEsid) !== -1) errors.push(label + ': ' + t('err_duplicate_esid_group') + ' (' + pEsid + ')');
       esidsInGroup.push(pEsid);
     }
 
@@ -579,6 +1265,9 @@ async function submitGroupRegistration() {
       shirt: v('p_shirt_' + id) || null,
       package: pPackage, package_price: packagePrice,
       room_type: roomType,
+      hotel: v('p_hotel_' + id) || null,
+      checkin: v('p_checkin_' + id) || null,
+      checkout: v('p_checkout_' + id) || null,
       meal_plus: 'Nein',
       ams_bus: travel.ams_bus, airport_plus: travel.airport_plus,
       arrival_date: travel.arrival_date, arrival_time: travel.arrival_time, flight_in: travel.flight_in,
@@ -590,30 +1279,42 @@ async function submitGroupRegistration() {
     });
   });
 
+  var needsAccessCode = rows.some(function(r) { return r.package === 'T'; });
+  if (needsAccessCode) {
+    var codeEl = document.getElementById('g_accessCode');
+    if (v('g_accessCode') !== 'REFEREE-2026') {
+      errors.push(t('err_access_code'));
+      codeEl.classList.add('error');
+    } else {
+      codeEl.classList.remove('error');
+    }
+  }
+
   var errBox = document.getElementById('errorBox');
   if (errors.length) {
     errBox.style.display = 'block';
-    errBox.innerHTML = '⚠️ Please fix the following:\n• ' + errors.join('\n• ');
+    errBox.innerHTML = t('err_fix_following') + '\n• ' + errors.join('\n• ');
     errBox.scrollIntoView({ behavior: 'smooth' });
     return;
   }
   errBox.style.display = 'none';
 
   var btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.textContent = 'Submitting…';
+  btn.disabled = true; btn.textContent = t('submitting');
 
   // Re-check room capacity right before insert (best-effort, not a hard lock)
   await loadRoomAvailability();
   var capacityErrors = [];
+  var typeLabels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
   Object.keys(requestedRoomCounts).forEach(function(type) {
     if (requestedRoomCounts[type] > roomFree(type)) {
-      capacityErrors.push(type + ': only ' + roomFree(type) + ' free, but ' + requestedRoomCounts[type] + ' requested in this group');
+      capacityErrors.push((typeLabels[type] || type) + ': ' + t('err_only_free') + ' ' + roomFree(type) + ' ' + t('err_requested_in_group') + ' ' + requestedRoomCounts[type] + ' ' + t('err_requested_suffix'));
     }
   });
   if (capacityErrors.length) {
-    btn.disabled = false; btn.textContent = 'Submit Group Registration';
+    btn.disabled = false; btn.textContent = t('submit_btn');
     errBox.style.display = 'block';
-    errBox.innerHTML = '⛔ Room availability changed, please adjust:\n• ' + capacityErrors.join('\n• ');
+    errBox.innerHTML = t('err_room_capacity_changed') + '\n• ' + capacityErrors.join('\n• ');
     errBox.scrollIntoView({ behavior: 'smooth' });
     return;
   }
@@ -621,9 +1322,9 @@ async function submitGroupRegistration() {
   // Duplicate ESID check against existing DB records
   var dupQ = await db.from('participants').select('member_id,firstname,lastname').in('member_id', esidsInGroup);
   if (dupQ.data && dupQ.data.length) {
-    btn.disabled = false; btn.textContent = 'Submit Group Registration';
+    btn.disabled = false; btn.textContent = t('submit_btn');
     errBox.style.display = 'block';
-    errBox.innerHTML = '⛔ These ESIDs are already registered:\n• ' + dupQ.data.map(function(d) { return d.member_id + ' (' + d.firstname + ' ' + d.lastname + ')'; }).join('\n• ');
+    errBox.innerHTML = t('err_esid_already_registered') + '\n• ' + dupQ.data.map(function(d) { return d.member_id + ' (' + d.firstname + ' ' + d.lastname + ')'; }).join('\n• ');
     errBox.scrollIntoView({ behavior: 'smooth' });
     return;
   }
@@ -635,9 +1336,9 @@ async function submitGroupRegistration() {
 
   var r = await db.from('participants').insert(rows).select();
   if (r.error) {
-    btn.disabled = false; btn.textContent = 'Submit Group Registration';
+    btn.disabled = false; btn.textContent = t('submit_btn');
     errBox.style.display = 'block';
-    errBox.innerHTML = '❌ Error: ' + r.error.message;
+    errBox.innerHTML = t('err_generic') + r.error.message;
     errBox.scrollIntoView({ behavior: 'smooth' });
     return;
   }
