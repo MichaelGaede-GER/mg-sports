@@ -1160,16 +1160,21 @@ function calcAgeCategory(id, skipAutoDefault) {
 
   var sel = document.getElementById('p_events_' + id);
   if (sel && (!sel.value || ageAutoFilledFlag[id])) {
+    var matched = false;
     if (info.isAdult) {
       for (var i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; ageAutoFilledFlag[id] = true; break; }
+        if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; matched = true; break; }
       }
     } else {
       var wanted = info.expCat.trim().toLowerCase();
       for (var j = 0; j < sel.options.length; j++) {
-        if (sel.options[j].value.trim().toLowerCase() === wanted) { sel.value = sel.options[j].value; ageAutoFilledFlag[id] = true; break; }
+        if (sel.options[j].value.trim().toLowerCase() === wanted) { sel.value = sel.options[j].value; matched = true; break; }
       }
     }
+    // No matching category exists in the settings for this age/gender (e.g. no U11 offered) —
+    // reset to the placeholder instead of silently keeping a stale/wrong previous value.
+    if (!matched) sel.value = '';
+    ageAutoFilledFlag[id] = true;
   }
 
   populateRoleSelect(id, info.isAdult);
