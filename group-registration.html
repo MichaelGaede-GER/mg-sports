@@ -217,6 +217,7 @@ var participantCounter = 0;
 var participantIds = []; // order of rows currently in DOM
 var roomShareGroups = {}; // anchorId -> { roomType, members: [ids] }
 var roomShareOf = {};     // memberId -> anchorId (only set for non-anchor sharers)
+var ageAutoFilledFlag = {}; // participantId -> true if Age Category was last set automatically (not by the user)
 
 // ---------- I18N ----------
 var LANG = 'en';
@@ -332,6 +333,12 @@ en: {
   err_group_leader_firstname: "Group Leader First Name",
   err_group_leader_mobile: "Group Leader Mobile",
   err_group_leader_email: "Group Leader E-Mail",
+
+  age_hint_enter_dob: "– enter date of birth –",
+  age_hint_label: "Age at tournament end: ",
+  age_hint_years: " years – Recommended: ",
+  age_hint_ok: "✓ matches selection",
+  age_hint_check: "⚠ differs from your selection",
 
   code_header: "🔑 Access Code",
   code_label: 'Access Code (required for Tournament Team package) <span class="req">*</span>',
@@ -450,6 +457,12 @@ de: {
   err_group_leader_mobile: "Mobilnummer Gruppenleiter",
   err_group_leader_email: "E-Mail Gruppenleiter",
 
+  age_hint_enter_dob: "– Geburtsdatum eingeben –",
+  age_hint_label: "Alter am Turnierende: ",
+  age_hint_years: " Jahre – Empfehlung: ",
+  age_hint_ok: "✓ stimmt mit Auswahl überein",
+  age_hint_check: "⚠ weicht von deiner Auswahl ab",
+
   code_header: "🔑 Zugangscode",
   code_label: 'Zugangscode (erforderlich für Package "Tournament Team") <span class="req">*</span>',
   code_ph: "Code eingeben",
@@ -514,7 +527,7 @@ function refreshDynamicTranslations() {
     populateEventsSelect(id);
     populateGenderSelect(id);
     populateVisaSelect(id);
-    calcAgeCategory(id); // safe/idempotent; refreshes role option labels too
+    calcAgeCategory(id, true); // refresh labels only, never auto-default the role here
     calcCheckout(id);
   });
   refreshAllShareSelects();
@@ -684,7 +697,7 @@ function addParticipantRow() {
     + '<div class="form-group"><label data-i18n="f_mobile_optional">' + t('f_mobile_optional') + '</label><input type="tel" id="p_mobile_' + id + '" data-i18n-ph="f_mobile_ph" placeholder="' + t('f_mobile_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_email_optional">' + t('f_email_optional') + '</label><input type="email" id="p_email_' + id + '" data-i18n-ph="f_email_ph" placeholder="' + t('f_email_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_role">' + t('f_role') + '</label><select id="p_role_' + id + '" onchange="onRoleChange(' + id + ')"></select></div>'
-    + '<div class="form-group"><label data-i18n="f_age_category">' + t('f_age_category') + '</label><select id="p_events_' + id + '"><option value="">' + t('ph_auto_select') + '</option></select></div>'
+    + '<div class="form-group"><label data-i18n="f_age_category">' + t('f_age_category') + '</label><select id="p_events_' + id + '" onchange="checkAgeMatch(' + id + ')"><option value="">' + t('ph_auto_select') + '</option></select><div class="esid-hint" id="p_age_hint_' + id + '"></div></div>'
     + '<div class="form-group" id="p_shirt_wrap_' + id + '" style="display:none"><label data-i18n="f_shirt">' + t('f_shirt') + '</label><select id="p_shirt_' + id + '"></select></div>'
     + '<div class="form-group"><label data-i18n="f_package">' + t('f_package') + '</label><select id="p_package_' + id + '" onchange="onPackageChange(' + id + ')"><option value="">' + t('ph_loading') + '</option></select></div>'
     + '<div class="form-group" id="p_roomtype_wrap_' + id + '" style="display:none"><label data-i18n="f_roomtype">' + t('f_roomtype') + '</label><select id="p_roomtype_' + id + '" onchange="onRoomTypeChange(' + id + ')"></select></div>'
@@ -746,6 +759,7 @@ function populateVisaSelect(id) {
 function removeParticipantRow(id) {
   clearShareAssignment(id);
   releaseAsAnchor(id);
+  delete ageAutoFilledFlag[id];
   var el = document.getElementById('p_card_' + id);
   if (el) el.remove();
   participantIds = participantIds.filter(function(x) { return x !== id; });
@@ -1091,10 +1105,10 @@ function populateEventsSelect(id) {
   if (cur) sel.value = cur;
 }
 
-function calcAgeCategory(id) {
+function computeAgeInfo(id) {
   var dob = document.getElementById('p_dob_' + id).value;
   var gender = document.getElementById('p_gender_' + id).value;
-  if (!dob || !gender) return;
+  if (!dob) return null;
 
   // Age is calculated as of tournament end date (same rule as the main event management tool)
   var te = eventEndDate || new Date();
@@ -1114,20 +1128,71 @@ function calcAgeCategory(id) {
 
   var isAdult = ageClass === 'Adult';
   var prefix = gender === 'Weiblich' ? 'G' : gender === 'Männlich' ? 'B' : '';
-  var cat = isAdult ? 'Adult Pass' : prefix + ageClass;
+  var expCat = isAdult ? 'Adult Pass' : (prefix + ageClass);
+  return { age: age, ageClass: ageClass, isAdult: isAdult, expCat: expCat, hasGenderPrefix: !!prefix };
+}
+
+function renderAgeHint(id, info) {
+  var hintEl = document.getElementById('p_age_hint_' + id);
+  if (!hintEl) return;
+  if (!info) { hintEl.textContent = t('age_hint_enter_dob'); hintEl.style.color = ''; return; }
+  var sel = document.getElementById('p_events_' + id);
+  var curVal = (sel ? sel.value : '').trim().toLowerCase();
+  var matches;
+  if (info.isAdult) {
+    matches = curVal === 'adult pass' || curVal === info.expCat.toLowerCase();
+  } else if (info.hasGenderPrefix) {
+    matches = curVal === info.expCat.toLowerCase();
+  } else {
+    matches = curVal === info.expCat.toLowerCase() || curVal === ('b' + info.ageClass).toLowerCase() || curVal === ('g' + info.ageClass).toLowerCase() || curVal === info.ageClass.toLowerCase();
+  }
+  hintEl.innerHTML = t('age_hint_label') + '<strong>' + info.age + '</strong>' + t('age_hint_years') + '<strong>' + info.expCat + '</strong> '
+    + '<span style="color:' + (matches ? 'var(--green)' : 'var(--amber)') + '">' + (matches ? t('age_hint_ok') : t('age_hint_check')) + '</span>';
+  hintEl.style.color = '';
+}
+
+// Triggered when DOB or Gender changes: recalculates age, auto-fills the Age Category
+// (only if it's still empty, so manual overrides are never overwritten), auto-adjusts
+// the Role for adults/minors, and shows the recommendation.
+function calcAgeCategory(id, skipAutoDefault) {
+  var info = computeAgeInfo(id);
+  if (!info) { renderAgeHint(id, null); return; }
 
   var sel = document.getElementById('p_events_' + id);
-  if (isAdult) {
-    for (var i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; break; }
-    }
-  } else {
-    for (var i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === cat) { sel.value = cat; break; }
+  if (sel && (!sel.value || ageAutoFilledFlag[id])) {
+    if (info.isAdult) {
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; ageAutoFilledFlag[id] = true; break; }
+      }
+    } else {
+      var wanted = info.expCat.trim().toLowerCase();
+      for (var j = 0; j < sel.options.length; j++) {
+        if (sel.options[j].value.trim().toLowerCase() === wanted) { sel.value = sel.options[j].value; ageAutoFilledFlag[id] = true; break; }
+      }
     }
   }
 
-  populateRoleSelect(id, isAdult);
+  populateRoleSelect(id, info.isAdult);
+
+  // Minors default to Player (unless a manual, non-default role was already chosen).
+  // Skipped during pure re-render passes (e.g. language switch) so it never overwrites a
+  // deliberate manual choice when nothing about the person actually changed.
+  if (!skipAutoDefault && !info.isAdult) {
+    var roleSel = document.getElementById('p_role_' + id);
+    if (roleSel && (!roleSel.value || roleSel.value === 'Coach')) {
+      roleSel.value = 'Player';
+      onRoleChange(id);
+    }
+  }
+
+  renderAgeHint(id, info);
+}
+
+// Triggered when the Age Category / Event dropdown is changed manually:
+// only re-checks whether it still matches the recommendation, without overwriting anything.
+function checkAgeMatch(id) {
+  ageAutoFilledFlag[id] = false; // the user just picked this themselves, protect it from now on
+  renderAgeHint(id, computeAgeInfo(id));
 }
 
 function onRoleChange(id) {
