@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entry Registration – European Junior Open 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #185FA5; --blue-bg: #e8f0fb; --green: #2E7D32; --green-bg: #e8f5e9;
+    --red: #c62828; --red-bg: #fdecea; --amber:#b26a00; --border: #dde2ec; --radius: 8px;
+    --bg: #fff; --bg2: #f7f9fc; --text: #1a1d23; --text2: #5a6272; --text3: #9aa3b2;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg2); color: var(--text); min-height: 100vh; }
+  .header { background: var(--blue); color: #fff; padding: 24px 32px; text-align: center; position:relative; }
+  .header h1 { font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .racket-icon { width: 34px; height: 34px; flex-shrink: 0; }
+  .event-logo-img { height: 80px; max-width: 180px; object-fit: contain; flex-shrink: 0; display: none; border-radius: 4px; background: #fff; padding: 4px; }
+  .lang-switch { position: absolute; top: 14px; right: 16px; display: flex; gap: 4px; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px; }
+  .lang-btn { border: none; background: transparent; color: #fff; opacity: 0.7; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 16px; cursor: pointer; }
+  .lang-btn.active { background: #fff; color: var(--blue); opacity: 1; }
+  .container { max-width: 760px; margin: 32px auto; padding: 0 16px 60px; }
+  .card { background: var(--bg); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; overflow: hidden; }
+  .card-header { padding: 14px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-body { padding: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: var(--text2); }
+  label .req { color: var(--red); margin-left: 2px; }
+  input, select, textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color .15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+  input.error, select.error { border-color: var(--red); background: var(--red-bg); }
+  .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .pkg-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: all .15s; }
+  .pkg-card:hover { border-color: var(--blue); background: var(--blue-bg); }
+  .pkg-card.selected { border-color: var(--blue); background: var(--blue-bg); }
+  .pkg-card .pkg-code { font-size: 22px; font-weight: 800; color: var(--blue); }
+  .pkg-card .pkg-name { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .pkg-card .pkg-price { font-size: 15px; font-weight: 700; margin-top: 8px; color: var(--text); }
+  .pkg-card .pkg-details { font-size: 11px; color: var(--text3); margin-top: 4px; line-height: 1.5; }
+  .submit-btn { width: 100%; padding: 14px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+  .submit-btn:hover { opacity: 0.9; }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .success-box { display: none; background: var(--green-bg); border: 1.5px solid var(--green); border-radius: 12px; padding: 32px; text-align: center; }
+  .success-box h2 { color: var(--green); font-size: 22px; margin-bottom: 8px; }
+  .success-box p { color: var(--text2); font-size: 14px; line-height: 1.6; }
+  .error-box { display: none; background: var(--red-bg); border: 1px solid var(--red); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: var(--red); white-space: pre-line; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1d23; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; z-index: 999; }
+  .checkbox-row { display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; }
+  .checkbox-row input { width:18px; height:18px; accent-color: var(--blue); flex-shrink:0; }
+  .esid-hint { font-size:11px; color:#888; margin-top:3px; }
+  .room-badges { display:flex; flex-wrap:wrap; gap:10px; }
+  .room-badge { flex:1; min-width:140px; border:1.5px solid var(--border); border-radius:var(--radius); padding:10px 14px; }
+  .room-badge .rb-type { font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.3px; }
+  .room-badge .rb-count { font-size:18px; font-weight:800; margin-top:2px; }
+  .room-badge.ok .rb-count { color: var(--green); }
+  .room-badge.low .rb-count { color: var(--amber); }
+  .room-badge.full .rb-count { color: var(--red); }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } .pkg-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="lang-switch">
+    <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" id="langBtnDe" onclick="setLang('de')">DE</button>
+  </div>
+  <h1 id="pageTitle">
+    <svg class="racket-icon" id="racketIcon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="26" cy="22" rx="16" ry="19" stroke="#fff" stroke-width="3.2" transform="rotate(-18 26 22)"/>
+      <path d="M18 12 L34 32 M34 12 L18 32 M14 22 L38 22" stroke="#fff" stroke-width="1.6" opacity="0.75" transform="rotate(-18 26 22)"/>
+      <path d="M35 38 L52 56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M49 53 L56 60" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/>
+    </svg>
+    <img id="eventLogoImg" class="event-logo-img" alt="Event logo" />
+    <span id="pageTitleText">European Junior Open 2026</span>
+  </h1>
+  <p data-i18n="header_subtitle">Player & Coach Registration — Please fill in all required fields</p>
+</div>
+
+<div class="container">
+  <div id="successBox" class="success-box">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <h2 data-i18n="success_title">Registration Submitted!</h2>
+    <p data-i18n-html="success_text">Thank you for your registration. Your entry has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
+    <p style="margin-top:16px;font-size:12px;color:var(--text3)"><span data-i18n="success_regid">Registration ID:</span> <strong id="regId">–</strong></p>
+  </div>
+
+  <div id="formContainer">
+    <div id="errorBox" class="error-box"></div>
+    <div id="noEventBox" class="error-box" style="display:none" data-i18n="no_event">⚠️ No active tournament found. Please contact the organizer.</div>
+
+    <!-- PERSONAL DATA -->
+    <div class="card">
+      <div class="card-header" data-i18n="personal_header">👤 Personal Data</div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label data-i18n="f_lastname">Last Name <span class="req">*</span></label><input type="text" id="r_lastname" data-i18n-ph="f_lastname_ph" placeholder="Last name" /></div>
+          <div class="form-group"><label data-i18n="f_firstname">First Name <span class="req">*</span></label><input type="text" id="r_firstname" data-i18n-ph="f_firstname_ph" placeholder="First name" /></div>
+          <div class="form-group"><label data-i18n="f_country">Country <span class="req">*</span></label>
+            <select id="r_country"></select>
+          </div>
+          <div class="form-group"><label data-i18n="f_dob">Date of Birth <span class="req">*</span></label><input type="date" id="r_dob" onchange="calcAgeCategory()" /></div>
+          <div class="form-group"><label data-i18n="f_gender">Gender <span class="req">*</span></label>
+            <select id="r_gender" onchange="calcAgeCategory()"></select>
+          </div>
+          <div class="form-group"><label data-i18n="f_member_id">Member ID / ESID <span class="req">*</span></label><input type="text" id="r_member_id" placeholder="e.g. ES473686007" pattern="ES[0-9]{9}" /><div class="esid-hint" data-i18n="f_member_id_hint">Format: ES + 9 digits, e.g. ES473686007</div></div>
+          <div class="form-group"><label data-i18n="f_passport">Passport / ID Number</label><input type="text" id="r_passport_id" /></div>
+          <div class="form-group"><label data-i18n="f_mobile">Mobile <span class="req">*</span></label><input type="tel" id="r_mobile" placeholder="+49 151 …" /></div>
+          <div class="form-group full"><label data-i18n="f_email">E-Mail <span class="req">*</span></label><input type="email" id="r_email" placeholder="your@email.com" /></div>
+          <div class="form-group"><label data-i18n="f_role">Role <span class="req">*</span></label>
+            <select id="r_role" onchange="onRoleChange()"></select>
+          </div>
+          <div class="form-group" id="r_events_group"><label data-i18n="f_age_category">Age Category / Event</label>
+            <select id="r_events"><option value="">– Auto / Select –</option></select>
+          </div>
+          <div class="form-group"><label data-i18n="f_coach_name">Coach Name</label><input type="text" id="r_coach_name" data-i18n-ph="f_coach_name_ph" placeholder="Coach last name, first name" /></div>
+          <div class="form-group"><label data-i18n="f_coach_esid">Coach ESID</label><input type="text" id="r_coach_esid" data-i18n-ph="f_coach_esid_ph" placeholder="Coach Member ID" /></div>
+          <div class="form-group full" id="r_shirt_wrap" style="display:none"><label data-i18n="f_shirt">Shirt Size <span class="req">*</span></label>
+            <select id="r_shirt"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PACKAGE -->
+    <div class="card">
+      <div class="card-header"><span data-i18n="pkg_header">📦 Package Selection</span> <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--text3)" data-i18n="pkg_required">(required)</span></div>
+      <div class="card-body">
+        <div id="pkgGrid" class="pkg-grid"><p style="color:var(--text3);font-size:13px" data-i18n="pkg_loading">Loading packages…</p></div>
+        <input type="hidden" id="r_package" />
+        <input type="hidden" id="r_package_price" />
+      </div>
+    </div>
+
+    <!-- ROOM / HOTEL (only shown if the chosen package includes nights) -->
+    <div class="card" id="roomCard" style="display:none">
+      <div class="card-header" data-i18n="room_header">🏨 Room & Hotel</div>
+      <div class="card-body">
+        <div id="roomBadges" class="room-badges" style="margin-bottom:14px"></div>
+        <div class="form-grid">
+          <div class="form-group"><label data-i18n="f_roomtype">Room Type <span class="req">*</span></label><select id="r_roomtype"></select></div>
+          <div class="form-group full"><label data-i18n="f_hotel">Hotel <span class="req">*</span></label><select id="r_hotel"></select></div>
+          <div class="form-group" style="grid-column:1"><label data-i18n="f_checkin">Check-in Date <span class="req">*</span></label><input type="date" id="r_checkin" onchange="calcCheckout()" /></div>
+          <div class="form-group"><label data-i18n="f_checkout">Check-out Date <span class="req">*</span></label><input type="date" id="r_checkout" /><div class="esid-hint" id="r_checkout_hint"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSPORT -->
+    <div class="card">
+      <div class="card-header" data-i18n="travel_header">✈️ Travel & Transport</div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label data-i18n="f_transport">Transport Option</label>
+            <select id="r_ams_bus" disabled><option value="Flugzeug" selected data-i18n="transport_only">Airplane (only option)</option></select>
+            <div class="esid-hint" data-i18n="transport_hint">Airport Hamburg pick up and drop off only</div>
+          </div>
+          <div class="form-group"><label data-i18n="f_airport_transfer">Airport Transfer</label>
+            <select id="r_airport_plus" disabled><option value="Nein" selected>No</option></select>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <div class="form-grid">
+            <div class="form-group"><label data-i18n="f_arrival_date">Arrival Date</label><input type="date" id="r_arrival_date" oninput="updateAirportTransfer()" /></div>
+            <div class="form-group"><label data-i18n="f_arrival_time">Arrival Time</label><input type="time" id="r_arrival_time" oninput="updateAirportTransfer()" /></div>
+            <div class="form-group"><label data-i18n="f_flight_in">Incoming Flight No.</label><input type="text" id="r_flight_in" data-i18n-ph="flight_in_ph" placeholder="e.g. LH1234" /></div>
+            <div class="form-group"><label data-i18n="f_departure_date">Departure Date</label><input type="date" id="r_departure_date" oninput="updateAirportTransfer()" /></div>
+            <div class="form-group"><label data-i18n="f_departure_time">Departure Time</label><input type="time" id="r_departure_time" oninput="updateAirportTransfer()" /></div>
+            <div class="form-group"><label data-i18n="f_flight_out">Outgoing Flight No.</label><input type="text" id="r_flight_out" data-i18n-ph="flight_out_ph" placeholder="e.g. LH5678" /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEAL -->
+    <div class="card">
+      <div class="card-header" data-i18n="meal_header">🍽️ Meal Package</div>
+      <div class="card-body">
+        <label class="checkbox-row">
+          <input type="checkbox" id="r_meal_plus" />
+          <span data-i18n="meal_text">Yes, I would like to book the meal package</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- VISA -->
+    <div class="card">
+      <div class="card-header" data-i18n="visa_header">🛂 Visa & Additional Info</div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label data-i18n="f_visa">Visa Required?</label>
+            <select id="r_visa"></select>
+          </div>
+          <div class="form-group full"><label data-i18n="f_memo">Notes / Special Requests</label>
+            <textarea id="r_memo" rows="3" data-i18n-ph="memo_ph" placeholder="Any special requests, dietary requirements, etc."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCESS CODE (only required if package T - Tournament Team is booked) -->
+    <div class="card" id="accessCodeCard" style="display:none">
+      <div class="card-header" data-i18n="code_header">🔑 Access Code</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label data-i18n="code_label">Access Code (required for Tournament Team package) <span class="req">*</span></label>
+          <input type="text" id="r_accessCode" data-i18n-ph="code_ph" placeholder="Enter code" />
+          <div class="esid-hint" data-i18n="code_hint">This package requires an access code provided by the organizer.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONSENT -->
+    <div class="card">
+      <div class="card-header" data-i18n="decl_header">📋 Declaration</div>
+      <div class="card-body">
+        <label class="checkbox-row" style="align-items:flex-start;line-height:1.6">
+          <input type="checkbox" id="r_consent" style="width:18px;height:18px;margin-top:2px;accent-color:var(--blue);flex-shrink:0" />
+          <span data-i18n-html="decl_text">I confirm that all information provided is correct and I agree to the <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">tournament regulations and withdrawal policy</a>. I understand that my registration is subject to confirmation by the organizer.</span>
+        </label>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitRegistration()" data-i18n="submit_btn">
+      Submit Registration
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://xngiyfqbjyhnmgukhanj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZ2l5ZnFianlobm1ndWtoYW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDEwMzksImV4cCI6MjA5NzgxNzAzOX0.CjzN8HH9cxJRtc9wrBPwTsw2ayPf7em_LeCM7HBQLxQ';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+var selectedPackage = null;
+var eventId = null;
+var eventEndDate = null;
+var ageClassesCache = ['GU11', 'GU13', 'GU15', 'GU17', 'GU19', 'BU11', 'BU13', 'BU15', 'BU17', 'BU19'];
+var packagesData = [];
+var hotelsCache = [];
+var roomCapacity = {}, roomUsed = {};
+var ROOM_MAX = { 'Einzelzimmer': 1, 'Doppelzimmer': 2, 'Dreibettzimmer': 3 };
+var ROOM_TYPES = ['Einzelzimmer', 'Doppelzimmer', 'Dreibettzimmer'];
+var ROLE_OPTIONS_FULL = ['Player', 'Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+var ROLE_OPTIONS_ADULT = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+var ADULT_ROLES = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+
+// ---------- I18N ----------
+var LANG = 'en';
+var I18N = {
+en: {
+  header_subtitle: "Player & Coach Registration — Please fill in all required fields",
+  no_event: "⚠️ No active tournament found. Please contact the organizer.",
+  personal_header: "👤 Personal Data",
+  f_lastname: 'Last Name <span class="req">*</span>',
+  f_lastname_ph: "Last name",
+  f_firstname: 'First Name <span class="req">*</span>',
+  f_firstname_ph: "First name",
+  f_country: 'Country <span class="req">*</span>',
+  f_dob: 'Date of Birth <span class="req">*</span>',
+  f_gender: 'Gender <span class="req">*</span>',
+  f_member_id: 'Member ID / ESID <span class="req">*</span>',
+  f_member_id_hint: "Format: ES + 9 digits, e.g. ES473686007",
+  f_passport: "Passport / ID Number",
+  f_mobile: 'Mobile <span class="req">*</span>',
+  f_email: 'E-Mail <span class="req">*</span>',
+  f_role: 'Role <span class="req">*</span>',
+  f_age_category: "Age Category / Event",
+  f_coach_name: "Coach Name",
+  f_coach_name_ph: "Coach last name, first name",
+  f_coach_esid: "Coach ESID",
+  f_coach_esid_ph: "Coach Member ID",
+  f_shirt: 'Shirt Size <span class="req">*</span>',
+  pkg_header: "📦 Package Selection",
+  pkg_required: "(required)",
+  pkg_loading: "Loading packages…",
+  room_header: "🏨 Room & Hotel",
+  f_roomtype: 'Room Type <span class="req">*</span>',
+  f_hotel: 'Hotel <span class="req">*</span>',
+  f_checkin: 'Check-in Date <span class="req">*</span>',
+  f_checkout: 'Check-out Date <span class="req">*</span>',
+  travel_header: "✈️ Travel & Transport",
+  f_transport: "Transport Option",
+  transport_only: "Airplane (only option)",
+  transport_hint: "Airport Hamburg pick up and drop off only",
+  f_airport_transfer: "Airport Transfer",
+  f_arrival_date: "Arrival Date",
+  f_arrival_time: "Arrival Time",
+  f_flight_in: "Incoming Flight No.",
+  flight_in_ph: "e.g. LH1234",
+  f_departure_date: "Departure Date",
+  f_departure_time: "Departure Time",
+  f_flight_out: "Outgoing Flight No.",
+  flight_out_ph: "e.g. LH5678",
+  meal_header: "🍽️ Meal Package",
+  meal_text: "Yes, I would like to book the meal package",
+  visa_header: "🛂 Visa & Additional Info",
+  f_visa: "Visa Required?",
+  f_memo: "Notes / Special Requests",
+  memo_ph: "Any special requests, dietary requirements, etc.",
+  code_header: "🔑 Access Code",
+  code_label: 'Access Code (required for Tournament Team package) <span class="req">*</span>',
+  code_ph: "Enter code",
+  code_hint: "This package requires an access code provided by the organizer.",
+  decl_header: "📋 Declaration",
+  decl_text: 'I confirm that all information provided is correct and I agree to the <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">tournament regulations and withdrawal policy</a>. I understand that my registration is subject to confirmation by the organizer.',
+  submit_btn: "Submit Registration",
+  submitting: "Submitting…",
+  success_title: "Registration Submitted!",
+  success_text: "Thank you for your registration. Your entry has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.",
+  success_regid: "Registration ID:",
+
+  ph_select: "– Select –",
+  ph_select_roomtype: "– Select room type –",
+  ph_select_hotel: "– Select hotel –",
+  ph_select_size: "– Select size –",
+  ph_auto_select: "– Auto / Select –",
+
+  ra_full: "FULLY BOOKED",
+  ra_free_suffix: "free",
+
+  hint_no_nights: "No nights defined for this package – set check-out manually",
+  hint_nights_from_pkg: " nights (from package ",
+  hint_no_packages: "No packages available.",
+  hint_no_player_packages: "No player packages available.",
+  hint_no_adult_packages: "No adult packages available.",
+  hint_no_hotel_configured: "No hotel configured for this event",
+
+  err_fix_following: "⚠️ Please fill in the following required fields:",
+  err_esid_format: "Member ID / ESID must start with ES followed by exactly 9 digits (e.g. ES473686007)",
+  err_package: "Package",
+  err_declaration: "Declaration (please accept the terms)",
+  err_access_code: "Invalid access code for the Tournament Team package (T)",
+  err_esid_duplicate: "This ESID is already registered:",
+  err_esid_duplicate_contact: "Please contact the organizer if you believe this is an error.",
+  err_room_full: "Sorry, this room type just became fully booked. Please choose another one.",
+  err_generic: "Error: "
+},
+de: {
+  header_subtitle: "Spieler- & Trainer-Anmeldung — bitte alle Pflichtfelder ausfüllen",
+  no_event: "⚠️ Kein aktives Turnier gefunden. Bitte den Veranstalter kontaktieren.",
+  personal_header: "👤 Persönliche Daten",
+  f_lastname: 'Nachname <span class="req">*</span>',
+  f_lastname_ph: "Nachname",
+  f_firstname: 'Vorname <span class="req">*</span>',
+  f_firstname_ph: "Vorname",
+  f_country: 'Land <span class="req">*</span>',
+  f_dob: 'Geburtsdatum <span class="req">*</span>',
+  f_gender: 'Geschlecht <span class="req">*</span>',
+  f_member_id: 'Mitglieds-ID / ESID <span class="req">*</span>',
+  f_member_id_hint: "Format: ES + 9 Ziffern, z. B. ES473686007",
+  f_passport: "Reisepass- / Ausweisnummer",
+  f_mobile: 'Mobil <span class="req">*</span>',
+  f_email: 'E-Mail <span class="req">*</span>',
+  f_role: 'Rolle <span class="req">*</span>',
+  f_age_category: "Altersklasse / Event",
+  f_coach_name: "Trainername",
+  f_coach_name_ph: "Nachname, Vorname des Trainers",
+  f_coach_esid: "Trainer-ESID",
+  f_coach_esid_ph: "Mitglieds-ID des Trainers",
+  f_shirt: 'Shirtgröße <span class="req">*</span>',
+  pkg_header: "📦 Package-Auswahl",
+  pkg_required: "(erforderlich)",
+  pkg_loading: "Packages werden geladen…",
+  room_header: "🏨 Zimmer & Hotel",
+  f_roomtype: 'Zimmertyp <span class="req">*</span>',
+  f_hotel: 'Hotel <span class="req">*</span>',
+  f_checkin: 'Check-in Datum <span class="req">*</span>',
+  f_checkout: 'Check-out Datum <span class="req">*</span>',
+  travel_header: "✈️ Reise & Transport",
+  f_transport: "Transportmittel",
+  transport_only: "Flugzeug (einzige Option)",
+  transport_hint: "Nur Abholung/Bringservice Flughafen Hamburg",
+  f_airport_transfer: "Flughafentransfer",
+  f_arrival_date: "Ankunftsdatum",
+  f_arrival_time: "Ankunftszeit",
+  f_flight_in: "Ankunftsflug Nr.",
+  flight_in_ph: "z. B. LH1234",
+  f_departure_date: "Abreisedatum",
+  f_departure_time: "Abreisezeit",
+  f_flight_out: "Abflug Nr.",
+  flight_out_ph: "z. B. LH5678",
+  meal_header: "🍽️ Verpflegungspaket",
+  meal_text: "Ja, ich möchte das Verpflegungspaket buchen",
+  visa_header: "🛂 Visum & weitere Angaben",
+  f_visa: "Visum erforderlich?",
+  f_memo: "Notizen / Besondere Wünsche",
+  memo_ph: "Besondere Wünsche, Ernährungshinweise usw.",
+  code_header: "🔑 Zugangscode",
+  code_label: 'Zugangscode (erforderlich für Package "Tournament Team") <span class="req">*</span>',
+  code_ph: "Code eingeben",
+  code_hint: "Für dieses Package wird ein vom Veranstalter bereitgestellter Zugangscode benötigt.",
+  decl_header: "📋 Erklärung",
+  decl_text: 'Ich bestätige, dass alle Angaben korrekt sind, und stimme den <a href="https://european-junior-open.com/payment-information/" target="_blank" style="color:var(--blue)">Turnierregeln und der Rücktrittsregelung</a> zu. Mir ist bewusst, dass meine Anmeldung der Bestätigung durch den Veranstalter bedarf.',
+  submit_btn: "Anmeldung absenden",
+  submitting: "Wird gesendet…",
+  success_title: "Anmeldung gesendet!",
+  success_text: "Vielen Dank für deine Anmeldung. Sie wurde empfangen und wartet nun auf <strong>Bestätigung</strong>.<br>Der Veranstalter wird sich in Kürze bei dir melden.",
+  success_regid: "Anmelde-ID:",
+
+  ph_select: "– Auswählen –",
+  ph_select_roomtype: "– Zimmertyp wählen –",
+  ph_select_hotel: "– Hotel wählen –",
+  ph_select_size: "– Größe wählen –",
+  ph_auto_select: "– Automatisch / Auswählen –",
+
+  ra_full: "AUSGEBUCHT",
+  ra_free_suffix: "frei",
+
+  hint_no_nights: "Keine Nächte für dieses Package hinterlegt – Check-out bitte manuell setzen",
+  hint_nights_from_pkg: " Nächte (aus Package ",
+  hint_no_packages: "Keine Packages verfügbar.",
+  hint_no_player_packages: "Keine Player-Packages verfügbar.",
+  hint_no_adult_packages: "Keine Adult-Packages verfügbar.",
+  hint_no_hotel_configured: "Kein Hotel für dieses Event hinterlegt",
+
+  err_fix_following: "⚠️ Bitte folgende Pflichtfelder ausfüllen:",
+  err_esid_format: "Mitglieds-ID / ESID muss mit ES gefolgt von genau 9 Ziffern beginnen (z. B. ES473686007)",
+  err_package: "Package",
+  err_declaration: "Erklärung (bitte den Bedingungen zustimmen)",
+  err_access_code: "Ungültiger Zugangscode für das Package \"Tournament Team\" (T)",
+  err_esid_duplicate: "Diese ESID ist bereits registriert:",
+  err_esid_duplicate_contact: "Bitte kontaktiere den Veranstalter, falls das ein Fehler ist.",
+  err_room_full: "Dieser Zimmertyp ist gerade ausgebucht worden. Bitte einen anderen wählen.",
+  err_generic: "Fehler: "
+}
+};
+
+var ROLE_LABELS = {
+  en: { Player: 'Player', Coach: 'Coach', Parent: 'Parent', Referee: 'Referee', Official: 'Official', 'ESF Official': 'ESF Official' },
+  de: { Player: 'Spieler', Coach: 'Trainer', Parent: 'Elternteil', Referee: 'Schiedsrichter', Official: 'Offizieller', 'ESF Official': 'ESF-Offizieller' }
+};
+var GENDER_LABELS = {
+  en: { Weiblich: 'Female', 'Männlich': 'Male' },
+  de: { Weiblich: 'Weiblich', 'Männlich': 'Männlich' }
+};
+var ROOM_TYPE_LABELS = {
+  en: { Einzelzimmer: 'Single Room', Doppelzimmer: 'Double Room', Dreibettzimmer: 'Triple Room' },
+  de: { Einzelzimmer: 'Einzelzimmer', Doppelzimmer: 'Doppelzimmer', Dreibettzimmer: 'Dreibettzimmer' }
+};
+var VISA_LABELS = {
+  en: { 'Nicht erforderlich': 'Not required', 'Erforderlich': 'Required', 'Wird beantragt': 'Being applied for' },
+  de: { 'Nicht erforderlich': 'Nicht erforderlich', 'Erforderlich': 'Erforderlich', 'Wird beantragt': 'Wird beantragt' }
+};
+var AIRPORT_LABELS = {
+  en: { 'Ja – Beide': 'Yes – Both', 'Ja – Ankunft': 'Yes – Arrival only', 'Ja – Abflug': 'Yes – Departure only', 'Nein': 'No' },
+  de: { 'Ja – Beide': 'Ja – Beide', 'Ja – Ankunft': 'Ja – Ankunft', 'Ja – Abflug': 'Ja – Abflug', 'Nein': 'Nein' }
+};
+
+function t(key) {
+  return (I18N[LANG] && I18N[LANG][key] !== undefined) ? I18N[LANG][key] : ((I18N.en && I18N.en[key] !== undefined) ? I18N.en[key] : key);
+}
+
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(function(el) { el.innerHTML = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el) { el.innerHTML = t(el.getAttribute('data-i18n-html')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el) { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
+  document.getElementById('langBtnEn').classList.toggle('active', LANG === 'en');
+  document.getElementById('langBtnDe').classList.toggle('active', LANG === 'de');
+  document.documentElement.lang = LANG;
+}
+
+function setLang(lang) {
+  LANG = lang === 'de' ? 'de' : 'en';
+  try { localStorage.setItem('regFormLang', LANG); } catch (e) {}
+  applyStaticTranslations();
+  refreshDynamicTranslations();
+}
+
+function refreshDynamicTranslations() {
+  document.getElementById('r_country').innerHTML = countryOptionsHtml();
+  populateGenderSelect();
+  populateVisaSelect();
+  populateRoleSelect(isCurrentlyAdult());
+  populateShirtSelect();
+  populatePackageGrid();
+  populateRoomTypeSelect();
+  populateHotelSelect();
+  populateEventsSelect();
+  renderRoomBadges();
+  updateAirportTransfer();
+  calcCheckout();
+}
+
+function isCurrentlyAdult() {
+  var opts = document.getElementById('r_role').querySelectorAll('option');
+  for (var i = 0; i < opts.length; i++) { if (opts[i].value === 'Player') return false; }
+  return document.getElementById('r_role').options.length > 1;
+}
+
+var COUNTRIES = [["AFG","Afghanistan"],["ALB","Albania"],["ALG","Algeria"],["AND","Andorra"],["AGO","Angola"],["ANT","Antigua and Barbuda"],["ARG","Argentina"],["ARM","Armenia"],["AUS","Australia"],["AUT","Austria"],["AZE","Azerbaijan"],["BAH","Bahamas"],["BRN","Bahrain"],["BAN","Bangladesh"],["BAR","Barbados"],["BLR","Belarus"],["BEL","Belgium"],["BIZ","Belize"],["BEN","Benin"],["BHU","Bhutan"],["BOL","Bolivia"],["BIH","Bosnia and Herzegovina"],["BOT","Botswana"],["BRA","Brazil"],["BRU","Brunei"],["BUL","Bulgaria"],["BUR","Burkina Faso"],["BDI","Burundi"],["CAM","Cambodia"],["CMR","Cameroon"],["CAN","Canada"],["CPV","Cape Verde"],["CAF","Central African Republic"],["CHA","Chad"],["CHI","Chile"],["CHN","China"],["TPE","Chinese Taipei"],["COL","Colombia"],["COM","Comoros"],["CGO","Congo"],["COD","Congo DR"],["CRC","Costa Rica"],["CRO","Croatia"],["CUB","Cuba"],["CYP","Cyprus"],["CZE","Czech Republic"],["CIV","Côte d'Ivoire"],["DEN","Denmark"],["DJI","Djibouti"],["DMA","Dominica"],["DOM","Dominican Republic"],["ECU","Ecuador"],["EGY","Egypt"],["ESA","El Salvador"],["ENG","England"],["GEQ","Equatorial Guinea"],["ERI","Eritrea"],["EST","Estonia"],["SWZ","Eswatini"],["ETH","Ethiopia"],["FIJ","Fiji"],["FIN","Finland"],["FRA","France"],["GAB","Gabon"],["GAM","Gambia"],["GEO","Georgia"],["GER","Germany"],["GHA","Ghana"],["GBR","Great Britain"],["GRE","Greece"],["GRN","Grenada"],["GTM","Guatemala"],["GUI","Guinea"],["GBS","Guinea-Bissau"],["GUY","Guyana"],["HAI","Haiti"],["HON","Honduras"],["HKG","Hong Kong"],["HUN","Hungary"],["ISL","Iceland"],["IND","India"],["INA","Indonesia"],["IRI","Iran"],["IRQ","Iraq"],["IRL","Ireland"],["ISR","Israel"],["ITA","Italy"],["JAM","Jamaica"],["JPN","Japan"],["JOR","Jordan"],["KAZ","Kazakhstan"],["KEN","Kenya"],["PRK","Korea North"],["KOR","Korea South"],["KUW","Kuwait"],["KGZ","Kyrgyzstan"],["LAO","Laos"],["LAT","Latvia"],["LIB","Lebanon"],["LES","Lesotho"],["LBA","Libya"],["LIE","Liechtenstein"],["LTU","Lithuania"],["LUX","Luxembourg"],["MAD","Madagascar"],["MAW","Malawi"],["MAS","Malaysia"],["MDV","Maldives"],["MLI","Mali"],["MLT","Malta"],["MRI","Mauritius"],["MEX","Mexico"],["MDA","Moldova"],["MON","Monaco"],["MGL","Mongolia"],["MNE","Montenegro"],["MAR","Morocco"],["MOZ","Mozambique"],["MYA","Myanmar"],["NAM","Namibia"],["NEP","Nepal"],["NED","Netherlands"],["NZL","New Zealand"],["NCA","Nicaragua"],["NIG","Niger"],["NGR","Nigeria"],["MKD","North Macedonia"],["NOR","Norway"],["OMA","Oman"],["PAK","Pakistan"],["PLE","Palestine"],["PAN","Panama"],["PNG","Papua New Guinea"],["PAR","Paraguay"],["PER","Peru"],["PHI","Philippines"],["POL","Poland"],["POR","Portugal"],["QAT","Qatar"],["ROU","Romania"],["RUS","Russia"],["RWA","Rwanda"],["SKN","Saint Kitts and Nevis"],["LCA","Saint Lucia"],["VIN","Saint Vincent and the Grenadines"],["SAM","Samoa"],["SMR","San Marino"],["STP","Sao Tome and Principe"],["KSA","Saudi Arabia"],["SCO","Scotland"],["SEN","Senegal"],["SRB","Serbia"],["SEY","Seychelles"],["SLE","Sierra Leone"],["SGP","Singapore"],["SVK","Slovakia"],["SLO","Slovenia"],["SOL","Solomon Islands"],["SOM","Somalia"],["RSA","South Africa"],["SSD","South Sudan"],["ESP","Spain"],["SRI","Sri Lanka"],["SUD","Sudan"],["SUR","Suriname"],["SWE","Sweden"],["SUI","Switzerland"],["SYR","Syria"],["TJK","Tajikistan"],["TAN","Tanzania"],["THA","Thailand"],["TLS","Timor-Leste"],["TOG","Togo"],["TGA","Tonga"],["TTO","Trinidad and Tobago"],["TUN","Tunisia"],["TUR","Turkey"],["TKM","Turkmenistan"],["UGA","Uganda"],["UKR","Ukraine"],["UAE","United Arab Emirates"],["USA","United States"],["URU","Uruguay"],["UZB","Uzbekistan"],["VAN","Vanuatu"],["VEN","Venezuela"],["VIE","Vietnam"],["WAL","Wales"],["YEM","Yemen"],["ZAM","Zambia"],["ZIM","Zimbabwe"]];
+
+function countryOptionsHtml() {
+  return '<option value="">' + t('ph_select') + '</option>' + COUNTRIES.map(function(c) { return '<option value="' + c[0] + '">' + c[1] + ' (' + c[0] + ')</option>'; }).join('');
+}
+
+function toast(msg) {
+  var elx = document.getElementById('toast');
+  elx.textContent = msg; elx.style.display = 'block';
+  setTimeout(function() { elx.style.display = 'none'; }, 3000);
+}
+function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+function computeAirportTransfer(arrivalTime, departureTime) {
+  var hasArr = !!arrivalTime, hasDep = !!departureTime;
+  if (hasArr && hasDep) return 'Ja – Beide';
+  if (hasArr) return 'Ja – Ankunft';
+  if (hasDep) return 'Ja – Abflug';
+  return 'Nein';
+}
+function airportTransferLabel(val) { return (AIRPORT_LABELS[LANG] && AIRPORT_LABELS[LANG][val]) || val; }
+function updateAirportTransfer() {
+  var val = computeAirportTransfer(v('r_arrival_time'), v('r_departure_time'));
+  document.getElementById('r_airport_plus').innerHTML = '<option value="' + val + '" selected>' + airportTransferLabel(val) + '</option>';
+}
+
+// ---------- INIT ----------
+async function init() {
+  try { var savedLang = localStorage.getItem('regFormLang'); if (savedLang) LANG = savedLang; } catch (e) {}
+  applyStaticTranslations();
+  document.getElementById('r_country').innerHTML = countryOptionsHtml();
+  populateGenderSelect();
+  populateVisaSelect();
+  populateRoleSelect(false);
+  populateShirtSelect();
+
+  // Event: URL param ?event=<uuid> overrides the active event
+  var params = new URLSearchParams(window.location.search);
+  var paramEvent = params.get('event');
+  if (paramEvent) {
+    eventId = paramEvent;
+  } else {
+    var evR = await db.from('app_settings').select('value').eq('key','active_event').limit(1);
+    if (evR.data && evR.data[0]) {
+      try {
+        var evtData = JSON.parse(evR.data[0].value);
+        eventId = evtData.id;
+      } catch(e) { console.error('Event load error:', e); }
+    }
+  }
+
+  if (!eventId) {
+    document.getElementById('pkgGrid').innerHTML = '<p style="color:var(--red);font-size:13px">⚠️ No active event found. Please contact the organizer.</p>';
+    document.getElementById('noEventBox').style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+    return;
+  }
+
+  var evFull = await db.from('events').select('*').eq('id', eventId).single();
+  if (evFull.data) {
+    document.getElementById('pageTitleText').textContent = evFull.data.name;
+    document.title = 'Registration – ' + evFull.data.name;
+    if (evFull.data.date_to) eventEndDate = new Date(evFull.data.date_to);
+    if (evFull.data.logo_url) {
+      var logoImg = document.getElementById('eventLogoImg');
+      logoImg.src = 'data:image/png;base64,' + evFull.data.logo_url;
+      logoImg.style.display = 'inline-block';
+      document.getElementById('racketIcon').style.display = 'none';
+    }
+  }
+
+  var ageR = await db.from('app_settings').select('value').eq('key','age_classes').limit(1);
+  if (ageR.data && ageR.data[0]) {
+    try { ageClassesCache = JSON.parse(ageR.data[0].value); } catch(e) {}
+  }
+
+  await loadPackages();
+  await loadRoomAvailability();
+  await loadHotels();
+  populateEventsSelect();
+}
+
+async function loadPackages() {
+  var pkgR = await db.from('packages').select('*').order('code');
+  packagesData = pkgR.data || [];
+  populatePackageGrid();
+}
+
+async function loadHotels() {
+  var q = db.from('hotels').select('*').order('name');
+  if (eventId) q = q.eq('event_id', eventId);
+  var r = await q;
+  hotelsCache = r.data || [];
+  populateHotelSelect();
+}
+
+async function loadRoomAvailability() {
+  roomCapacity = {}; roomUsed = {};
+  ROOM_TYPES.forEach(function(rt) { roomCapacity[rt] = 0; roomUsed[rt] = 0; });
+  var rr = await db.from('hotel_rooms').select('room_type').eq('event_id', eventId);
+  (rr.data || []).forEach(function(room) {
+    if (ROOM_MAX[room.room_type]) roomCapacity[room.room_type] = (roomCapacity[room.room_type] || 0) + ROOM_MAX[room.room_type];
+  });
+  var pr = await db.from('participants').select('room_type').eq('event_id', eventId).neq('withdraw', 'Ja').not('room_type', 'is', null);
+  (pr.data || []).forEach(function(p) { if (p.room_type) roomUsed[p.room_type] = (roomUsed[p.room_type] || 0) + 1; });
+  renderRoomBadges();
+}
+
+function roomFree(type) { return Math.max(0, (roomCapacity[type] || 0) - (roomUsed[type] || 0)); }
+
+function renderRoomBadges() {
+  var el = document.getElementById('roomBadges');
+  if (!el) return;
+  el.innerHTML = ROOM_TYPES.map(function(rt) {
+    var total = roomCapacity[rt] || 0;
+    var free = roomFree(rt);
+    var cls = free <= 0 ? 'full' : free <= 2 ? 'low' : 'ok';
+    var label = free <= 0 ? t('ra_full') : free + ' / ' + total + ' ' + t('ra_free_suffix');
+    var typeLabel = (ROOM_TYPE_LABELS[LANG] && ROOM_TYPE_LABELS[LANG][rt]) || rt;
+    return '<div class="room-badge ' + cls + '"><div class="rb-type">' + typeLabel + '</div><div class="rb-count">' + label + '</div></div>';
+  }).join('');
+}
+
+function populateGenderSelect() {
+  var sel = document.getElementById('r_gender');
+  var cur = sel.value;
+  var labels = GENDER_LABELS[LANG] || GENDER_LABELS.en;
+  sel.innerHTML = '<option value="">' + t('ph_select') + '</option><option value="Weiblich">' + labels.Weiblich + '</option><option value="Männlich">' + labels['Männlich'] + '</option>';
+  if (cur) sel.value = cur;
+}
+
+function populateVisaSelect() {
+  var sel = document.getElementById('r_visa');
+  var cur = sel.value;
+  var labels = VISA_LABELS[LANG] || VISA_LABELS.en;
+  sel.innerHTML = ['Nicht erforderlich', 'Erforderlich', 'Wird beantragt'].map(function(vv) { return '<option value="' + vv + '">' + labels[vv] + '</option>'; }).join('');
+  if (cur) sel.value = cur;
+}
+
+function populateShirtSelect() {
+  var sel = document.getElementById('r_shirt');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">' + t('ph_select_size') + '</option>' + ['XS','S','M','L','XL','XXL'].map(function(s) { return '<option>' + s + '</option>'; }).join('');
+  if (cur) sel.value = cur;
+}
+
+function populateRoleSelect(isAdult) {
+  var sel = document.getElementById('r_role');
+  var cur = sel.value;
+  var opts = isAdult ? ROLE_OPTIONS_ADULT : ROLE_OPTIONS_FULL;
+  var labels = ROLE_LABELS[LANG] || ROLE_LABELS.en;
+  sel.innerHTML = '<option value="">' + t('ph_select') + '</option>' + opts.map(function(o) { return '<option value="' + o + '">' + labels[o] + '</option>'; }).join('');
+  if (isAdult && (!cur || cur === 'Player')) sel.value = 'Coach';
+  else if (opts.indexOf(cur) !== -1) sel.value = cur;
+  onRoleChange();
+}
+
+function onRoleChange() {
+  var role = document.getElementById('r_role').value;
+  var wrap = document.getElementById('r_shirt_wrap');
+  var show = role === 'Player';
+  wrap.style.display = show ? '' : 'none';
+  if (!show) document.getElementById('r_shirt').value = '';
+  populatePackageGrid();
+}
+
+function populateEventsSelect() {
+  var sel = document.getElementById('r_events');
+  var cur = sel.value;
+  var filteredAges = ageClassesCache.filter(function(a) { return a !== 'GU11' && a !== 'BU11'; });
+  sel.innerHTML = '<option value="">' + t('ph_auto_select') + '</option>' + filteredAges.map(function(a) { return '<option value="' + a + '">' + a + '</option>'; }).join('');
+  if (cur) sel.value = cur;
+}
+
+function populatePackageGrid() {
+  var grid = document.getElementById('pkgGrid');
+  var role = document.getElementById('r_role').value;
+  var filterWord = null, emptyMsg = t('hint_no_packages');
+  if (role === 'Player') { filterWord = 'player'; emptyMsg = t('hint_no_player_packages'); }
+  else if (ADULT_ROLES.indexOf(role) !== -1) { filterWord = 'adult'; emptyMsg = t('hint_no_adult_packages'); }
+  var list = filterWord ? packagesData.filter(function(p) { return (p.category || '').toLowerCase().indexOf(filterWord) !== -1; }) : packagesData;
+
+  if (!list.length) { grid.innerHTML = '<p style="color:var(--text3)">' + emptyMsg + '</p>'; return; }
+
+  // If the currently selected package no longer matches the role filter, clear it
+  if (selectedPackage && !list.some(function(p) { return p.code === selectedPackage; })) {
+    selectedPackage = null;
+    document.getElementById('r_package').value = '';
+    document.getElementById('r_package_price').value = '';
+    updateRoomFieldsVisibility();
+  }
+
+  grid.innerHTML = list.map(function(p) {
+    var details = [];
+    if (p.nights) details.push(p.nights + (LANG === 'de' ? ' Nächte' : ' nights'));
+    if (p.room_type) details.push((ROOM_TYPE_LABELS[LANG] && ROOM_TYPE_LABELS[LANG][p.room_type]) || p.room_type);
+    if (p.meals_text) details.push(p.meals_text);
+    else if (p.meals) details.push(p.meals);
+    if (p.transport === 'Ja') details.push(LANG === 'de' ? 'Transfer inklusive' : 'Transfer included');
+    var sel = p.code === selectedPackage ? ' selected' : '';
+    return '<div class="pkg-card' + sel + '" onclick="selectPackage(this, \'' + p.code + '\', ' + (p.price||0) + ')" data-code="' + p.code + '">'
+      + '<div class="pkg-code">' + p.code + '</div>'
+      + '<div class="pkg-name">' + (p.category||'') + '</div>'
+      + '<div class="pkg-price">€ ' + parseFloat(p.price||0).toFixed(2) + '</div>'
+      + '<div class="pkg-details">' + details.join(' · ') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function selectPackage(el, code, price) {
+  document.querySelectorAll('.pkg-card').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  selectedPackage = code;
+  document.getElementById('r_package').value = code;
+  document.getElementById('r_package_price').value = price;
+  updateRoomFieldsVisibility();
+  applyPackageRoomType();
+  calcCheckout();
+  updateAccessCodeVisibility();
+}
+
+function updateRoomFieldsVisibility() {
+  var pkg = packagesData.find(function(p) { return p.code === selectedPackage; });
+  var nights = pkg ? parseInt(pkg.nights, 10) : NaN;
+  var show = !isNaN(nights) && nights >= 1;
+  document.getElementById('roomCard').style.display = show ? '' : 'none';
+  if (!show) {
+    document.getElementById('r_roomtype').value = '';
+    document.getElementById('r_hotel').value = '';
+    document.getElementById('r_checkin').value = '';
+    document.getElementById('r_checkout').value = '';
+    document.getElementById('r_checkout_hint').textContent = '';
+  } else {
+    populateRoomTypeSelect();
+    populateHotelSelect();
+  }
+}
+
+function applyPackageRoomType() {
+  var pkg = packagesData.find(function(p) { return p.code === selectedPackage; });
+  var sel = document.getElementById('r_roomtype');
+  if (!pkg || !sel) return;
+  if (ROOM_TYPES.indexOf(pkg.room_type) !== -1) sel.value = pkg.room_type;
+}
+
+function populateRoomTypeSelect() {
+  var sel = document.getElementById('r_roomtype');
+  var cur = sel.value;
+  var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+  sel.innerHTML = '<option value="">' + t('ph_select_roomtype') + '</option>' + ROOM_TYPES.map(function(rt) {
+    var free = roomFree(rt);
+    var disabled = free <= 0 && rt !== cur;
+    return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + free + ' ' + t('ra_free_suffix') + ')') + '</option>';
+  }).join('');
+  if (cur) sel.value = cur;
+}
+
+function populateHotelSelect() {
+  var sel = document.getElementById('r_hotel');
+  var cur = sel.value;
+  if (!hotelsCache.length) { sel.innerHTML = '<option value="">' + t('hint_no_hotel_configured') + '</option>'; return; }
+  sel.innerHTML = '<option value="">' + t('ph_select_hotel') + '</option>' + hotelsCache.map(function(h) { return '<option value="' + h.name + '">' + h.name + '</option>'; }).join('');
+  if (cur && hotelsCache.some(function(h) { return h.name === cur; })) sel.value = cur;
+  else if (hotelsCache.length === 1) sel.value = hotelsCache[0].name;
+}
+
+function calcCheckout() {
+  var checkinVal = v('r_checkin');
+  var hintEl = document.getElementById('r_checkout_hint');
+  if (!hintEl) return;
+  if (!checkinVal || !selectedPackage) { hintEl.textContent = ''; return; }
+  var pkg = packagesData.find(function(p) { return p.code === selectedPackage; });
+  var nights = pkg ? parseInt(pkg.nights, 10) : NaN;
+  if (!pkg || isNaN(nights) || nights <= 0) { hintEl.textContent = t('hint_no_nights'); return; }
+  var d = new Date(checkinVal + 'T00:00:00');
+  d.setDate(d.getDate() + nights);
+  var iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  document.getElementById('r_checkout').value = iso;
+  hintEl.textContent = nights + t('hint_nights_from_pkg') + selectedPackage + ')';
+}
+
+function updateAccessCodeVisibility() {
+  document.getElementById('accessCodeCard').style.display = (selectedPackage === 'T') ? '' : 'none';
+}
+
+function calcAgeCategory() {
+  var dob = document.getElementById('r_dob').value;
+  var gender = document.getElementById('r_gender').value;
+  if (!dob || !gender) return;
+
+  var te = eventEndDate || new Date();
+  var birth = new Date(dob);
+  var age = te.getFullYear() - birth.getFullYear();
+  var mo = te.getMonth() - birth.getMonth();
+  if (mo < 0 || (mo === 0 && te.getDate() < birth.getDate())) age--;
+
+  var ageClass;
+  if (age >= 19) ageClass = 'Adult';
+  else if (age >= 17) ageClass = 'U19';
+  else if (age >= 15) ageClass = 'U17';
+  else if (age >= 13) ageClass = 'U15';
+  else if (age >= 11) ageClass = 'U13';
+  else ageClass = 'U11';
+
+  var isAdult = ageClass === 'Adult';
+  var prefix = gender === 'Weiblich' ? 'G' : gender === 'Männlich' ? 'B' : '';
+  var cat = isAdult ? 'Adult Pass' : prefix + ageClass;
+
+  var sel = document.getElementById('r_events');
+  if (isAdult) {
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; break; }
+    }
+  } else {
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === cat) { sel.value = cat; break; }
+    }
+  }
+
+  populateRoleSelect(isAdult);
+}
+
+function v2(id) { return v(id); }
+
+async function submitRegistration() {
+  var required = [
+    ['r_lastname', t('f_lastname')], ['r_firstname', t('f_firstname')], ['r_country', t('f_country')],
+    ['r_dob', t('f_dob')], ['r_gender', t('f_gender')], ['r_member_id', t('f_member_id')],
+    ['r_mobile', t('f_mobile')], ['r_email', t('f_email')], ['r_role', t('f_role')]
+  ];
+  var errors = [];
+
+  function plain(s) { return s.replace(/<[^>]+>/g, '').replace('*', '').trim(); }
+
+  var esidVal = v('r_member_id');
+  var esidEl = document.getElementById('r_member_id');
+  if (esidVal && !/^ES[0-9]{9}$/.test(esidVal)) {
+    errors.push(t('err_esid_format'));
+    esidEl.classList.add('error');
+  } else { esidEl.classList.remove('error'); }
+
+  required.forEach(function(f) {
+    var el = document.getElementById(f[0]);
+    if (!el || !el.value.trim()) { errors.push(plain(f[1])); if (el) el.classList.add('error'); }
+    else if (el) el.classList.remove('error');
+  });
+
+  if (!selectedPackage) errors.push(t('err_package'));
+
+  // Room fields only required while the room card is visible (package has nights)
+  if (document.getElementById('roomCard').style.display !== 'none') {
+    [['r_roomtype', t('f_roomtype')], ['r_hotel', t('f_hotel')], ['r_checkin', t('f_checkin')], ['r_checkout', t('f_checkout')]].forEach(function(f) {
+      var el = document.getElementById(f[0]);
+      if (!el.value.trim()) { errors.push(plain(f[1])); el.classList.add('error'); } else { el.classList.remove('error'); }
+    });
+  }
+
+  // Shirt size only required while Player role is selected
+  if (document.getElementById('r_shirt_wrap').style.display !== 'none') {
+    var shirtEl = document.getElementById('r_shirt');
+    if (!shirtEl.value.trim()) { errors.push(plain(t('f_shirt'))); shirtEl.classList.add('error'); } else { shirtEl.classList.remove('error'); }
+  }
+
+  if (!document.getElementById('r_consent').checked) errors.push(t('err_declaration'));
+
+  var needsAccessCode = selectedPackage === 'T';
+  if (needsAccessCode) {
+    var codeEl = document.getElementById('r_accessCode');
+    if (v('r_accessCode') !== 'REFEREE-2026') { errors.push(t('err_access_code')); codeEl.classList.add('error'); }
+    else { codeEl.classList.remove('error'); }
+  }
+
+  var errBox = document.getElementById('errorBox');
+  if (errors.length) {
+    errBox.style.display = 'block';
+    errBox.innerHTML = '⚠️ ' + t('err_fix_following') + ' <strong>' + errors.join(', ') + '</strong>';
+    errBox.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  errBox.style.display = 'none';
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = t('submitting');
+
+  var roomType = v('r_roomtype') || null;
+
+  var row = {
+    event_id: eventId,
+    lastname: v('r_lastname'), firstname: v('r_firstname'),
+    country: v('r_country'), dob: v('r_dob') || null,
+    gender: v('r_gender'), member_id: v('r_member_id'),
+    passport_id: v('r_passport_id') || null,
+    mobile: v('r_mobile'), email: v('r_email'),
+    role: v('r_role'), events: v('r_events') || null,
+    coach_name: v('r_coach_name') || null, coach_esid: v('r_coach_esid') || null,
+    shirt: v('r_shirt') || null,
+    package: selectedPackage,
+    package_price: parseFloat(document.getElementById('r_package_price').value) || null,
+    room_type: roomType,
+    hotel: v('r_hotel') || null,
+    checkin: v('r_checkin') || null,
+    checkout: v('r_checkout') || null,
+    meal_plus: document.getElementById('r_meal_plus').checked ? 'Ja' : 'Nein',
+    ams_bus: v('r_ams_bus') || null,
+    airport_plus: v('r_airport_plus') || null,
+    arrival_date: v('r_arrival_date') || null, arrival_time: v('r_arrival_time') || null,
+    flight_in: v('r_flight_in') || null,
+    departure_date: v('r_departure_date') || null, departure_time: v('r_departure_time') || null,
+    flight_out: v('r_flight_out') || null,
+    visa: v('r_visa') || null, memo: v('r_memo') || null,
+    payment_status: 'Pending',
+    updated_at: new Date().toISOString(),
+  };
+
+  // Re-check room capacity right before insert (best-effort, not a hard lock)
+  if (roomType) {
+    await loadRoomAvailability();
+    if (roomFree(roomType) < 1) {
+      btn.disabled = false; btn.textContent = t('submit_btn');
+      errBox.style.display = 'block';
+      errBox.innerHTML = '⛔ ' + t('err_room_full');
+      errBox.scrollIntoView({behavior:'smooth'});
+      return;
+    }
+  }
+
+  // Check for duplicate ESID
+  var esid = row.member_id;
+  if (esid) {
+    var dupQ = await db.from('participants').select('id,firstname,lastname').eq('member_id', esid);
+    if (dupQ.data && dupQ.data.length > 0) {
+      var d = dupQ.data[0];
+      btn.disabled = false;
+      btn.textContent = t('submit_btn');
+      var eb2 = document.getElementById('errorBox');
+      eb2.style.display = 'block';
+      eb2.innerHTML = '⛔ ' + t('err_esid_duplicate') + ' ' + esid + ' – ' + d.firstname + ' ' + d.lastname + '. ' + t('err_esid_duplicate_contact');
+      window.scrollTo(0, eb2.offsetTop - 20);
+      return;
+    }
+  }
+
+  var r = await db.from('participants').insert(row).select().single();
+  if (r.error) {
+    btn.disabled = false;
+    btn.textContent = t('submit_btn');
+    var eb = document.getElementById('errorBox');
+    eb.style.display = 'block';
+    eb.innerHTML = '❌ ' + t('err_generic') + r.error.message;
+    return;
+  }
+
+  document.getElementById('formContainer').style.display = 'none';
+  var sb = document.getElementById('successBox');
+  sb.style.display = 'block';
+  document.getElementById('regId').textContent = r.data ? r.data.id.slice(0,8).toUpperCase() : '–';
+  sb.scrollIntoView({behavior:'smooth'});
+}
+
+init();
+</script>
+</body>
+</html>

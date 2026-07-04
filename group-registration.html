@@ -14,8 +14,10 @@
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg2); color: var(--text); min-height: 100vh; }
   .header { background: var(--blue); color: #fff; padding: 24px 32px; text-align: center; position: relative; }
-  .header h1 { font-size: 22px; font-weight: 700; }
+  .header h1 { font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px; }
   .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .racket-icon { width: 34px; height: 34px; flex-shrink: 0; }
+  .event-logo-img { height: 80px; max-width: 180px; object-fit: contain; flex-shrink: 0; display: none; border-radius: 4px; background: #fff; padding: 4px; }
   .lang-switch { position: absolute; top: 14px; right: 16px; display: flex; gap: 4px; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px; }
   .lang-btn { border: none; background: transparent; color: #fff; opacity: 0.7; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 16px; cursor: pointer; }
   .lang-btn.active { background: #fff; color: var(--blue); opacity: 1; }
@@ -75,7 +77,16 @@
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang('en')">EN</button>
     <button type="button" class="lang-btn" id="langBtnDe" onclick="setLang('de')">DE</button>
   </div>
-  <h1 id="pageTitle">🎾 Group Registration</h1>
+  <h1 id="pageTitle">
+    <svg class="racket-icon" id="racketIcon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="26" cy="22" rx="16" ry="19" stroke="#fff" stroke-width="3.2" transform="rotate(-18 26 22)"/>
+      <path d="M18 12 L34 32 M34 12 L18 32 M14 22 L38 22" stroke="#fff" stroke-width="1.6" opacity="0.75" transform="rotate(-18 26 22)"/>
+      <path d="M35 38 L52 56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M49 53 L56 60" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/>
+    </svg>
+    <img id="eventLogoImg" class="event-logo-img" alt="Event logo" />
+    <span id="pageTitleText">Group Registration</span>
+  </h1>
   <p data-i18n="header_subtitle">Register a full team or delegation in one go — please fill in all required fields</p>
 </div>
 
@@ -575,9 +586,15 @@ async function init() {
   var evFull = await db.from('events').select('*').eq('id', eventId).single();
   if (evFull.data) {
     eventNameRaw = evFull.data.name;
-    document.getElementById('pageTitle').textContent = '🎾 ' + eventNameRaw + ' – Group Registration';
+    document.getElementById('pageTitleText').textContent = eventNameRaw + ' – Group Registration';
     document.title = 'Group Registration – ' + eventNameRaw;
     if (evFull.data.date_to) eventEndDate = new Date(evFull.data.date_to);
+    if (evFull.data.logo_url) {
+      var logoImg = document.getElementById('eventLogoImg');
+      logoImg.src = 'data:image/png;base64,' + evFull.data.logo_url;
+      logoImg.style.display = 'inline-block';
+      document.getElementById('racketIcon').style.display = 'none';
+    }
   }
 
   var ageR = await db.from('app_settings').select('value').eq('key', 'age_classes').limit(1);
