@@ -26,6 +26,7 @@
   .card-header { padding: 14px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
   .card-body { padding: 20px; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
   .form-group { display: flex; flex-direction: column; gap: 5px; }
   .form-group.full { grid-column: 1 / -1; }
   label { font-size: 12px; font-weight: 600; color: var(--text2); }
@@ -33,14 +34,6 @@
   input, select, textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color .15s; }
   input:focus, select:focus, textarea:focus { border-color: var(--blue); }
   input.error, select.error { border-color: var(--red); background: var(--red-bg); }
-  .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-  .pkg-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: all .15s; }
-  .pkg-card:hover { border-color: var(--blue); background: var(--blue-bg); }
-  .pkg-card.selected { border-color: var(--blue); background: var(--blue-bg); }
-  .pkg-card .pkg-code { font-size: 22px; font-weight: 800; color: var(--blue); }
-  .pkg-card .pkg-name { font-size: 11px; color: var(--text2); margin-top: 2px; }
-  .pkg-card .pkg-price { font-size: 15px; font-weight: 700; margin-top: 8px; color: var(--text); }
-  .pkg-card .pkg-details { font-size: 11px; color: var(--text3); margin-top: 4px; line-height: 1.5; }
   .submit-btn { width: 100%; padding: 14px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
   .submit-btn:hover { opacity: 0.9; }
   .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -59,7 +52,7 @@
   .room-badge.ok .rb-count { color: var(--green); }
   .room-badge.low .rb-count { color: var(--amber); }
   .room-badge.full .rb-count { color: var(--red); }
-  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } .pkg-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -116,7 +109,8 @@
             <select id="r_role" onchange="onRoleChange()"></select>
           </div>
           <div class="form-group" id="r_events_group"><label data-i18n="f_age_category">Age Category / Event</label>
-            <select id="r_events"><option value="">– Auto / Select –</option></select>
+            <select id="r_events" onchange="checkAgeMatch()"><option value="">– Auto / Select –</option></select>
+            <div class="esid-hint" id="r_age_hint"></div>
           </div>
           <div class="form-group"><label data-i18n="f_coach_name">Coach Name</label><input type="text" id="r_coach_name" data-i18n-ph="f_coach_name_ph" placeholder="Coach last name, first name" /></div>
           <div class="form-group"><label data-i18n="f_coach_esid">Coach ESID</label><input type="text" id="r_coach_esid" data-i18n-ph="f_coach_esid_ph" placeholder="Coach Member ID" /></div>
@@ -131,9 +125,10 @@
     <div class="card">
       <div class="card-header"><span data-i18n="pkg_header">📦 Package Selection</span> <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--text3)" data-i18n="pkg_required">(required)</span></div>
       <div class="card-body">
-        <div id="pkgGrid" class="pkg-grid"><p style="color:var(--text3);font-size:13px" data-i18n="pkg_loading">Loading packages…</p></div>
-        <input type="hidden" id="r_package" />
-        <input type="hidden" id="r_package_price" />
+        <div class="form-group">
+          <label data-i18n="f_package">Package <span class="req">*</span></label>
+          <select id="r_package" onchange="onPackageSelectChange()"><option value="">Loading…</option></select>
+        </div>
       </div>
     </div>
 
@@ -151,8 +146,8 @@
       </div>
     </div>
 
-    <!-- TRANSPORT -->
-    <div class="card">
+    <!-- TRANSPORT (only shown if the chosen package includes transfer) -->
+    <div class="card" id="travelCard" style="display:none">
       <div class="card-header" data-i18n="travel_header">✈️ Travel & Transport</div>
       <div class="card-body">
         <div class="form-grid">
@@ -164,27 +159,16 @@
             <select id="r_airport_plus" disabled><option value="Nein" selected>No</option></select>
           </div>
         </div>
-        <div style="margin-top:14px">
-          <div class="form-grid">
-            <div class="form-group"><label data-i18n="f_arrival_date">Arrival Date</label><input type="date" id="r_arrival_date" oninput="updateAirportTransfer()" /></div>
-            <div class="form-group"><label data-i18n="f_arrival_time">Arrival Time</label><input type="time" id="r_arrival_time" oninput="updateAirportTransfer()" /></div>
-            <div class="form-group"><label data-i18n="f_flight_in">Incoming Flight No.</label><input type="text" id="r_flight_in" data-i18n-ph="flight_in_ph" placeholder="e.g. LH1234" /></div>
-            <div class="form-group"><label data-i18n="f_departure_date">Departure Date</label><input type="date" id="r_departure_date" oninput="updateAirportTransfer()" /></div>
-            <div class="form-group"><label data-i18n="f_departure_time">Departure Time</label><input type="time" id="r_departure_time" oninput="updateAirportTransfer()" /></div>
-            <div class="form-group"><label data-i18n="f_flight_out">Outgoing Flight No.</label><input type="text" id="r_flight_out" data-i18n-ph="flight_out_ph" placeholder="e.g. LH5678" /></div>
-          </div>
+        <div class="form-grid cols-3" style="margin-top:14px">
+          <div class="form-group"><label data-i18n="f_arrival_date">Arrival Date</label><input type="date" id="r_arrival_date" oninput="updateAirportTransfer()" /></div>
+          <div class="form-group"><label data-i18n="f_arrival_time">Arrival Time</label><input type="time" id="r_arrival_time" oninput="updateAirportTransfer()" /></div>
+          <div class="form-group"><label data-i18n="f_flight_in">Incoming Flight No.</label><input type="text" id="r_flight_in" data-i18n-ph="flight_in_ph" placeholder="e.g. LH1234" /></div>
         </div>
-      </div>
-    </div>
-
-    <!-- MEAL -->
-    <div class="card">
-      <div class="card-header" data-i18n="meal_header">🍽️ Meal Package</div>
-      <div class="card-body">
-        <label class="checkbox-row">
-          <input type="checkbox" id="r_meal_plus" />
-          <span data-i18n="meal_text">Yes, I would like to book the meal package</span>
-        </label>
+        <div class="form-grid cols-3" style="margin-top:14px">
+          <div class="form-group"><label data-i18n="f_departure_date">Departure Date</label><input type="date" id="r_departure_date" oninput="updateAirportTransfer()" /></div>
+          <div class="form-group"><label data-i18n="f_departure_time">Departure Time</label><input type="time" id="r_departure_time" oninput="updateAirportTransfer()" /></div>
+          <div class="form-group"><label data-i18n="f_flight_out">Outgoing Flight No.</label><input type="text" id="r_flight_out" data-i18n-ph="flight_out_ph" placeholder="e.g. LH5678" /></div>
+        </div>
       </div>
     </div>
 
@@ -241,6 +225,7 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 var selectedPackage = null;
+var ageAutoFilledFlag = false; // true if Age Category was last set automatically (not by the user)
 var eventId = null;
 var eventEndDate = null;
 var ageClassesCache = ['GU11', 'GU13', 'GU15', 'GU17', 'GU19', 'BU11', 'BU13', 'BU15', 'BU17', 'BU19'];
@@ -282,6 +267,7 @@ en: {
   pkg_header: "📦 Package Selection",
   pkg_required: "(required)",
   pkg_loading: "Loading packages…",
+  f_package: 'Package <span class="req">*</span>',
   room_header: "🏨 Room & Hotel",
   f_roomtype: 'Room Type <span class="req">*</span>',
   f_hotel: 'Hotel <span class="req">*</span>',
@@ -300,8 +286,6 @@ en: {
   f_departure_time: "Departure Time",
   f_flight_out: "Outgoing Flight No.",
   flight_out_ph: "e.g. LH5678",
-  meal_header: "🍽️ Meal Package",
-  meal_text: "Yes, I would like to book the meal package",
   visa_header: "🛂 Visa & Additional Info",
   f_visa: "Visa Required?",
   f_memo: "Notes / Special Requests",
@@ -320,6 +304,7 @@ en: {
 
   ph_select: "– Select –",
   ph_select_roomtype: "– Select room type –",
+  ph_select_package: "– Select package –",
   ph_select_hotel: "– Select hotel –",
   ph_select_size: "– Select size –",
   ph_auto_select: "– Auto / Select –",
@@ -342,7 +327,13 @@ en: {
   err_esid_duplicate: "This ESID is already registered:",
   err_esid_duplicate_contact: "Please contact the organizer if you believe this is an error.",
   err_room_full: "Sorry, this room type just became fully booked. Please choose another one.",
-  err_generic: "Error: "
+  err_generic: "Error: ",
+
+  age_hint_enter_dob: "– enter date of birth –",
+  age_hint_label: "Age at tournament end: ",
+  age_hint_years: " years – Recommended: ",
+  age_hint_ok: "✓ matches selection",
+  age_hint_check: "⚠ differs from your selection"
 },
 de: {
   header_subtitle: "Spieler- & Trainer-Anmeldung — bitte alle Pflichtfelder ausfüllen",
@@ -370,6 +361,7 @@ de: {
   pkg_header: "📦 Package-Auswahl",
   pkg_required: "(erforderlich)",
   pkg_loading: "Packages werden geladen…",
+  f_package: 'Package <span class="req">*</span>',
   room_header: "🏨 Zimmer & Hotel",
   f_roomtype: 'Zimmertyp <span class="req">*</span>',
   f_hotel: 'Hotel <span class="req">*</span>',
@@ -388,8 +380,6 @@ de: {
   f_departure_time: "Abreisezeit",
   f_flight_out: "Abflug Nr.",
   flight_out_ph: "z. B. LH5678",
-  meal_header: "🍽️ Verpflegungspaket",
-  meal_text: "Ja, ich möchte das Verpflegungspaket buchen",
   visa_header: "🛂 Visum & weitere Angaben",
   f_visa: "Visum erforderlich?",
   f_memo: "Notizen / Besondere Wünsche",
@@ -408,6 +398,7 @@ de: {
 
   ph_select: "– Auswählen –",
   ph_select_roomtype: "– Zimmertyp wählen –",
+  ph_select_package: "– Package wählen –",
   ph_select_hotel: "– Hotel wählen –",
   ph_select_size: "– Größe wählen –",
   ph_auto_select: "– Automatisch / Auswählen –",
@@ -430,7 +421,13 @@ de: {
   err_esid_duplicate: "Diese ESID ist bereits registriert:",
   err_esid_duplicate_contact: "Bitte kontaktiere den Veranstalter, falls das ein Fehler ist.",
   err_room_full: "Dieser Zimmertyp ist gerade ausgebucht worden. Bitte einen anderen wählen.",
-  err_generic: "Fehler: "
+  err_generic: "Fehler: ",
+
+  age_hint_enter_dob: "– Geburtsdatum eingeben –",
+  age_hint_label: "Alter am Turnierende: ",
+  age_hint_years: " Jahre – Empfehlung: ",
+  age_hint_ok: "✓ stimmt mit Auswahl überein",
+  age_hint_check: "⚠ weicht von deiner Auswahl ab"
 }
 };
 
@@ -481,13 +478,14 @@ function refreshDynamicTranslations() {
   populateVisaSelect();
   populateRoleSelect(isCurrentlyAdult());
   populateShirtSelect();
-  populatePackageGrid();
+  populatePackageSelect();
   populateRoomTypeSelect();
   populateHotelSelect();
   populateEventsSelect();
   renderRoomBadges();
   updateAirportTransfer();
   calcCheckout();
+  renderAgeHint(computeAgeInfo());
 }
 
 function isCurrentlyAdult() {
@@ -548,7 +546,7 @@ async function init() {
   }
 
   if (!eventId) {
-    document.getElementById('pkgGrid').innerHTML = '<p style="color:var(--red);font-size:13px">⚠️ No active event found. Please contact the organizer.</p>';
+    document.getElementById('r_package').innerHTML = '<option value="">No active event found</option>';
     document.getElementById('noEventBox').style.display = 'block';
     document.getElementById('submitBtn').disabled = true;
     return;
@@ -581,7 +579,7 @@ async function init() {
 async function loadPackages() {
   var pkgR = await db.from('packages').select('*').order('code');
   packagesData = pkgR.data || [];
-  populatePackageGrid();
+  populatePackageSelect();
 }
 
 async function loadHotels() {
@@ -610,10 +608,12 @@ function renderRoomBadges() {
   var el = document.getElementById('roomBadges');
   if (!el) return;
   el.innerHTML = ROOM_TYPES.map(function(rt) {
-    var total = roomCapacity[rt] || 0;
-    var free = roomFree(rt);
-    var cls = free <= 0 ? 'full' : free <= 2 ? 'low' : 'ok';
-    var label = free <= 0 ? t('ra_full') : free + ' / ' + total + ' ' + t('ra_free_suffix');
+    var perRoom = ROOM_MAX[rt] || 1;
+    var totalRooms = Math.round((roomCapacity[rt] || 0) / perRoom);
+    var usedRooms = Math.ceil((roomUsed[rt] || 0) / perRoom);
+    var freeRooms = Math.max(0, totalRooms - usedRooms);
+    var cls = freeRooms <= 0 ? 'full' : freeRooms <= 2 ? 'low' : 'ok';
+    var label = freeRooms <= 0 ? t('ra_full') : freeRooms + ' / ' + totalRooms + ' ' + t('ra_free_suffix');
     var typeLabel = (ROOM_TYPE_LABELS[LANG] && ROOM_TYPE_LABELS[LANG][rt]) || rt;
     return '<div class="room-badge ' + cls + '"><div class="rb-type">' + typeLabel + '</div><div class="rb-count">' + label + '</div></div>';
   }).join('');
@@ -659,7 +659,7 @@ function onRoleChange() {
   var show = role === 'Player';
   wrap.style.display = show ? '' : 'none';
   if (!show) document.getElementById('r_shirt').value = '';
-  populatePackageGrid();
+  populatePackageSelect();
 }
 
 function populateEventsSelect() {
@@ -670,51 +670,56 @@ function populateEventsSelect() {
   if (cur) sel.value = cur;
 }
 
-function populatePackageGrid() {
-  var grid = document.getElementById('pkgGrid');
+function populatePackageSelect() {
+  var sel = document.getElementById('r_package');
+  var cur = sel.value;
   var role = document.getElementById('r_role').value;
   var filterWord = null, emptyMsg = t('hint_no_packages');
   if (role === 'Player') { filterWord = 'player'; emptyMsg = t('hint_no_player_packages'); }
   else if (ADULT_ROLES.indexOf(role) !== -1) { filterWord = 'adult'; emptyMsg = t('hint_no_adult_packages'); }
   var list = filterWord ? packagesData.filter(function(p) { return (p.category || '').toLowerCase().indexOf(filterWord) !== -1; }) : packagesData;
 
-  if (!list.length) { grid.innerHTML = '<p style="color:var(--text3)">' + emptyMsg + '</p>'; return; }
+  if (!list.length) { sel.innerHTML = '<option value="">' + emptyMsg + '</option>'; selectedPackage = null; updateRoomFieldsVisibility(); updateTravelCardVisibility(); return; }
 
-  // If the currently selected package no longer matches the role filter, clear it
-  if (selectedPackage && !list.some(function(p) { return p.code === selectedPackage; })) {
-    selectedPackage = null;
-    document.getElementById('r_package').value = '';
-    document.getElementById('r_package_price').value = '';
-    updateRoomFieldsVisibility();
-  }
-
-  grid.innerHTML = list.map(function(p) {
-    var details = [];
-    if (p.nights) details.push(p.nights + (LANG === 'de' ? ' Nächte' : ' nights'));
-    if (p.room_type) details.push((ROOM_TYPE_LABELS[LANG] && ROOM_TYPE_LABELS[LANG][p.room_type]) || p.room_type);
-    if (p.meals_text) details.push(p.meals_text);
-    else if (p.meals) details.push(p.meals);
-    if (p.transport === 'Ja') details.push(LANG === 'de' ? 'Transfer inklusive' : 'Transfer included');
-    var sel = p.code === selectedPackage ? ' selected' : '';
-    return '<div class="pkg-card' + sel + '" onclick="selectPackage(this, \'' + p.code + '\', ' + (p.price||0) + ')" data-code="' + p.code + '">'
-      + '<div class="pkg-code">' + p.code + '</div>'
-      + '<div class="pkg-name">' + (p.category||'') + '</div>'
-      + '<div class="pkg-price">€ ' + parseFloat(p.price||0).toFixed(2) + '</div>'
-      + '<div class="pkg-details">' + details.join(' · ') + '</div>'
-      + '</div>';
+  sel.innerHTML = '<option value="">' + t('ph_select_package') + '</option>' + list.map(function(p) {
+    return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + p.code + (p.category ? ' – ' + p.category : '') + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
   }).join('');
+
+  if (cur && list.some(function(p) { return p.code === cur; })) {
+    sel.value = cur;
+  } else {
+    selectedPackage = null;
+    updateRoomFieldsVisibility();
+    updateTravelCardVisibility();
+  }
 }
 
-function selectPackage(el, code, price) {
-  document.querySelectorAll('.pkg-card').forEach(function(c) { c.classList.remove('selected'); });
-  el.classList.add('selected');
-  selectedPackage = code;
-  document.getElementById('r_package').value = code;
-  document.getElementById('r_package_price').value = price;
+function onPackageSelectChange() {
+  var sel = document.getElementById('r_package');
+  selectedPackage = sel.value || null;
   updateRoomFieldsVisibility();
   applyPackageRoomType();
   calcCheckout();
   updateAccessCodeVisibility();
+  updateTravelCardVisibility();
+}
+
+// Travel & Transport is only relevant if the chosen package includes a transfer
+// (packages.transport === 'Ja' in the package management).
+function updateTravelCardVisibility() {
+  var pkg = packagesData.find(function(p) { return p.code === selectedPackage; });
+  var show = !!(pkg && pkg.transport === 'Ja');
+  var card = document.getElementById('travelCard');
+  if (card) card.style.display = show ? '' : 'none';
+  if (!show) {
+    document.getElementById('r_arrival_date').value = '';
+    document.getElementById('r_arrival_time').value = '';
+    document.getElementById('r_flight_in').value = '';
+    document.getElementById('r_departure_date').value = '';
+    document.getElementById('r_departure_time').value = '';
+    document.getElementById('r_flight_out').value = '';
+    updateAirportTransfer();
+  }
 }
 
 function updateRoomFieldsVisibility() {
@@ -746,9 +751,13 @@ function populateRoomTypeSelect() {
   var cur = sel.value;
   var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
   sel.innerHTML = '<option value="">' + t('ph_select_roomtype') + '</option>' + ROOM_TYPES.map(function(rt) {
-    var free = roomFree(rt);
+    var free = roomFree(rt); // slot-based: still governs whether this person can select the type
     var disabled = free <= 0 && rt !== cur;
-    return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + free + ' ' + t('ra_free_suffix') + ')') + '</option>';
+    var perRoom = ROOM_MAX[rt] || 1;
+    var totalRooms = Math.round((roomCapacity[rt] || 0) / perRoom);
+    var usedRooms = Math.ceil((roomUsed[rt] || 0) / perRoom);
+    var freeRooms = Math.max(0, totalRooms - usedRooms);
+    return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + freeRooms + ' ' + t('ra_free_suffix') + ')') + '</option>';
   }).join('');
   if (cur) sel.value = cur;
 }
@@ -781,10 +790,10 @@ function updateAccessCodeVisibility() {
   document.getElementById('accessCodeCard').style.display = (selectedPackage === 'T') ? '' : 'none';
 }
 
-function calcAgeCategory() {
+function computeAgeInfo() {
   var dob = document.getElementById('r_dob').value;
   var gender = document.getElementById('r_gender').value;
-  if (!dob || !gender) return;
+  if (!dob) return null;
 
   var te = eventEndDate || new Date();
   var birth = new Date(dob);
@@ -802,20 +811,73 @@ function calcAgeCategory() {
 
   var isAdult = ageClass === 'Adult';
   var prefix = gender === 'Weiblich' ? 'G' : gender === 'Männlich' ? 'B' : '';
-  var cat = isAdult ? 'Adult Pass' : prefix + ageClass;
+  var expCat = isAdult ? 'Adult Pass' : (prefix + ageClass);
+  return { age: age, ageClass: ageClass, isAdult: isAdult, expCat: expCat, hasGenderPrefix: !!prefix };
+}
+
+function renderAgeHint(info) {
+  var hintEl = document.getElementById('r_age_hint');
+  if (!hintEl) return;
+  if (!info) { hintEl.textContent = t('age_hint_enter_dob'); return; }
+  var sel = document.getElementById('r_events');
+  var curVal = (sel ? sel.value : '').trim().toLowerCase();
+  var matches;
+  if (info.isAdult) {
+    matches = curVal === 'adult pass' || curVal === info.expCat.toLowerCase();
+  } else if (info.hasGenderPrefix) {
+    matches = curVal === info.expCat.toLowerCase();
+  } else {
+    matches = curVal === info.expCat.toLowerCase() || curVal === ('b' + info.ageClass).toLowerCase() || curVal === ('g' + info.ageClass).toLowerCase() || curVal === info.ageClass.toLowerCase();
+  }
+  hintEl.innerHTML = t('age_hint_label') + '<strong>' + info.age + '</strong>' + t('age_hint_years') + '<strong>' + info.expCat + '</strong> '
+    + '<span style="color:' + (matches ? 'var(--green)' : 'var(--amber)') + '">' + (matches ? t('age_hint_ok') : t('age_hint_check')) + '</span>';
+}
+
+// Triggered when DOB or Gender changes: recalculates age, auto-fills the Age Category
+// (only if it's still empty or was itself auto-filled before, so a deliberate manual
+// choice is never overwritten), auto-adjusts Role for adults/minors, shows the recommendation.
+function calcAgeCategory() {
+  var info = computeAgeInfo();
+  if (!info) { renderAgeHint(null); return; }
 
   var sel = document.getElementById('r_events');
-  if (isAdult) {
-    for (var i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; break; }
+  if (sel && (!sel.value || ageAutoFilledFlag)) {
+    var matched = false;
+    if (info.isAdult) {
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value.trim().toLowerCase() === 'adult pass') { sel.value = sel.options[i].value; matched = true; break; }
+      }
+    } else {
+      var wanted = info.expCat.trim().toLowerCase();
+      for (var j = 0; j < sel.options.length; j++) {
+        if (sel.options[j].value.trim().toLowerCase() === wanted) { sel.value = sel.options[j].value; matched = true; break; }
+      }
     }
-  } else {
-    for (var i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === cat) { sel.value = cat; break; }
+    // No matching category exists in the settings for this age/gender (e.g. no U11 offered) —
+    // reset to the placeholder instead of silently keeping a stale/wrong previous value.
+    if (!matched) sel.value = '';
+    ageAutoFilledFlag = true;
+  }
+
+  populateRoleSelect(info.isAdult);
+
+  // Minors default to Player (unless a manual, non-default role was already chosen)
+  if (!info.isAdult) {
+    var roleSel = document.getElementById('r_role');
+    if (roleSel && (!roleSel.value || roleSel.value === 'Coach')) {
+      roleSel.value = 'Player';
+      onRoleChange();
     }
   }
 
-  populateRoleSelect(isAdult);
+  renderAgeHint(info);
+}
+
+// Triggered when the Age Category / Event dropdown is changed manually:
+// only re-checks whether it still matches the recommendation, without overwriting anything.
+function checkAgeMatch() {
+  ageAutoFilledFlag = false; // the user just picked this themselves, protect it from now on
+  renderAgeHint(computeAgeInfo());
 }
 
 function v2(id) { return v(id); }
@@ -894,12 +956,12 @@ async function submitRegistration() {
     coach_name: v('r_coach_name') || null, coach_esid: v('r_coach_esid') || null,
     shirt: v('r_shirt') || null,
     package: selectedPackage,
-    package_price: parseFloat(document.getElementById('r_package_price').value) || null,
+    package_price: (function(){ var o = document.getElementById('r_package').selectedOptions[0]; return o ? parseFloat(o.getAttribute('data-price')) || null : null; })(),
     room_type: roomType,
     hotel: v('r_hotel') || null,
     checkin: v('r_checkin') || null,
     checkout: v('r_checkout') || null,
-    meal_plus: document.getElementById('r_meal_plus').checked ? 'Ja' : 'Nein',
+    meal_plus: 'Nein',
     ams_bus: v('r_ams_bus') || null,
     airport_plus: v('r_airport_plus') || null,
     arrival_date: v('r_arrival_date') || null, arrival_time: v('r_arrival_time') || null,
