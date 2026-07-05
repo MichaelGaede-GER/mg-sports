@@ -4826,10 +4826,11 @@ async function loadParticipants() {
       : '-';
     var eb = '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>';
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
+    var sb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendDigitalPass(this.dataset.id)">📲</button>';
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr>'
 + '<td style="white-space:nowrap">'
-        + eb + ' ' + vb + ' ' + db2
+        + eb + ' ' + vb + ' ' + sb + ' ' + db2
         + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Kostenlos' && p.payment_status !== 'Pending'
            ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
            : '')
@@ -7930,6 +7931,44 @@ async function calcAgeCheck() {
 }
 
 // EVENTPASS
+// Digital Pass: sends a mobile-friendly link (with QR code) to the participant via
+// the device's native share sheet (WhatsApp/Mail/Messages...), falling back to a small
+// menu with WhatsApp/E-Mail/Copy-Link if the Web Share API isn't available (desktop).
+async function sendDigitalPass(participantId) {
+  var pr = await db.from('participants').select('firstname,lastname,mobile,email').eq('id', participantId).single();
+  var p = pr.data;
+  if (!p) { toast('Teilnehmer nicht gefunden'); return; }
+
+  var passUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'digital-pass.html?id=' + participantId;
+  var text = 'Hi ' + (p.firstname || '') + ', here is your digital tournament pass: ' + passUrl;
+
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Digital Pass', text: text, url: passUrl }); return; }
+    catch (e) { /* user cancelled the native share sheet — fall through to the manual menu below */ }
+  }
+  showPassSendMenu(passUrl, text, p);
+}
+
+function showPassSendMenu(passUrl, text, p) {
+  var existing = document.getElementById('passSendMenu'); if (existing) existing.remove();
+  var phoneDigits = (p.mobile || '').replace(/[^0-9+]/g, '').replace(/^\+/, '');
+  var waLink = 'https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(text);
+  var mailLink = 'mailto:' + encodeURIComponent(p.email || '') + '?subject=' + encodeURIComponent('Your Digital Pass') + '&body=' + encodeURIComponent(text);
+
+  var menu = document.createElement('div');
+  menu.id = 'passSendMenu';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:20px;width:280px;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">📲 Pass senden</h3>'
+    + (p.mobile ? '<a href="' + waLink + '" target="_blank" style="display:block;padding:10px;margin-bottom:8px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;text-align:center;font-weight:600">WhatsApp</a>' : '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Keine Mobilnummer hinterlegt</div>')
+    + (p.email ? '<a href="' + mailLink + '" style="display:block;padding:10px;margin-bottom:8px;background:var(--blue);color:#fff;border-radius:8px;text-decoration:none;text-align:center;font-weight:600">E-Mail</a>' : '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Keine E-Mail hinterlegt</div>')
+    + '<button onclick="navigator.clipboard.writeText(\'' + passUrl + '\');toast(\'✅ Link kopiert\')" style="display:block;width:100%;padding:10px;margin-bottom:8px;background:var(--border2);color:var(--text);border:none;border-radius:8px;font-weight:600;cursor:pointer">🔗 Link kopieren</button>'
+    + '<button onclick="document.getElementById(\'passSendMenu\').remove()" style="display:block;width:100%;padding:8px;background:none;border:none;color:var(--text3);cursor:pointer">Abbrechen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
 async function generateEventpass(participantId) {
   var pr = await db.from('participants').select('*').eq('id', participantId).single();
   var p = pr.data;
@@ -11683,7 +11722,8 @@ async function loadIdCards() {
         + '<td style="padding:4px 8px;font-size:11px">'+(p.events||'–')+'</td>'
         + '<td style="padding:4px 8px;font-size:11px">'+(p.role||'–')+'</td>'
         + '<td style="padding:4px 8px">'
-        + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>'
+        + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button> '
+        + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendDigitalPass(this.dataset.id)">📲</button>'
         + '</td>'
         + '</tr>';
     }).join('');

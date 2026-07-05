@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Digital Pass</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1115;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px 14px 40px;
+  }
+  .card {
+    width: 100%;
+    max-width: 380px;
+    background: linear-gradient(180deg, #185FA5 0%, #124a84 100%);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .card-top {
+    padding: 20px 20px 14px;
+    text-align: center;
+  }
+  .logo-wrap { height: 44px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .logo-wrap img { max-height: 44px; max-width: 160px; object-fit: contain; }
+  .ev-name { font-size: 15px; font-weight: 700; }
+  .ev-dates { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+  .white-panel {
+    background: #fff;
+    color: #1a1d23;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 20px 24px;
+    text-align: center;
+  }
+  .photo {
+    width: 96px; height: 120px;
+    border-radius: 10px;
+    object-fit: cover;
+    margin: -50px auto 12px;
+    border: 4px solid #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    display: block;
+    background: #e8f0fb;
+  }
+  .photo-placeholder {
+    width: 96px; height: 120px;
+    border-radius: 10px;
+    margin: -50px auto 12px;
+    border: 4px solid #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    background: #e8f0fb;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+  }
+  .name { font-size: 20px; font-weight: 800; }
+  .country { font-size: 12px; color: #5a6272; margin-top: 2px; }
+  .role-badge {
+    display: inline-block; margin-top: 10px;
+    padding: 5px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .info-row {
+    display: flex; justify-content: space-between;
+    font-size: 13px; padding: 9px 0; border-bottom: 1px solid #eee;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #5a6272; }
+  .info-value { font-weight: 700; }
+  .qr-section { margin-top: 20px; text-align: center; }
+  .qr-section img { width: 190px; height: 190px; border-radius: 8px; }
+  .qr-hint { font-size: 11px; color: #9aa3b2; margin-top: 8px; }
+  .meal-section { margin-top: 20px; text-align: left; }
+  .meal-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #5a6272; margin-bottom: 8px; }
+  .meal-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
+  .meal-days { display: flex; gap: 4px; margin-left: auto; }
+  .meal-day-chip {
+    width: 24px; height: 24px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; background: #185FA5; color: #fff;
+  }
+  .footer-note { text-align: center; font-size: 10px; color: #9aa3b2; padding: 14px 20px 20px; }
+  .state-box { max-width: 380px; width: 100%; background: #1a1d23; border-radius: 16px; padding: 40px 24px; text-align: center; }
+  .state-box p { font-size: 14px; color: #9aa3b2; }
+</style>
+</head>
+<body>
+
+<div id="loadingState" class="state-box"><p>Loading pass…</p></div>
+<div id="errorState" class="state-box" style="display:none"><p id="errorText">Pass not found.</p></div>
+
+<div class="card" id="passCard" style="display:none">
+  <div class="card-top">
+    <div class="logo-wrap" id="logoWrap"></div>
+    <div class="ev-name" id="evName"></div>
+    <div class="ev-dates" id="evDates"></div>
+  </div>
+  <div class="white-panel">
+    <img class="photo" id="photoImg" style="display:none" />
+    <div class="photo-placeholder" id="photoPlaceholder">👤</div>
+    <div class="name" id="pName"></div>
+    <div class="country" id="pCountry"></div>
+    <div class="role-badge" id="roleBadge"></div>
+
+    <div style="margin-top:18px;text-align:left">
+      <div class="info-row"><span class="info-label">Package</span><span class="info-value" id="pPackage">–</span></div>
+      <div class="info-row" id="roomRow" style="display:none"><span class="info-label">Hotel</span><span class="info-value" id="pHotel">–</span></div>
+    </div>
+
+    <div class="qr-section">
+      <img id="qrImg" alt="QR Code" />
+      <div class="qr-hint">Show this at meal check-in</div>
+    </div>
+
+    <div class="meal-section" id="mealSection" style="display:none">
+      <h3>Meal Package</h3>
+      <div id="mealRows"></div>
+    </div>
+  </div>
+  <div class="footer-note">This pass is personal — please don't share the link with others.</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xngiyfqbjyhnmgukhanj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZ2l5ZnFianlobm1ndWtoYW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDEwMzksImV4cCI6MjA5NzgxNzAzOX0.CjzN8HH9cxJRtc9wrBPwTsw2ayPf7em_LeCM7HBQLxQ';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+var ROLE_COLORS = { Player: '#185FA5', Coach: '#2E7D32', Parent: '#6a6a9e', Referee: '#c87a00', Official: '#7b3fa0', 'ESF Official': '#1a7a4a' };
+var ROOM_MAX = { 'Einzelzimmer': 1, 'Doppelzimmer': 2, 'Dreibettzimmer': 3 };
+var PASS_MEAL_DAYS = [
+  { day: 'Thursday', short: 'THU', code: 'do' },
+  { day: 'Friday', short: 'FRI', code: 'fr' },
+  { day: 'Saturday', short: 'SAT', code: 'sa' },
+  { day: 'Sunday', short: 'SUN', code: 'so' }
+];
+var PASS_MEALS = [
+  { label: 'Breakfast', key: 'meal_breakfast', days_key: 'meal_breakfast_days' },
+  { label: 'Lunch', key: 'meal_lunch', days_key: 'meal_lunch_days' },
+  { label: 'Dinner', key: 'meal_dinner', days_key: 'meal_dinner_days' }
+];
+
+function mealBooked(p, m, dayCode) {
+  if (p[m.key] !== 'Ja') return false;
+  var daysVal = p[m.days_key];
+  if (!daysVal || daysVal.trim() === '') return true;
+  return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
+}
+
+function showError(msg) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('errorState').style.display = 'block';
+  document.getElementById('errorText').textContent = msg;
+}
+
+async function init() {
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  if (!id) { showError('No pass ID provided.'); return; }
+
+  var pr = await db.from('participants').select('*').eq('id', id).single();
+  var p = pr.data;
+  if (!p) { showError('Pass not found. Please contact the organizer.'); return; }
+
+  // Photo
+  var photoSrc = p.photo_url || '';
+  if (!photoSrc && p.member_id) {
+    var pr2 = await db.from('persons').select('photo_url').eq('member_id', p.member_id).maybeSingle();
+    if (pr2.data && pr2.data.photo_url) photoSrc = pr2.data.photo_url;
+  }
+  if (photoSrc) {
+    document.getElementById('photoImg').src = photoSrc;
+    document.getElementById('photoImg').style.display = 'block';
+    document.getElementById('photoPlaceholder').style.display = 'none';
+  }
+
+  // Event
+  var ev = null;
+  if (p.event_id) {
+    var evR = await db.from('events').select('*').eq('id', p.event_id).single();
+    ev = evR.data;
+  }
+  var evName = ev && ev.name ? ev.name : '';
+  document.getElementById('evName').textContent = evName;
+  document.title = evName ? evName + ' – Digital Pass' : 'Digital Pass';
+  if (ev && (ev.date_from || ev.date_to)) {
+    var fmt = function(d) { return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''; };
+    document.getElementById('evDates').textContent = fmt(ev.date_from) + (ev.date_to ? ' – ' + fmt(ev.date_to) : '');
+  }
+  if (ev && ev.logo_url) {
+    document.getElementById('logoWrap').innerHTML = '<img src="data:image/png;base64,' + ev.logo_url + '" />';
+  } else {
+    document.getElementById('logoWrap').innerHTML = '<div style="font-size:28px">🏆</div>';
+  }
+
+  // Personal info
+  document.getElementById('pName').textContent = (p.firstname || '') + ' ' + (p.lastname || '');
+  document.getElementById('pCountry').textContent = p.country || '';
+  var roleColor = ROLE_COLORS[p.role] || '#185FA5';
+  var badge = document.getElementById('roleBadge');
+  badge.textContent = p.role || '';
+  badge.style.background = roleColor;
+
+  // Package (with short_code lookup)
+  if (p.package) {
+    var pkgR = await db.from('packages').select('*').eq('code', p.package).maybeSingle();
+    var pkg = pkgR.data;
+    document.getElementById('pPackage').textContent = (pkg && pkg.short_code) ? pkg.short_code : p.package;
+  }
+
+  // Hotel
+  if (p.hotel) {
+    document.getElementById('roomRow').style.display = 'flex';
+    document.getElementById('pHotel').textContent = p.hotel;
+  }
+
+  // QR code (encodes the ESID, scanned the same way as the printed pass)
+  var qrData = encodeURIComponent(p.member_id || p.id);
+  document.getElementById('qrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=' + qrData;
+
+  // Meal grid (informational — same booked logic as the printed pass)
+  if (p.meal_plus === 'Ja') {
+    var activeMeals = PASS_MEALS.filter(function(m) { return p[m.key] === 'Ja'; });
+    if (activeMeals.length) {
+      document.getElementById('mealSection').style.display = 'block';
+      var rowsHtml = activeMeals.map(function(m) {
+        var chips = PASS_MEAL_DAYS.filter(function(d) { return mealBooked(p, m, d.code); })
+          .map(function(d) { return '<div class="meal-day-chip">' + d.short.slice(0, 2) + '</div>'; }).join('');
+        return '<div class="meal-row"><span>' + m.label + '</span><div class="meal-days">' + chips + '</div></div>';
+      }).join('');
+      document.getElementById('mealRows').innerHTML = rowsHtml;
+    }
+  }
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('passCard').style.display = 'block';
+}
+
+init();
+</script>
+</body>
+</html>
