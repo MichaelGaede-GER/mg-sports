@@ -436,6 +436,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <button class="btn" onclick="toggleDarkMode()" id="modeBtn" title="Hell/Dunkel wechseln" style="font-size:18px;padding:4px 8px;border:none;background:none;cursor:pointer">🌙</button>
       <button class="btn" onclick="toggleLanguage()" id="langBtn" title="Deutsch / English" style="font-size:18px;padding:4px 8px;border:none;background:none;cursor:pointer">🇩🇪</button>
       <span style="font-size:12px;color:var(--text2)" id="topbarUser"></span>
+      <button class="btn" onclick="doLogout()" title="Abmelden" style="font-size:16px;padding:4px 8px;border:none;background:none;cursor:pointer">🚪</button>
     </div>
     <div class="content">
 
@@ -3590,10 +3591,23 @@ async function initApp() {
   applyTranslations();
   // 1. Load event ID first - critical for all queries
   await loadActiveEvent();
-  // 2. Load dashboard immediately - user sees numbers right away
-  await loadDashboard();
-  // 3. Load rest in background
-  loadRolePermissions().catch(function(){});
+  // 2. Load role permissions BEFORE showing anything — otherwise a restricted user would
+  // briefly see the Dashboard (hardcoded as the default active page in the HTML) before
+  // being redirected away from it.
+  await loadRolePermissions().catch(function(){});
+  if (canAccess('dashboard') === 'hidden') {
+    var firstAllowedPage = ALL_NAV_PAGES.find(function(pg) { return canAccess(pg) !== 'hidden'; });
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    if (firstAllowedPage) {
+      nav(firstAllowedPage);
+    } else {
+      toast('⛔ Für diesen Account ist kein Bereich freigeschaltet. Bitte den Administrator kontaktieren.');
+    }
+  } else {
+    // 3. Load dashboard immediately - user sees numbers right away
+    await loadDashboard();
+  }
+  // 4. Load rest in background
   try { loadAgeClasses().catch(function(){}); } catch(e) {}
   checkTables().catch(function(){});
   loadEntryFee().catch(function(){});
