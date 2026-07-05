@@ -4826,12 +4826,12 @@ async function loadParticipants() {
       : '-';
     var eb = '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>';
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
-    var sb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button>'
+    var sendBtns = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button>'
       + ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>';
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr>'
 + '<td style="white-space:nowrap">'
-        + eb + ' ' + vb + ' ' + sb + ' ' + db2
+        + eb + ' ' + vb + ' ' + sendBtns + ' ' + db2
         + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Kostenlos' && p.payment_status !== 'Pending'
            ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
            : '')
