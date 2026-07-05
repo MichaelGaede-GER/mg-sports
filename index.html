@@ -10130,6 +10130,7 @@ var PERMISSIONS = [
   {key:'import',       label:'Import'},
   {key:'persons',      label:'Personendatenbank'},
   {key:'marketing',    label:'Marketing'},
+  {key:'mealcheck',    label:'Meal-Check'},
 ];
 
 var DEFAULT_ROLES = [
@@ -12100,6 +12101,9 @@ async function loadRolePermissions() {
   if (!rolePermissions['Admin']) rolePermissions['Admin'] = ['*'];
   if (!rolePermissions['Turnierstab']) rolePermissions['Turnierstab'] = ['dashboard','participants','hotel','shuttle','withdrawals','waitlist','reports','airport','idcard'];
 
+  // Load the actual role definitions (with per-page hidden/read/write) used by canAccess()
+  if (!userRolesCache || !userRolesCache.length) await loadUserRoles();
+
   // Get current user role from app_users
   var session = await db.auth.getSession();
   if (session.data && session.data.session) {
@@ -12112,14 +12116,11 @@ async function loadRolePermissions() {
 
 function canAccess(page) {
   if (!currentUserRole || currentUserRole === 'Admin') return 'write';
-  var perms = rolePermissions[currentUserRole];
-  if (!perms) return 'hidden';
-  if (Array.isArray(perms)) return (perms.includes('*') || perms.includes(page)) ? 'write' : 'hidden';
-  if (perms === '*') return 'write';
-  // Object with per-page values: 'hidden', 'read', 'write'
-  if (typeof perms === 'object') {
-    return perms[page] || 'hidden';
-  }
+  var roleObj = (userRolesCache || []).find(function(r) { return r.name === currentUserRole; });
+  if (!roleObj || !roleObj.permissions) return 'hidden';
+  var val = roleObj.permissions[page];
+  if (val === true || val === 'write') return 'write';
+  if (val === 'read') return 'read';
   return 'hidden';
 }
 
