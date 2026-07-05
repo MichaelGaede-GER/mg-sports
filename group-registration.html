@@ -101,6 +101,7 @@
   <div id="formContainer">
     <div id="errorBox" class="error-box"></div>
     <div id="noEventBox" class="error-box" style="display:none" data-i18n="no_event">⚠️ No active tournament found. Please contact the organizer.</div>
+    <div id="deadlineBanner" style="display:none;background:var(--amber-bg, #fff3cd);color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;font-weight:600" data-i18n="deadline_banner">⏰ The registration deadline has passed. Your registration will be added to the waitlist and confirmed individually by the organizer.</div>
 
     <!-- GROUP LEADER -->
     <div class="card">
@@ -211,6 +212,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 var eventId = null;
 var eventEndDate = null;
+var isPastDeadline = false;
 var eventNameRaw = '';
 var hotelsCache = [];
 var ageClassesCache = ['GU11', 'GU13', 'GU15', 'GU17', 'GU19', 'BU11', 'BU13', 'BU15', 'BU17', 'BU19'];
@@ -232,6 +234,7 @@ var I18N = {
 en: {
   header_subtitle: "Register a full team or delegation in one go — please fill in all required fields",
   no_event: "⚠️ No active tournament found. Please contact the organizer.",
+  deadline_banner: "⏰ The registration deadline has passed. Your registration will be added to the waitlist and confirmed individually by the organizer.",
   gl_header: "👤 Group Leader / Contact",
   gl_federation: "Federation / Club",
   gl_federation_ph: "e.g. German Squash Federation",
@@ -367,6 +370,7 @@ en: {
 de: {
   header_subtitle: "Melde ein ganzes Team oder eine Delegation auf einmal an — bitte alle Pflichtfelder ausfüllen",
   no_event: "⚠️ Kein aktives Turnier gefunden. Bitte den Veranstalter kontaktieren.",
+  deadline_banner: "⏰ Der Meldeschluss ist bereits abgelaufen. Deine Anmeldung wird auf die Warteliste gesetzt und vom Veranstalter individuell bestätigt.",
   gl_header: "👤 Gruppenleiter / Kontakt",
   gl_federation: "Verband / Verein",
   gl_federation_ph: "z. B. Deutscher Squash-Verband",
@@ -633,6 +637,10 @@ async function init() {
     document.getElementById('pageTitleText').textContent = eventNameRaw + ' – Group Registration';
     document.title = 'Group Registration – ' + eventNameRaw;
     if (evFull.data.date_to) eventEndDate = new Date(evFull.data.date_to);
+    if (evFull.data.registration_deadline && new Date(evFull.data.registration_deadline) < new Date()) {
+      isPastDeadline = true;
+      document.getElementById('deadlineBanner').style.display = 'block';
+    }
     if (evFull.data.logo_url) {
       var logoImg = document.getElementById('eventLogoImg');
       logoImg.src = 'data:image/png;base64,' + evFull.data.logo_url;
@@ -1420,9 +1428,10 @@ async function submitGroupRegistration() {
     }
 
     // Room Type, Hotel, Check-in and Check-out are only required while the room block is shown
-    // (i.e. the selected package includes nights)
+    // (i.e. the selected package includes nights) — but not once the registration deadline has
+    // passed, since room assignment is deferred to the waitlist review instead
     var roomWrap = document.getElementById('p_roomtype_wrap_' + id);
-    if (roomWrap && roomWrap.style.display !== 'none') {
+    if (!isPastDeadline && roomWrap && roomWrap.style.display !== 'none') {
       [['p_roomtype_'+id, label+': '+reqFieldLabels.roomtype], ['p_hotel_'+id, label+': '+reqFieldLabels.hotel],
        ['p_checkin_'+id, label+': '+reqFieldLabels.checkin], ['p_checkout_'+id, label+': '+reqFieldLabels.checkout]].forEach(function(f) {
         var el = document.getElementById(f[0]);
@@ -1482,7 +1491,7 @@ async function submitGroupRegistration() {
       role: pRole, events: v('p_events_' + id) || null,
       shirt: v('p_shirt_' + id) || null,
       package: pPackage, package_price: packagePrice,
-      room_type: roomType,
+      room_type: isPastDeadline ? 'Warteliste' : roomType,
       hotel: v('p_hotel_' + id) || null,
       checkin: v('p_checkin_' + id) || null,
       checkout: v('p_checkout_' + id) || null,
@@ -1496,7 +1505,7 @@ async function submitGroupRegistration() {
       visa_date_of_expiry: needsLetter ? (v('p_date_of_expiry_' + id) || null) : null,
       confirmation_letter_type: needsLetter ? (letterSel.value || null) : null,
       confirmation_letter_price: letterOpt ? (parseFloat(letterOpt.getAttribute('data-price')) || null) : null,
-      memo: v('g_memo') || null,
+      memo: (isPastDeadline ? '⏰ Registered after deadline' + (v('g_memo') ? ' | ' + v('g_memo') : '') : v('g_memo')) || null,
       payment_status: 'Pending',
       updated_at: new Date().toISOString()
     });

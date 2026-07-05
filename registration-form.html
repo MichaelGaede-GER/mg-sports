@@ -86,6 +86,7 @@
   <div id="formContainer">
     <div id="errorBox" class="error-box"></div>
     <div id="noEventBox" class="error-box" style="display:none" data-i18n="no_event">⚠️ No active tournament found. Please contact the organizer.</div>
+    <div id="deadlineBanner" style="display:none;background:var(--amber-bg, #fff3cd);color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;font-weight:600" data-i18n="deadline_banner">⏰ The registration deadline has passed. Your registration will be added to the waitlist and confirmed individually by the organizer.</div>
 
     <!-- PERSONAL DATA -->
     <div class="card">
@@ -284,6 +285,7 @@ var selectedPackage = null;
 var ageAutoFilledFlag = false; // true if Age Category was last set automatically (not by the user)
 var eventId = null;
 var eventEndDate = null;
+var isPastDeadline = false;
 var ageClassesCache = ['GU11', 'GU13', 'GU15', 'GU17', 'GU19', 'BU11', 'BU13', 'BU15', 'BU17', 'BU19'];
 var packagesData = [];
 var hotelsCache = [];
@@ -300,6 +302,7 @@ var I18N = {
 en: {
   header_subtitle: "Player & Coach Registration — Please fill in all required fields",
   no_event: "⚠️ No active tournament found. Please contact the organizer.",
+  deadline_banner: "⏰ The registration deadline has passed. Your registration will be added to the waitlist and confirmed individually by the organizer.",
   personal_header: "👤 Personal Data",
   f_lastname: 'Last Name <span class="req">*</span>',
   f_lastname_ph: "Last name",
@@ -416,6 +419,7 @@ en: {
 de: {
   header_subtitle: "Spieler- & Trainer-Anmeldung — bitte alle Pflichtfelder ausfüllen",
   no_event: "⚠️ Kein aktives Turnier gefunden. Bitte den Veranstalter kontaktieren.",
+  deadline_banner: "⏰ Der Meldeschluss ist bereits abgelaufen. Deine Anmeldung wird auf die Warteliste gesetzt und vom Veranstalter individuell bestätigt.",
   personal_header: "👤 Persönliche Daten",
   f_lastname: 'Nachname <span class="req">*</span>',
   f_lastname_ph: "Nachname",
@@ -658,6 +662,10 @@ async function init() {
     document.getElementById('pageTitleText').textContent = evFull.data.name;
     document.title = 'Registration – ' + evFull.data.name;
     if (evFull.data.date_to) eventEndDate = new Date(evFull.data.date_to);
+    if (evFull.data.registration_deadline && new Date(evFull.data.registration_deadline) < new Date()) {
+      isPastDeadline = true;
+      document.getElementById('deadlineBanner').style.display = 'block';
+    }
     if (evFull.data.logo_url) {
       var logoImg = document.getElementById('eventLogoImg');
       logoImg.src = 'data:image/png;base64,' + evFull.data.logo_url;
@@ -1137,8 +1145,10 @@ async function submitRegistration() {
 
   if (!selectedPackage) errors.push(t('err_package'));
 
-  // Room fields only required while the room card is visible (package has nights)
-  if (document.getElementById('roomCard').style.display !== 'none') {
+  // Room fields only required while the room card is visible (package has nights) — but not
+  // once the registration deadline has passed, since room assignment is deferred to the
+  // waitlist review instead
+  if (!isPastDeadline && document.getElementById('roomCard').style.display !== 'none') {
     [['r_roomtype', t('f_roomtype')], ['r_hotel', t('f_hotel')], ['r_checkin', t('f_checkin')], ['r_checkout', t('f_checkout')]].forEach(function(f) {
       var el = document.getElementById(f[0]);
       if (!el.value.trim()) { errors.push(plain(f[1])); el.classList.add('error'); } else { el.classList.remove('error'); }
@@ -1210,6 +1220,7 @@ async function submitRegistration() {
     if (roomType === 'Dreibettzimmer') { var p2 = describePartner(2); if (p2) partnerNames.push(p2); }
   }
   var memoParts = [];
+  if (isPastDeadline) memoParts.push('⏰ Registered after deadline');
   if (partnerNames.length) memoParts.push(t('room_partner_memo_prefix') + partnerNames.join(' / '));
   if (v('r_memo')) memoParts.push(v('r_memo'));
   var combinedMemo = memoParts.join(' | ') || null;
@@ -1230,7 +1241,7 @@ async function submitRegistration() {
     shirt: v('r_shirt') || null,
     package: selectedPackage,
     package_price: (function(){ var o = document.getElementById('r_package').selectedOptions[0]; return o ? parseFloat(o.getAttribute('data-price')) || null : null; })(),
-    room_type: roomType,
+    room_type: isPastDeadline ? 'Warteliste' : roomType,
     hotel: v('r_hotel') || null,
     checkin: v('r_checkin') || null,
     checkout: v('r_checkout') || null,

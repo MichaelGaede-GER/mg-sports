@@ -2971,6 +2971,7 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
       <div class="form-group"><label>Ort</label><input type="text" id="eventLocation" placeholder="Stadt, Land" /></div>
       <div class="form-group"><label>Von</label><input type="date" id="eventDateFrom" /></div>
       <div class="form-group"><label>Bis</label><input type="date" id="eventDateTo" /></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Meldeschluss (Registrierungen danach landen automatisch auf der Warteliste)</label><input type="datetime-local" id="eventRegDeadline" /></div>
       <div class="form-group" style="grid-column:1/-1"><label>Notiz</label><textarea id="eventNotes" style="height:60px" placeholder="Beschreibung…"></textarea></div>
     </div>
     <div style="margin-top:14px;padding:14px;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border)">
@@ -7079,11 +7080,19 @@ function openEventModal(ev) {
   document.getElementById('eventLocation').value=ev?ev.location||'':'';
   document.getElementById('eventDateFrom').value=ev?ev.date_from||'':'';
   document.getElementById('eventDateTo').value=ev?ev.date_to||'':'';
+  document.getElementById('eventRegDeadline').value=(ev&&ev.registration_deadline)?isoToDatetimeLocal(ev.registration_deadline):'';
   document.getElementById('eventNotes').value=ev?ev.notes||'':'';
   currentEventLogoB64=ev&&ev.logo_url?ev.logo_url:''; eventLogoFile=null;
   var prev=document.getElementById('eventLogoPreview'); var btn=document.getElementById('eventLogoDeleteBtn');
   if(prev){if(currentEventLogoB64){prev.innerHTML='<img src="data:image/png;base64,'+currentEventLogoB64+'" style="max-width:100%;max-height:76px;object-fit:contain" />';if(btn)btn.style.display='block';}else{prev.innerHTML='<span style="font-size:24px">Logo</span>';if(btn)btn.style.display='none';}}
   document.getElementById('eventModal').classList.add('open');
+}
+// Converts a stored ISO timestamp to the local "YYYY-MM-DDTHH:mm" format datetime-local inputs need
+function isoToDatetimeLocal(iso) {
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 function editEvent(id) { var ev=eventsCache.find(function(e){return e.id===id;}); if(ev) openEventModal(ev); }
 async function deleteEvent(id) {
@@ -7095,7 +7104,8 @@ async function deleteEvent(id) {
 async function saveEvent() {
   var name=document.getElementById('eventName').value.trim(); if(!name){toast('Event-Name ist Pflicht');return;}
   var id=document.getElementById('eventEditId').value;
-  var row={name:name,year:parseInt(document.getElementById('eventYear').value)||null,location:document.getElementById('eventLocation').value.trim()||null,date_from:document.getElementById('eventDateFrom').value||null,date_to:document.getElementById('eventDateTo').value||null,notes:document.getElementById('eventNotes').value.trim()||null};
+  var deadlineLocal=document.getElementById('eventRegDeadline').value;
+  var row={name:name,year:parseInt(document.getElementById('eventYear').value)||null,location:document.getElementById('eventLocation').value.trim()||null,date_from:document.getElementById('eventDateFrom').value||null,date_to:document.getElementById('eventDateTo').value||null,registration_deadline:deadlineLocal?new Date(deadlineLocal).toISOString():null,notes:document.getElementById('eventNotes').value.trim()||null};
   var r,data2;
   if(id){r=await db.from('events').update(row).eq('id',id);}
   else{var ins=await db.from('events').insert(row).select().single();r=ins;data2=ins.data;if(!r.error&&data2&&!currentEventId)setActiveEvent(data2.id,data2.name);}
