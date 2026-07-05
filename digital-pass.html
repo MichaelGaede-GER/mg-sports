@@ -248,7 +248,7 @@ async function init() {
 
   // Personal info
   document.getElementById('pName').textContent = (p.firstname || '') + ' ' + (p.lastname || '');
-  document.getElementById('pCountry').innerHTML = getCountryFlagImg(p.country, 16) + (p.country || '');
+  document.getElementById('pCountry').innerHTML = getCountryFlagImg(p.country, 20) + (p.country || '');
   document.getElementById('pGender').textContent = (p.gender === 'Weiblich') ? 'Female' : (p.gender === 'Männlich') ? 'Male' : '–';
   var roleColor = ROLE_COLORS[p.role] || '#185FA5';
   var badge = document.getElementById('roleBadge');
