@@ -2972,6 +2972,8 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
       <div class="form-group"><label>Von</label><input type="date" id="eventDateFrom" /></div>
       <div class="form-group"><label>Bis</label><input type="date" id="eventDateTo" /></div>
       <div class="form-group" style="grid-column:1/-1"><label>Meldeschluss (Registrierungen danach landen automatisch auf der Warteliste)</label><input type="datetime-local" id="eventRegDeadline" /></div>
+      <div class="form-group"><label>Zugangscode Official / Referee / ESF Official</label><input type="text" id="eventOfficialCode" placeholder="z.B. Official2026" /></div>
+      <div class="form-group"><label>Zugangscode Tournament Team (Package T)</label><input type="text" id="eventTeamCode" placeholder="z.B. REFEREE-2026" /></div>
       <div class="form-group" style="grid-column:1/-1"><label>Notiz</label><textarea id="eventNotes" style="height:60px" placeholder="Beschreibung…"></textarea></div>
     </div>
     <div style="margin-top:14px;padding:14px;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border)">
@@ -7081,6 +7083,8 @@ function openEventModal(ev) {
   document.getElementById('eventDateFrom').value=ev?ev.date_from||'':'';
   document.getElementById('eventDateTo').value=ev?ev.date_to||'':'';
   document.getElementById('eventRegDeadline').value=(ev&&ev.registration_deadline)?isoToDatetimeLocal(ev.registration_deadline):'';
+  document.getElementById('eventOfficialCode').value=ev?ev.official_access_code||'':'';
+  document.getElementById('eventTeamCode').value=ev?ev.team_access_code||'':'';
   document.getElementById('eventNotes').value=ev?ev.notes||'':'';
   currentEventLogoB64=ev&&ev.logo_url?ev.logo_url:''; eventLogoFile=null;
   var prev=document.getElementById('eventLogoPreview'); var btn=document.getElementById('eventLogoDeleteBtn');
@@ -7105,7 +7109,7 @@ async function saveEvent() {
   var name=document.getElementById('eventName').value.trim(); if(!name){toast('Event-Name ist Pflicht');return;}
   var id=document.getElementById('eventEditId').value;
   var deadlineLocal=document.getElementById('eventRegDeadline').value;
-  var row={name:name,year:parseInt(document.getElementById('eventYear').value)||null,location:document.getElementById('eventLocation').value.trim()||null,date_from:document.getElementById('eventDateFrom').value||null,date_to:document.getElementById('eventDateTo').value||null,registration_deadline:deadlineLocal?new Date(deadlineLocal).toISOString():null,notes:document.getElementById('eventNotes').value.trim()||null};
+  var row={name:name,year:parseInt(document.getElementById('eventYear').value)||null,location:document.getElementById('eventLocation').value.trim()||null,date_from:document.getElementById('eventDateFrom').value||null,date_to:document.getElementById('eventDateTo').value||null,registration_deadline:deadlineLocal?new Date(deadlineLocal).toISOString():null,official_access_code:document.getElementById('eventOfficialCode').value.trim()||null,team_access_code:document.getElementById('eventTeamCode').value.trim()||null,notes:document.getElementById('eventNotes').value.trim()||null};
   var r,data2;
   if(id){r=await db.from('events').update(row).eq('id',id);}
   else{var ins=await db.from('events').insert(row).select().single();r=ins;data2=ins.data;if(!r.error&&data2&&!currentEventId)setActiveEvent(data2.id,data2.name);}

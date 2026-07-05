@@ -213,6 +213,8 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 var eventId = null;
 var eventEndDate = null;
 var isPastDeadline = false;
+var officialAccessCode = null;
+var teamAccessCode = null;
 var eventNameRaw = '';
 var hotelsCache = [];
 var ageClassesCache = ['GU11', 'GU13', 'GU15', 'GU17', 'GU19', 'BU11', 'BU13', 'BU15', 'BU17', 'BU19'];
@@ -299,9 +301,9 @@ en: {
   f_transport: "Transport",
   f_airport_transfer: "Airport Transfer",
   f_visa: "Confirmation Letter required?",
-  f_official_code: 'Official Access Code <span class="req">*</span>',
+  f_official_code: 'Access Code (Official / Referee / ESF Official) <span class="req">*</span>',
   hint_official_code: "This code is issued by Michael Gäde.",
-  err_official_code: "Invalid access code for the Official role",
+  err_official_code: "Invalid access code for this role",
   f_arrival_date: "Arrival Date",
   f_arrival_time: "Arrival Time",
   f_flight_in: "Incoming Flight No.",
@@ -438,9 +440,9 @@ de: {
   f_transport: "Transport",
   f_airport_transfer: "Flughafentransfer",
   f_visa: "Bestätigungsschreiben erforderlich?",
-  f_official_code: 'Official Zugangscode <span class="req">*</span>',
+  f_official_code: 'Zugangscode (Official / Referee / ESF Official) <span class="req">*</span>',
   hint_official_code: "Dieser Code wird von Michael Gäde vergeben.",
-  err_official_code: "Ungültiger Zugangscode für die Rolle Official",
+  err_official_code: "Ungültiger Zugangscode für diese Rolle",
   f_arrival_date: "Ankunftsdatum",
   f_arrival_time: "Ankunftszeit",
   f_flight_in: "Ankunftsflug Nr.",
@@ -647,6 +649,8 @@ async function init() {
       isPastDeadline = true;
       document.getElementById('deadlineBanner').style.display = 'block';
     }
+    officialAccessCode = evFull.data.official_access_code || null;
+    teamAccessCode = evFull.data.team_access_code || null;
     if (evFull.data.logo_url) {
       var logoImg = document.getElementById('eventLogoImg');
       logoImg.src = 'data:image/png;base64,' + evFull.data.logo_url;
@@ -757,7 +761,7 @@ function addParticipantRow() {
     + '<div class="form-group"><label data-i18n="f_email_optional">' + t('f_email_optional') + '</label><input type="email" id="p_email_' + id + '" data-i18n-ph="f_email_ph" placeholder="' + t('f_email_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_role">' + t('f_role') + '</label><select id="p_role_' + id + '" onchange="onRoleChange(' + id + ')"></select></div>'
     + '<div class="form-group full" id="p_official_code_wrap_' + id + '" style="display:none">'
-      + '<label data-i18n="f_official_code">' + t('f_official_code') + '</label><input type="text" id="p_official_code_' + id + '" placeholder="Official2026" />'
+      + '<label data-i18n="f_official_code">' + t('f_official_code') + '</label><input type="text" id="p_official_code_' + id + '" placeholder="XXXXX" />'
       + '<div class="esid-hint" data-i18n="hint_official_code">' + t('hint_official_code') + '</div>'
     + '</div>'
     + '<div class="form-group"><label data-i18n="f_age_category">' + t('f_age_category') + '</label><select id="p_events_' + id + '" onchange="checkAgeMatch(' + id + ')"><option value="">' + t('ph_auto_select') + '</option></select><div class="esid-hint" id="p_age_hint_' + id + '"></div></div>'
@@ -1364,7 +1368,7 @@ function onRoleChange(id) {
   }
 
   var officialWrap = document.getElementById('p_official_code_wrap_' + id);
-  var showOfficial = role === 'Official';
+  var showOfficial = (role === 'Official' || role === 'Referee' || role === 'ESF Official');
   if (officialWrap) officialWrap.style.display = showOfficial ? '' : 'none';
   if (!showOfficial) {
     var codeEl = document.getElementById('p_official_code_' + id);
@@ -1490,9 +1494,11 @@ async function submitGroupRegistration() {
     }
 
     // Official Access Code is only required while this participant's role is "Official"
-    if (document.getElementById('p_role_' + id).value === 'Official') {
+    var roleForCode = document.getElementById('p_role_' + id).value;
+    if (roleForCode === 'Official' || roleForCode === 'Referee' || roleForCode === 'ESF Official') {
       var officialCodeEl = document.getElementById('p_official_code_' + id);
-      if (v('p_official_code_' + id) !== 'Official2026') {
+      var expectedOfficialCode = officialAccessCode || 'Official2026'; // fallback if not yet configured in event settings
+      if (v('p_official_code_' + id) !== expectedOfficialCode) {
         errors.push(label + ': ' + t('err_official_code'));
         officialCodeEl.classList.add('error');
       } else { officialCodeEl.classList.remove('error'); }
@@ -1560,7 +1566,8 @@ async function submitGroupRegistration() {
   var needsAccessCode = rows.some(function(r) { return r.package === 'T'; });
   if (needsAccessCode) {
     var codeEl = document.getElementById('g_accessCode');
-    if (v('g_accessCode') !== 'REFEREE-2026') {
+    var expectedTeamCode = teamAccessCode || 'REFEREE-2026'; // fallback if not yet configured in event settings
+    if (v('g_accessCode') !== expectedTeamCode) {
       errors.push(t('err_access_code'));
       codeEl.classList.add('error');
     } else {
