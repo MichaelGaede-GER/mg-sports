@@ -1267,7 +1267,7 @@ async function submitRegistration() {
   // Check for duplicate ESID
   var esid = row.member_id;
   if (esid) {
-    var dupQ = await db.from('participants').select('id,firstname,lastname').eq('member_id', esid);
+    var dupQ = await db.from('participants').select('id,firstname,lastname').eq('member_id', esid).eq('event_id', eventId);
     if (dupQ.data && dupQ.data.length > 0) {
       var d = dupQ.data[0];
       btn.disabled = false;

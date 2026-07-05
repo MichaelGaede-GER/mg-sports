@@ -1543,7 +1543,7 @@ async function submitGroupRegistration() {
   }
 
   // Duplicate ESID check against existing DB records
-  var dupQ = await db.from('participants').select('member_id,firstname,lastname').in('member_id', esidsInGroup);
+  var dupQ = await db.from('participants').select('member_id,firstname,lastname').in('member_id', esidsInGroup).eq('event_id', eventId);
   if (dupQ.data && dupQ.data.length) {
     btn.disabled = false; btn.textContent = t('submit_btn');
     errBox.style.display = 'block';
