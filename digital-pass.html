@@ -142,6 +142,9 @@ var FEMALE_DUMMY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEB
 var ROLE_COLORS = { Player: '#185FA5', Coach: '#2E7D32', Parent: '#6a6a9e', Referee: '#c87a00', Official: '#7b3fa0', 'ESF Official': '#1a7a4a' };
 var ROOM_MAX = { 'Einzelzimmer': 1, 'Doppelzimmer': 2, 'Dreibettzimmer': 3 };
 var PASS_MEAL_DAYS = [
+  { day: 'Monday', short: 'MON', code: 'mo' },
+  { day: 'Tuesday', short: 'TUE', code: 'di' },
+  { day: 'Wednesday', short: 'WED', code: 'mi' },
   { day: 'Thursday', short: 'THU', code: 'do' },
   { day: 'Friday', short: 'FRI', code: 'fr' },
   { day: 'Saturday', short: 'SAT', code: 'sa' },
@@ -153,10 +156,12 @@ var PASS_MEALS = [
   { label: 'Dinner', key: 'meal_dinner', days_key: 'meal_dinner_days' }
 ];
 
+var CORE_TOURNAMENT_DAYS = ['do', 'fr', 'sa', 'so']; // Thu–Sun: used as the fallback when a package has no specific days configured
+
 function mealBooked(p, m, dayCode) {
   if (p[m.key] !== 'Ja') return false;
   var daysVal = p[m.days_key];
-  if (!daysVal || daysVal.trim() === '') return true;
+  if (!daysVal || daysVal.trim() === '') return CORE_TOURNAMENT_DAYS.indexOf(dayCode) >= 0;
   return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
 }
 

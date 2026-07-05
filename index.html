@@ -8083,6 +8083,9 @@ async function generateEventpass(participantId) {
   // Meal dots
   // Fixed meal grid: Thu/Fri/Sat/Sun × Breakfast/Lunch/Dinner — only rows/columns/boxes that are actually booked are rendered
   var PASS_MEAL_DAYS = [
+    {day:'Monday',    short:'MON', code:'mo'},
+    {day:'Tuesday',   short:'TUE', code:'di'},
+    {day:'Wednesday', short:'WED', code:'mi'},
     {day:'Thursday', short:'THU', code:'do'},
     {day:'Friday',   short:'FRI', code:'fr'},
     {day:'Saturday', short:'SAT', code:'sa'},
@@ -8093,10 +8096,11 @@ async function generateEventpass(participantId) {
     {label:'Lunch',      key:'meal_lunch',     days_key:'meal_lunch_days'},
     {label:'Dinner',     key:'meal_dinner',    days_key:'meal_dinner_days'},
   ];
+  var CORE_TOURNAMENT_DAYS = ['do','fr','sa','so']; // Thu–Sun: fallback when no specific days are configured
   function passMealBooked(m, dayCode) {
     if (p[m.key] !== 'Ja') return false;
     var daysVal = p[m.days_key];
-    if (!daysVal || daysVal.trim() === '') return true; // no specific days set = all days
+    if (!daysVal || daysVal.trim() === '') return CORE_TOURNAMENT_DAYS.indexOf(dayCode) >= 0;
     return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
   }
 
@@ -11932,12 +11936,13 @@ function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtm
   var pkgDisplayCode = pkgData && pkgData.short_code ? pkgData.short_code : p.package;
   var pkgInfo = p.package ? pkgDisplayCode : '–';
 
-  var PASS_MEAL_DAYS = [{day:'Thursday',short:'THU',code:'do'},{day:'Friday',short:'FRI',code:'fr'},{day:'Saturday',short:'SAT',code:'sa'},{day:'Sunday',short:'SUN',code:'so'}];
+  var PASS_MEAL_DAYS = [{day:'Monday',short:'MON',code:'mo'},{day:'Tuesday',short:'TUE',code:'di'},{day:'Wednesday',short:'WED',code:'mi'},{day:'Thursday',short:'THU',code:'do'},{day:'Friday',short:'FRI',code:'fr'},{day:'Saturday',short:'SAT',code:'sa'},{day:'Sunday',short:'SUN',code:'so'}];
   var PASS_MEALS = [{label:'Breakfast',key:'meal_breakfast',days_key:'meal_breakfast_days'},{label:'Lunch',key:'meal_lunch',days_key:'meal_lunch_days'},{label:'Dinner',key:'meal_dinner',days_key:'meal_dinner_days'}];
+  var CORE_TOURNAMENT_DAYS_2 = ['do','fr','sa','so'];
   function passMealBooked2(m, dayCode) {
     if (p[m.key] !== 'Ja') return false;
     var daysVal = p[m.days_key];
-    if (!daysVal || daysVal.trim() === '') return true; // no specific days set = all days
+    if (!daysVal || daysVal.trim() === '') return CORE_TOURNAMENT_DAYS_2.indexOf(dayCode) >= 0;
     return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
   }
   var mealDotsHtml = '';
