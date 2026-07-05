@@ -4826,7 +4826,8 @@ async function loadParticipants() {
       : '-';
     var eb = '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>';
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
-    var sb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendDigitalPass(this.dataset.id)">📲</button>';
+    var sb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button>'
+      + ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>';
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr>'
 + '<td style="white-space:nowrap">'
@@ -7934,10 +7935,12 @@ async function calcAgeCheck() {
 // Digital Pass: sends a mobile-friendly link (with QR code) to the participant via
 // the device's native share sheet (WhatsApp/Mail/Messages...), falling back to a small
 // menu with WhatsApp/E-Mail/Copy-Link if the Web Share API isn't available (desktop).
-async function sendDigitalPass(participantId) {
+// Builds the personalized pass message + link for a participant (shared by the
+// WhatsApp/E-Mail send actions below).
+async function buildPassMessage(participantId) {
   var pr = await db.from('participants').select('firstname,lastname,mobile,email,event_id').eq('id', participantId).single();
   var p = pr.data;
-  if (!p) { toast('Teilnehmer nicht gefunden'); return; }
+  if (!p) { toast('Teilnehmer nicht gefunden'); return null; }
 
   var ev = null;
   if (p.event_id) {
@@ -7957,11 +7960,34 @@ async function sendDigitalPass(participantId) {
     + 'YOUR EVENT PASS: ' + passUrl + '\n\n'
     + 'Kind regards,\nMichael Gäde';
 
-  if (navigator.share) {
-    try { await navigator.share({ title: 'Your Digital Event Pass', text: text }); return; }
-    catch (e) { /* user cancelled the native share sheet — fall through to the manual menu below */ }
-  }
-  showPassSendMenu(passUrl, text, p);
+  return { p: p, text: text, passUrl: passUrl };
+}
+
+// Opens WhatsApp directly with the participant's stored mobile number and the
+// pre-filled pass message — one click, no intermediate menu.
+async function sendPassWhatsApp(participantId) {
+  var info = await buildPassMessage(participantId);
+  if (!info) return;
+  if (!info.p.mobile) { toast('⚠️ Keine Mobilnummer für diese Person hinterlegt'); return; }
+  var phoneDigits = info.p.mobile.replace(/[^0-9+]/g, '').replace(/^\+/, '');
+  window.open('https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(info.text), '_blank');
+}
+
+// Opens the default mail client with the participant's stored e-mail and the
+// pre-filled pass message — one click, no intermediate menu.
+async function sendPassEmail(participantId) {
+  var info = await buildPassMessage(participantId);
+  if (!info) return;
+  if (!info.p.email) { toast('⚠️ Keine E-Mail für diese Person hinterlegt'); return; }
+  window.location.href = 'mailto:' + encodeURIComponent(info.p.email) + '?subject=' + encodeURIComponent('Your Digital Event Pass') + '&body=' + encodeURIComponent(info.text);
+}
+
+// Kept as a fallback: shows a small menu (WhatsApp/E-Mail/Copy link) — used only if
+// neither a mobile number nor an e-mail is on file, so there's still a way to grab the link.
+async function sendDigitalPass(participantId) {
+  var info = await buildPassMessage(participantId);
+  if (!info) return;
+  showPassSendMenu(info.passUrl, info.text, info.p);
 }
 
 function showPassSendMenu(passUrl, text, p) {
@@ -11738,7 +11764,8 @@ async function loadIdCards() {
         + '<td style="padding:4px 8px;font-size:11px">'+(p.role||'–')+'</td>'
         + '<td style="padding:4px 8px">'
         + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button> '
-        + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendDigitalPass(this.dataset.id)">📲</button>'
+        + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button> '
+        + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>'
         + '</td>'
         + '</tr>';
     }).join('');
