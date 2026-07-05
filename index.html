@@ -5130,9 +5130,9 @@ async function editEntry(id) {
   var gEl = document.getElementById('f_gender');
   if (gEl && p.gender) {
     var gMap = {
-      'm':'Männlich','male':'Männlich','männlich':'Männlich','man':'Männlich','boys':'Männlich','boy':'Männlich',
+      'm':'Männlich','male':'Männlich','männlich':'Männlich','maennlich':'Männlich','man':'Männlich','boys':'Männlich','boy':'Männlich',
       'f':'Weiblich','female':'Weiblich','weiblich':'Weiblich','woman':'Weiblich','women':'Weiblich','girl':'Weiblich','girls':'Weiblich',
-      'w':'Weiblich','divers':'Divers'
+      'w':'Weiblich','divers':'Divers','diverse':'Divers','d':'Divers'
     };
     var gVal = p.gender.trim();
     if (gEl.value === '') {
@@ -10186,6 +10186,12 @@ async function syncParticipantsFromPersons() {
     syncFields.forEach(function(f) {
       var personVal = person[f]||null;
       var partVal = part[f]||null;
+      if (f === 'gender' && personVal) {
+        // Normalize ASCII/legacy variants (e.g. "Maennlich") to canonical value with umlaut
+        var gv = personVal.trim();
+        if (gv === 'Maennlich' || gv === 'maennlich') personVal = 'Männlich';
+        else if (gv === 'Weiblich' || gv === 'weiblich') personVal = 'Weiblich';
+      }
       // Update if persons DB has a value and participant field is empty/null
       if (personVal && !partVal) {
         updates[f] = personVal;
