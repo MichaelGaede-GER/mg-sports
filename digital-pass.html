@@ -87,6 +87,8 @@
     font-size: 10px; font-weight: 700; background: #185FA5; color: #fff;
   }
   .footer-note { text-align: center; font-size: 10px; color: #9aa3b2; padding: 14px 20px 20px; }
+  .sponsors-section { margin-top: 22px; padding-top: 16px; border-top: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
+  .sponsors-section img { max-height: 26px; max-width: 90px; object-fit: contain; }
   .state-box { max-width: 380px; width: 100%; background: #1a1d23; border-radius: 16px; padding: 40px 24px; text-align: center; }
   .state-box p { font-size: 14px; color: #9aa3b2; }
 </style>
@@ -123,6 +125,8 @@
       <h3>Meal Package</h3>
       <div id="mealRows"></div>
     </div>
+
+    <div class="sponsors-section" id="sponsorsSection" style="display:none"></div>
   </div>
   <div class="footer-note">This pass is personal — please don't share the link with others.</div>
 </div>
@@ -241,6 +245,17 @@ async function init() {
       }).join('');
       document.getElementById('mealRows').innerHTML = rowsHtml;
     }
+  }
+
+  // Sponsor logos
+  var sponsorR = await db.from('app_settings').select('key,value').in('key', ['sponsor_logo_1', 'sponsor_logo_2', 'sponsor_logo_3', 'sponsor_logo_4']);
+  var sponsorLogos = {};
+  (sponsorR.data || []).forEach(function(s) { sponsorLogos[s.key] = s.value; });
+  var sponsorImgs = [1, 2, 3, 4].filter(function(n) { return sponsorLogos['sponsor_logo_' + n]; })
+    .map(function(n) { return '<img src="data:image/png;base64,' + sponsorLogos['sponsor_logo_' + n] + '" alt="Sponsor" />'; }).join('');
+  if (sponsorImgs) {
+    document.getElementById('sponsorsSection').innerHTML = sponsorImgs;
+    document.getElementById('sponsorsSection').style.display = 'flex';
   }
 
   document.getElementById('loadingState').style.display = 'none';
