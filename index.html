@@ -5334,6 +5334,7 @@ async function loadPackages() {
       <td style="font-weight:600">${fmt(p.price)}</td>
       <td style="display:flex;gap:6px">
         <button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPackage('${p.id}')">Bearbeiten</button>
+        <button class="btn" style="font-size:11px;padding:3px 8px" title="Mahlzeiten-Vorlage auf alle Teilnehmer mit diesem Package anwenden" onclick="bulkApplyPackageMealDays('${p.code}')">🍽 Vorlage anwenden</button>
         <button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePackage('${p.id}')">Löschen</button>
       </td>
     </tr>`).join('') : '<tr><td colspan="12" class="empty">Keine Packages gefunden. SQL-Setup ausführen.</td></tr>';
@@ -10694,6 +10695,43 @@ async function applyPackageMealDays(packageCode) {
       if (cb) cb.checked = activeDays.indexOf(d) >= 0;
     });
   });
+}
+
+// Re-applies a package's current meal-day template to ALL participants (in the active
+// event) who already have that package assigned — without needing to reopen and re-save
+// each person individually. The master "Event Meals" checkbox is left untouched per
+// person, exactly like the single-person version above (applyPackageMealDays).
+async function bulkApplyPackageMealDays(packageCode) {
+  if (!packageCode) return;
+  if (!packagesData || !packagesData.length) await loadPackagesData();
+  var pkg = packagesData.find(function(p) { return p.code === packageCode; });
+  if (!pkg) { toast('Package nicht gefunden'); return; }
+
+  if (!confirm('Mahlzeiten-Vorlage von Package "' + packageCode + '" auf ALLE Teilnehmer mit diesem Package im aktiven Event anwenden?\n\nDabei werden die individuell gesetzten Mahlzeit-Tage dieser Teilnehmer überschrieben (das "Event Meals"-Häkchen selbst bleibt unangetastet).')) return;
+
+  var q = db.from('participants').select('id').eq('package', packageCode);
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
+  var ids = (r.data || []).map(function(x) { return x.id; });
+  if (!ids.length) { toast('Keine Teilnehmer mit diesem Package im aktiven Event gefunden'); return; }
+
+  var days = ['mo','di','mi','do','fr','sa','so'];
+  var hasMealDays = pkg.pkg_breakfast_days || pkg.pkg_lunch_days || pkg.pkg_dinner_days;
+  var mealIncluded = pkg.meal_included === 'Ja';
+
+  var updateObj = {};
+  ['breakfast','lunch','dinner'].forEach(function(meal) {
+    var pkgDays = pkg['pkg_' + meal + '_days'] || '';
+    var activeDays = pkgDays ? pkgDays.split(',').filter(Boolean) : [];
+    if (mealIncluded && !hasMealDays) activeDays = days.slice();
+    updateObj['meal_' + meal] = activeDays.length > 0 ? 'Ja' : 'Nein';
+    updateObj['meal_' + meal + '_days'] = activeDays.join(',');
+  });
+
+  var upd = await db.from('participants').update(updateObj).in('id', ids);
+  if (upd.error) { toast('❌ Fehler: ' + upd.error.message); return; }
+  toast('✅ Mahlzeiten-Vorlage auf ' + ids.length + ' Teilnehmer angewendet');
+  if (typeof loadParticipants === 'function') loadParticipants().catch(function(){});
 }
 
 
