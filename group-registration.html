@@ -180,6 +180,12 @@
       </div>
     </div>
 
+    <!-- PAYMENT SUMMARY -->
+    <div class="card">
+      <div class="card-header" data-i18n="summary_header">💶 Payment Summary</div>
+      <div class="card-body" id="groupPaymentSummaryBody" style="font-size:13px;line-height:1.8"></div>
+    </div>
+
     <!-- CONSENT -->
     <div class="card">
       <div class="card-header" data-i18n="decl_header">📋 Declaration</div>
@@ -289,7 +295,7 @@ en: {
   f_travel_toggle: "✈️ This person travels differently from the group defaults",
   f_transport: "Transport",
   f_airport_transfer: "Airport Transfer",
-  f_visa: "Visa",
+  f_visa: "Confirmation Letter required?",
   f_arrival_date: "Arrival Date",
   f_arrival_time: "Arrival Time",
   f_flight_in: "Incoming Flight No.",
@@ -333,6 +339,18 @@ en: {
   err_group_leader_firstname: "Group Leader First Name",
   err_group_leader_mobile: "Group Leader Mobile",
   err_group_leader_email: "Group Leader E-Mail",
+
+  opt_no: "No",
+  opt_yes: "Yes",
+  f_letter_type: 'Letter Type <span class="req">*</span>',
+  f_place_of_birth: 'Place of Birth <span class="req">*</span>',
+  f_passport_number: 'Passport Number <span class="req">*</span>',
+  f_date_of_issue: 'Date of Issue <span class="req">*</span>',
+  f_date_of_expiry: 'Date of Expiry <span class="req">*</span>',
+  hint_no_letter_packages: "No Confirmation Letter packages configured",
+  summary_header: "💶 Payment Summary",
+  summary_empty: "Add package selections to see the amount due.",
+  summary_total: "Group Total",
 
   age_hint_enter_dob: "– enter date of birth –",
   age_hint_label: "Age at tournament end: ",
@@ -412,7 +430,7 @@ de: {
   f_travel_toggle: "✈️ Diese Person reist abweichend von den Gruppen-Standardwerten",
   f_transport: "Transport",
   f_airport_transfer: "Flughafentransfer",
-  f_visa: "Visum",
+  f_visa: "Bestätigungsschreiben erforderlich?",
   f_arrival_date: "Ankunftsdatum",
   f_arrival_time: "Ankunftszeit",
   f_flight_in: "Ankunftsflug Nr.",
@@ -456,6 +474,18 @@ de: {
   err_group_leader_firstname: "Vorname Gruppenleiter",
   err_group_leader_mobile: "Mobilnummer Gruppenleiter",
   err_group_leader_email: "E-Mail Gruppenleiter",
+
+  opt_no: "Nein",
+  opt_yes: "Ja",
+  f_letter_type: 'Art des Schreibens <span class="req">*</span>',
+  f_place_of_birth: 'Geburtsort <span class="req">*</span>',
+  f_passport_number: 'Passnummer <span class="req">*</span>',
+  f_date_of_issue: 'Ausstellungsdatum <span class="req">*</span>',
+  f_date_of_expiry: 'Ablaufdatum <span class="req">*</span>',
+  hint_no_letter_packages: "Keine Confirmation-Letter-Packages hinterlegt",
+  summary_header: "💶 Zahlungsübersicht",
+  summary_empty: "Package-Auswahl hinzufügen, um den fälligen Betrag zu sehen.",
+  summary_total: "Gruppen-Gesamtbetrag",
 
   age_hint_enter_dob: "– Geburtsdatum eingeben –",
   age_hint_label: "Alter am Turnierende: ",
@@ -526,10 +556,11 @@ function refreshDynamicTranslations() {
     populateHotelSelect(id);
     populateEventsSelect(id);
     populateGenderSelect(id);
-    populateVisaSelect(id);
+    if (document.getElementById('p_visa_' + id) && document.getElementById('p_visa_' + id).value === 'Ja') populateLetterTypeSelect(id);
     calcAgeCategory(id, true); // refresh labels only, never auto-default the role here
     calcCheckout(id);
   });
+  renderGroupPaymentSummary();
   refreshAllShareSelects();
   updateGroupAirportTransfer();
   participantIds.forEach(function(id) { updateParticipantAirportTransfer(id); });
@@ -719,13 +750,18 @@ function addParticipantRow() {
     + '<div class="form-group full" id="p_hotel_wrap_' + id + '" style="display:none"><label data-i18n="f_hotel">' + t('f_hotel') + '</label><select id="p_hotel_' + id + '"></select></div>'
     + '<div class="form-group" id="p_checkin_wrap_' + id + '" style="display:none;grid-column:1"><label data-i18n="f_checkin">' + t('f_checkin') + '</label><input type="date" id="p_checkin_' + id + '" onchange="calcCheckout(' + id + ')" /></div>'
     + '<div class="form-group" id="p_checkout_wrap_' + id + '" style="display:none"><label data-i18n="f_checkout">' + t('f_checkout') + '</label><input type="date" id="p_checkout_' + id + '" /><div class="esid-hint" id="p_checkout_hint_' + id + '"></div></div>'
+    + '<div class="form-group full"><label data-i18n="f_visa">' + t('f_visa') + '</label><select id="p_visa_' + id + '" onchange="onConfirmationLetterToggle(' + id + ')"><option value="Nein" data-i18n="opt_no">' + t('opt_no') + '</option><option value="Ja" data-i18n="opt_yes">' + t('opt_yes') + '</option></select></div>'
+    + '<div class="form-group" id="p_letter_type_wrap_' + id + '" style="display:none"><label data-i18n="f_letter_type">' + t('f_letter_type') + '</label><select id="p_letter_type_' + id + '" onchange="renderGroupPaymentSummary()"></select></div>'
+    + '<div class="form-group" id="p_place_of_birth_wrap_' + id + '" style="display:none"><label data-i18n="f_place_of_birth">' + t('f_place_of_birth') + '</label><input type="text" id="p_place_of_birth_' + id + '" /></div>'
+    + '<div class="form-group" id="p_passport_number_wrap_' + id + '" style="display:none"><label data-i18n="f_passport_number">' + t('f_passport_number') + '</label><input type="text" id="p_visa_passport_number_' + id + '" /></div>'
+    + '<div class="form-group" id="p_date_of_issue_wrap_' + id + '" style="display:none"><label data-i18n="f_date_of_issue">' + t('f_date_of_issue') + '</label><input type="date" id="p_date_of_issue_' + id + '" /></div>'
+    + '<div class="form-group" id="p_date_of_expiry_wrap_' + id + '" style="display:none"><label data-i18n="f_date_of_expiry">' + t('f_date_of_expiry') + '</label><input type="date" id="p_date_of_expiry_' + id + '" /></div>'
     + '</div>'
     + '<span class="travel-toggle" onclick="toggleIndividualTravel(' + id + ')" id="p_traveltoggle_' + id + '" data-i18n="f_travel_toggle">' + t('f_travel_toggle') + '</span>'
     + '<div class="travel-fields" id="p_travelfields_' + id + '">'
     + '<div class="form-grid cols-3">'
     + '<div class="form-group"><label data-i18n="f_transport">' + t('f_transport') + '</label><select id="p_ams_bus_' + id + '" disabled><option value="Flugzeug" selected data-i18n="st_transport_only">' + t('st_transport_only') + '</option></select><div class="esid-hint" data-i18n="st_airport_hint">' + t('st_airport_hint') + '</div></div>'
     + '<div class="form-group"><label data-i18n="f_airport_transfer">' + t('f_airport_transfer') + '</label><select id="p_airport_plus_' + id + '" disabled><option value="Nein" selected>No</option></select></div>'
-    + '<div class="form-group"><label data-i18n="f_visa">' + t('f_visa') + '</label><select id="p_visa_' + id + '"></select></div>'
     + '<div class="form-group"><label data-i18n="f_arrival_date">' + t('f_arrival_date') + '</label><input type="date" id="p_arrival_date_' + id + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_arrival_time">' + t('f_arrival_time') + '</label><input type="time" id="p_arrival_time_' + id + '" oninput="updateParticipantAirportTransfer(' + id + ')" /></div>'
     + '<div class="form-group"><label data-i18n="f_flight_in_short">' + t('f_flight_in_short') + '</label><input type="text" id="p_flight_in_' + id + '" /></div>'
@@ -738,7 +774,6 @@ function addParticipantRow() {
   document.getElementById('participantsContainer').appendChild(wrap);
   document.getElementById('p_country_' + id).innerHTML = countryOptionsHtml();
   populateGenderSelect(id);
-  populateVisaSelect(id);
   populateRoleSelect(id, false);
   populatePackageSelect(id);
   populateRoomTypeSelect(id);
@@ -746,6 +781,7 @@ function addParticipantRow() {
   populateEventsSelect(id);
   refreshAllShareSelects();
   updateParticipantCountLabel();
+  renderGroupPaymentSummary();
 }
 
 function populateGenderSelect(id) {
@@ -756,17 +792,6 @@ function populateGenderSelect(id) {
   sel.innerHTML = '<option value="">' + t('ph_select') + '</option>'
     + '<option value="Weiblich">' + labels.Weiblich + '</option>'
     + '<option value="Männlich">' + labels['Männlich'] + '</option>';
-  if (cur) sel.value = cur;
-}
-
-function populateVisaSelect(id) {
-  var sel = document.getElementById('p_visa_' + id);
-  if (!sel) return;
-  var cur = sel.value;
-  var labels = VISA_LABELS[LANG] || VISA_LABELS.en;
-  sel.innerHTML = ['Nicht erforderlich', 'Erforderlich', 'Wird beantragt'].map(function(v2) {
-    return '<option value="' + v2 + '">' + labels[v2] + '</option>';
-  }).join('');
   if (cur) sel.value = cur;
 }
 
@@ -782,6 +807,7 @@ function removeParticipantRow(id) {
   refreshAllShareSelects();
   loadRoomAvailability();
   updateAccessCodeVisibility();
+  renderGroupPaymentSummary();
 }
 
 function renumberParticipants() {
@@ -826,7 +852,7 @@ function populatePackageSelect(id) {
   var list = filterWord ? packagesCache.filter(function(p) { return (p.category || '').toLowerCase().indexOf(filterWord) !== -1; }) : packagesCache;
   if (!list.length) { sel.innerHTML = '<option value="">' + emptyMsg + '</option>'; return; }
   sel.innerHTML = '<option value="">' + t('ph_select_package') + '</option>' + list.map(function(p) {
-    return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + p.code + (p.category ? ' – ' + p.category : '') + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
+    return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + (p.category ? p.category + ' – ' : '') + p.code + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
   }).join('');
   if (cur && list.some(function(p) { return p.code === cur; })) {
     sel.value = cur;
@@ -870,6 +896,79 @@ function onPackageChange(id) {
   applyPackageRoomType(id);
   calcCheckout(id);
   updateAccessCodeVisibility();
+  renderGroupPaymentSummary();
+}
+
+// Confirmation Letter (formerly "Visa"): per participant, when required, offers a choice
+// between two paid options ("Confirmation Letter" / "Confirmation Letter Express") whose
+// prices come from the package management (packages with those exact codes), and expands
+// the mandatory passport/birth details needed to issue the letter.
+function onConfirmationLetterToggle(id) {
+  var show = document.getElementById('p_visa_' + id).value === 'Ja';
+  ['p_letter_type_wrap_', 'p_place_of_birth_wrap_', 'p_passport_number_wrap_', 'p_date_of_issue_wrap_', 'p_date_of_expiry_wrap_'].forEach(function(prefix) {
+    var el = document.getElementById(prefix + id);
+    if (el) el.style.display = show ? '' : 'none';
+  });
+  if (show) {
+    populateLetterTypeSelect(id);
+    var pnEl = document.getElementById('p_visa_passport_number_' + id);
+    if (pnEl && !pnEl.value && document.getElementById('p_passport_id_' + id).value) {
+      pnEl.value = document.getElementById('p_passport_id_' + id).value;
+    }
+  } else {
+    ['p_letter_type_', 'p_place_of_birth_', 'p_visa_passport_number_', 'p_date_of_issue_', 'p_date_of_expiry_'].forEach(function(prefix) {
+      var el = document.getElementById(prefix + id);
+      if (el) el.value = '';
+    });
+  }
+  renderGroupPaymentSummary();
+}
+
+function populateLetterTypeSelect(id) {
+  var sel = document.getElementById('p_letter_type_' + id);
+  if (!sel) return;
+  var cur = sel.value;
+  var options = packagesCache.filter(function(p) { return p.code === 'Confirmation Letter' || p.code === 'Confirmation Letter Express'; });
+  if (!options.length) { sel.innerHTML = '<option value="">' + t('hint_no_letter_packages') + '</option>'; return; }
+  sel.innerHTML = '<option value="">' + t('ph_select') + '</option>' + options.map(function(p) {
+    return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + p.code + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
+  }).join('');
+  if (cur && options.some(function(p) { return p.code === cur; })) sel.value = cur;
+}
+
+function renderGroupPaymentSummary() {
+  var body = document.getElementById('groupPaymentSummaryBody');
+  if (!body) return;
+  var lines = [];
+  var total = 0;
+
+  participantIds.forEach(function(id, idx) {
+    var label = t('pt_participant_prefix') + (idx + 1);
+    var nameVal = participantLabel(id);
+    if (nameVal && nameVal !== label) label = nameVal;
+
+    var pkgSel = document.getElementById('p_package_' + id);
+    var pkgOpt = pkgSel && pkgSel.selectedOptions[0];
+    if (pkgOpt && pkgOpt.value) {
+      var pkgPrice = parseFloat(pkgOpt.getAttribute('data-price')) || 0;
+      total += pkgPrice;
+      lines.push('<div style="display:flex;justify-content:space-between"><span>' + label + ' – ' + pkgOpt.value + '</span><span>€ ' + pkgPrice.toFixed(2) + '</span></div>');
+    }
+
+    var visaEl = document.getElementById('p_visa_' + id);
+    if (visaEl && visaEl.value === 'Ja') {
+      var letterSel = document.getElementById('p_letter_type_' + id);
+      var letterOpt = letterSel && letterSel.selectedOptions[0];
+      if (letterOpt && letterOpt.value) {
+        var letterPrice = parseFloat(letterOpt.getAttribute('data-price')) || 0;
+        total += letterPrice;
+        lines.push('<div style="display:flex;justify-content:space-between"><span>' + label + ' – ' + letterOpt.value + '</span><span>€ ' + letterPrice.toFixed(2) + '</span></div>');
+      }
+    }
+  });
+
+  if (!lines.length) { body.innerHTML = '<span style="color:var(--text3)">' + t('summary_empty') + '</span>'; return; }
+  body.innerHTML = lines.join('') + '<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><span>' + t('summary_total') + '</span><span>€ ' + total.toFixed(2) + '</span></div>';
 }
 
 function updateAccessCodeVisibility() {
@@ -1262,7 +1361,6 @@ async function submitGroupRegistration() {
   var groupTravel = {
     ams_bus: v('g_ams_bus') || null,
     airport_plus: v('g_airport_plus') || null,
-    visa: null,
     arrival_date: v('g_arrival_date') || null,
     arrival_time: v('g_arrival_time') || null,
     flight_in: v('g_flight_in') || null,
@@ -1332,6 +1430,19 @@ async function submitGroupRegistration() {
       });
     }
 
+    // Confirmation Letter fields are only required while "required?" is set to Yes for this participant
+    var needsLetter = document.getElementById('p_visa_' + id).value === 'Ja';
+    if (needsLetter) {
+      [['p_letter_type_'+id, label+': '+t('f_letter_type').replace(/<[^>]+>/g,'').replace('*','').trim()],
+       ['p_place_of_birth_'+id, label+': '+t('f_place_of_birth').replace(/<[^>]+>/g,'').replace('*','').trim()],
+       ['p_visa_passport_number_'+id, label+': '+t('f_passport_number').replace(/<[^>]+>/g,'').replace('*','').trim()],
+       ['p_date_of_issue_'+id, label+': '+t('f_date_of_issue').replace(/<[^>]+>/g,'').replace('*','').trim()],
+       ['p_date_of_expiry_'+id, label+': '+t('f_date_of_expiry').replace(/<[^>]+>/g,'').replace('*','').trim()]].forEach(function(f) {
+        var el = document.getElementById(f[0]);
+        if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
+      });
+    }
+
     if (pEsid) {
       if (esidsInGroup.indexOf(pEsid) !== -1) errors.push(label + ': ' + t('err_duplicate_esid_group') + ' (' + pEsid + ')');
       esidsInGroup.push(pEsid);
@@ -1350,7 +1461,6 @@ async function submitGroupRegistration() {
     var travel = (!useSameTravel || individualOpen) ? {
       ams_bus: v('p_ams_bus_' + id) || groupTravel.ams_bus,
       airport_plus: v('p_airport_plus_' + id) || groupTravel.airport_plus,
-      visa: v('p_visa_' + id) || groupTravel.visa,
       arrival_date: v('p_arrival_date_' + id) || groupTravel.arrival_date,
       arrival_time: v('p_arrival_time_' + id) || groupTravel.arrival_time,
       flight_in: v('p_flight_in_' + id) || groupTravel.flight_in,
@@ -1359,11 +1469,14 @@ async function submitGroupRegistration() {
       flight_out: v('p_flight_out_' + id) || groupTravel.flight_out
     } : groupTravel;
 
+    var letterSel = document.getElementById('p_letter_type_' + id);
+    var letterOpt = needsLetter && letterSel ? letterSel.selectedOptions[0] : null;
+
     rows.push({
       event_id: eventId,
       lastname: pLast, firstname: pFirst, country: pCountry,
       dob: pDob || null, gender: pGender, member_id: pEsid,
-      passport_id: v('p_passport_id_' + id) || null,
+      passport_id: (needsLetter ? v('p_visa_passport_number_' + id) : null) || v('p_passport_id_' + id) || null,
       mobile: v('p_mobile_' + id) || v('g_mobile') || null,
       email: v('p_email_' + id) || v('g_email') || null,
       role: pRole, events: v('p_events_' + id) || null,
@@ -1377,7 +1490,12 @@ async function submitGroupRegistration() {
       ams_bus: travel.ams_bus, airport_plus: travel.airport_plus,
       arrival_date: travel.arrival_date, arrival_time: travel.arrival_time, flight_in: travel.flight_in,
       departure_date: travel.departure_date, departure_time: travel.departure_time, flight_out: travel.flight_out,
-      visa: travel.visa,
+      visa: document.getElementById('p_visa_' + id).value || null,
+      place_of_birth: needsLetter ? (v('p_place_of_birth_' + id) || null) : null,
+      visa_date_of_issue: needsLetter ? (v('p_date_of_issue_' + id) || null) : null,
+      visa_date_of_expiry: needsLetter ? (v('p_date_of_expiry_' + id) || null) : null,
+      confirmation_letter_type: needsLetter ? (letterSel.value || null) : null,
+      confirmation_letter_price: letterOpt ? (parseFloat(letterOpt.getAttribute('data-price')) || null) : null,
       memo: v('g_memo') || null,
       payment_status: 'Pending',
       updated_at: new Date().toISOString()
