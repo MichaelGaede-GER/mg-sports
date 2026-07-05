@@ -823,7 +823,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="card-header"><h3>Package</h3></div>
           <div class="card-body">
             <div class="form-grid">
-              <div class="form-group"><label>Package</label><select id="f_package" onchange="updatePackagePrice()"><option value="">– wählen –</option></select></div>
+              <div class="form-group"><label>Package</label><select id="f_package" onchange="updatePackagePrice(); applyPackageMealDays(this.value);"><option value="">– wählen –</option></select></div>
               <div class="form-group"><label>Package-Preis (€)</label><input type="number" id="f_package_price" placeholder="0.00" step="0.01" onchange="calcTotal()" /></div>
 
               <div class="form-group" style="grid-column:1/-1"><label>Memo / Notiz</label><textarea id="f_memo" placeholder="Interne Anmerkung…"></textarea></div>
@@ -1246,8 +1246,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         </div>
         <div class="card">
           <div class="table-wrap"><table>
-            <thead><tr><th>Code</th><th>Kategorie</th><th>Nächte</th><th>Zimmer</th><th>Mahlzeiten</th><th>Meal inkl.</th><th>Transfer inkl.</th><th>Startgeld</th><th>Preis (€)</th><th></th></tr></thead>
-            <tbody id="packagesTable"><tr><td colspan="11" class="loading">Lade…</td></tr></tbody>
+            <thead><tr><th>Code</th><th>Kürzel</th><th>Kategorie</th><th>Nächte</th><th>Zimmer</th><th>Mahlzeiten</th><th>Meal inkl.</th><th>Transfer inkl.</th><th>Startgeld</th><th>Preis (€)</th><th></th></tr></thead>
+            <tbody id="packagesTable"><tr><td colspan="12" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
       </div>
@@ -3395,6 +3395,7 @@ MG Sports Event Management</textarea>
     <input type="hidden" id="pkgEditId" />
     <div class="form-grid two" style="gap:12px">
       <div class="form-group"><label>Code *</label><input type="text" id="pkgCode" placeholder="z.B. A" /></div>
+      <div class="form-group"><label>Kürzel (Anzeige auf Ausweis/Liste)</label><input type="text" id="pkgShortCode" placeholder="z.B. A (leer = Code wird genutzt)" /></div>
       <div class="form-group"><label>Kategorie *</label><input type="text" id="pkgCategory" placeholder="z.B. Player" /></div>
       <div class="form-group"><label>Nächte</label><input type="number" id="pkgNights" placeholder="3" min="0" /></div>
       <div class="form-group"><label>Zimmer</label><select id="pkgRoom"><option value="">–</option><option>Einzelzimmer</option><option>Doppelzimmer</option><option>Dreibettzimmer</option><option>Nicht inbegriffen</option></select></div>
@@ -4538,6 +4539,10 @@ async function exportMealReportExcel() {
 // ============================================================
 // NAVIGATION
 function nav(page) {
+  if (canAccess(page) === 'hidden') {
+    toast('⛔ Kein Zugriff auf diesen Bereich');
+    return;
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   const el = document.getElementById('page-' + page);
@@ -4814,8 +4819,10 @@ async function loadParticipants() {
     if (p.arrival_date) icons.push('🛬');
     if (p.departure_date) icons.push('🛫');
     var iconsHtml = icons.length ? '<span style="font-size:14px;margin-left:4px;display:inline-flex;gap:2px;align-items:center">' + icons.join('') + '</span>' : '';
+    var pkgDataRow = packagesData && packagesData.find(function(pd){ return pd.code === p.package; });
+    var pkgDisplayCodeRow = pkgDataRow && pkgDataRow.short_code ? pkgDataRow.short_code : p.package;
     var pb = p.package
-      ? '<span style="display:inline-flex;align-items:center;gap:0;white-space:nowrap"><span class="badge">' + p.package + '</span>' + iconsHtml + '</span>'
+      ? '<span style="display:inline-flex;align-items:center;gap:0;white-space:nowrap"><span class="badge">' + pkgDisplayCodeRow + '</span>' + iconsHtml + '</span>'
       : '-';
     var eb = '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>';
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
@@ -4925,21 +4932,35 @@ async function loadPackagesData() {
 
 function populatePackageSelect() {
   const sel = document.getElementById('f_package');
+  const cur = sel.value;
   sel.innerHTML = '<option value="">– wählen –</option>' + packagesData.map(p => `<option value="${p.code}" data-price="${p.price}">${p.code} – ${p.category} (${fmt(p.price)})</option>`).join('');
+  if (cur) {
+    var exists = packagesData.some(function(p) { return p.code === cur; });
+    if (!exists) {
+      // The previously selected package isn't in the current list (e.g. renamed/deleted) —
+      // keep it visible instead of silently wiping the selection back to empty.
+      var missingOpt = document.createElement('option');
+      missingOpt.value = cur;
+      missingOpt.textContent = '⚠ ' + cur + ' (nicht mehr in Package-Liste)';
+      sel.appendChild(missingOpt);
+    }
+    sel.value = cur;
+  }
 }
 
-function updatePackagePrice() {
+function updatePackagePrice(forceTransportDefault) {
+  if (forceTransportDefault === undefined) forceTransportDefault = true;
   const sel = document.getElementById('f_package');
   const opt = sel.options[sel.selectedIndex];
   const price = opt ? parseFloat(opt.getAttribute('data-price')) || 0 : 0;
   document.getElementById('f_package_price').value = price || '';
-  // Check meal/transport checkboxes
+  // Event Meals is fully manual now — it never gets auto-set/reset based on the package,
+  // neither when opening the edit form nor when switching the package in the dropdown.
+  // Transport can still be auto-suggested when the admin actively picks a different package.
   const pkgCode = sel.value;
   const pkg = packagesData.find(p => p.code === pkgCode);
-  if (pkg) {
-    const mealEl = document.getElementById('f_meal_plus');
+  if (pkg && forceTransportDefault) {
     const transpEl = document.getElementById('f_transport_booked');
-    if (mealEl) mealEl.checked = pkg.meal_included === 'Ja';
     if (transpEl) transpEl.checked = pkg.transport === 'Ja';
   }
   updateMealFee();
@@ -5138,7 +5159,7 @@ async function editEntry(id) {
         pkgSel.appendChild(missingOpt);
         pkgSel.value = p.package;
       }
-      updatePackagePrice();
+      updatePackagePrice(false); // false: don't clobber the already-loaded meal/transport checkbox state with package defaults
     }
   } catch (e) {
     console.error('Package laden fehlgeschlagen:', e);
@@ -5269,14 +5290,29 @@ function v(id) { const el = document.getElementById('f_'+id); return el ? el.val
 function n(id) { const el = document.getElementById('f_'+id); return el ? (parseFloat(el.value)||0) : 0; }
 
 // PACKAGES
+function formatPackageMealsDisplay(p) {
+  var dayLabel = {mo:'Mo',di:'Di',mi:'Mi',do:'Do',fr:'Fr',sa:'Sa',so:'So'};
+  var defs = [
+    {icon:'🥐', label:'Frühstück', days: p.pkg_breakfast_days},
+    {icon:'🍽️', label:'Mittag', days: p.pkg_lunch_days},
+    {icon:'🌙', label:'Abend', days: p.pkg_dinner_days}
+  ];
+  var rows = defs.filter(function(d){ return d.days; }).map(function(d) {
+    var dayList = d.days.split(',').filter(Boolean).map(function(x){ return dayLabel[x]||x; }).join(', ');
+    return '<div style="white-space:nowrap"><span style="margin-right:3px">'+d.icon+'</span><span style="color:var(--text2)">'+d.label+':</span> '+dayList+'</div>';
+  });
+  return rows.length ? rows.join('') : '<span style="color:var(--text3)">–</span>';
+}
+
 async function loadPackages() {
   await loadPackagesData();
   populatePackageSelect();
   document.getElementById('packagesTable').innerHTML = packagesData.length ? packagesData.map(p => `
     <tr>
       <td><span class="badge">${p.code}</span></td>
+      <td>${p.short_code||'–'}</td>
       <td>${p.category||'–'}</td><td>${p.nights||'–'}</td>
-      <td>${p.room_type||'–'}</td><td>${p.meals||'–'}</td>
+      <td>${p.room_type||'–'}</td><td style="font-size:11px;line-height:1.6">${formatPackageMealsDisplay(p)}</td>
       <td style="text-align:center">${p.meal_included==='Ja'?'<span style="color:var(--green);font-size:16px">✓</span>':'<span style="color:var(--text3)">–</span>'}</td>
       <td style="text-align:center">${p.transport==='Ja'?'<span style="color:var(--green);font-size:16px">✓</span>':'<span style="color:var(--text3)">–</span>'}</td>
       <td style="text-align:center">${p.entry_included==='Ja'?'<span style="color:var(--green);font-size:16px">✓</span>':'<span style="color:var(--text3)">–</span>'}</td>
@@ -5285,7 +5321,7 @@ async function loadPackages() {
         <button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPackage('${p.id}')">Bearbeiten</button>
         <button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePackage('${p.id}')">Löschen</button>
       </td>
-    </tr>`).join('') : '<tr><td colspan="11" class="empty">Keine Packages gefunden. SQL-Setup ausführen.</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="12" class="empty">Keine Packages gefunden. SQL-Setup ausführen.</td></tr>';
 }
 
 function highlightPkgCheckbox(labelId, cbId) {
@@ -5300,6 +5336,7 @@ function openPackageModal(pkg) {
   document.getElementById('pkgModalTitle').textContent = pkg ? 'Package bearbeiten' : 'Neues Package';
   document.getElementById('pkgEditId').value = pkg ? pkg.id : '';
   ['Code','Category','Nights','Meals','Price'].forEach(f => document.getElementById('pkg'+f).value = pkg ? (pkg[f.toLowerCase()]||'') : '');
+  document.getElementById('pkgShortCode').value = pkg ? (pkg.short_code||'') : '';
   // Show current meal package price (S) and entry fee
   const mealPkg = packagesData.find(p => p.code === 'S');
   const mealPriceEl = document.getElementById('pkgMealPrice');
@@ -5367,7 +5404,7 @@ async function savePackage() {
   document.getElementById('pkgMeals').value = mealsStr || '';
 
   const row = {
-    code, category: document.getElementById('pkgCategory').value,
+    code, short_code: document.getElementById('pkgShortCode').value.trim() || null, category: document.getElementById('pkgCategory').value,
     nights: parseInt(document.getElementById('pkgNights').value)||null,
     room_type: document.getElementById('pkgRoom').value||null,
     meals: mealsStr,
@@ -6871,7 +6908,7 @@ function fillCoachFields() {
 }
 
 // HOTEL MANAGEMENT
-async function loadHotelsCache() { var r=await db.from('hotels').select('*').order('name'); hotelsCache=r.data||[]; return hotelsCache; }
+async function loadHotelsCache() { var q=db.from('hotels').select('*').order('name'); if(currentEventId) q=q.eq('event_id',currentEventId); var r=await q; hotelsCache=r.data||[]; return hotelsCache; }
 async function populateHotelDropdowns() {
   await loadHotelsCache();
   var sel=document.getElementById('f_hotel');
@@ -6921,6 +6958,7 @@ async function saveHotel() {
   var city=document.getElementById('hotelCity').value.trim();
   var address=[street, [postal,city].filter(Boolean).join(' ')].filter(Boolean).join(', ')||null;
   var row={name:name,contact_name:document.getElementById('hotelContact').value.trim()||null,email:document.getElementById('hotelEmail').value.trim()||null,phone:document.getElementById('hotelPhone').value.trim()||null,address:address,notes:document.getElementById('hotelNotes').value.trim()||null};
+  if(!id) row.event_id=currentEventId||null;
   var r=id?await db.from('hotels').update(row).eq('id',id):await db.from('hotels').insert(row);
   if(r.error){toast('Fehler: '+r.error.message);return;}
   closeModal('hotelModal'); toast('Hotel gespeichert'); await loadHotelsSettings(); await populateHotelDropdowns();
@@ -6928,7 +6966,8 @@ async function saveHotel() {
 async function openHotelEmailModal() {
   var fsel=document.getElementById('hotelFilterSelect'); var sel=fsel?fsel.value:''; if(!sel){toast('Bitte zuerst ein Hotel im Filter auswaehlen');return;}
   var hotel=hotelsCache.find(function(h){return h.name===sel;}); if(!hotel){toast('Hotel nicht gefunden');return;}
-  var cnt=await db.from('participants').select('id').eq('hotel',sel).neq('withdraw','Ja');
+  var cntQ=db.from('participants').select('id').eq('hotel',sel).neq('withdraw','Ja'); if(currentEventId) cntQ=cntQ.eq('event_id',currentEventId);
+  var cnt=await cntQ;
   document.getElementById('hotelEmailTitle').textContent='Hotel-Liste senden: '+hotel.name;
   document.getElementById('emailHotelName').textContent=hotel.name;
   document.getElementById('emailHotelEmail').textContent=hotel.email||'(keine E-Mail)';
@@ -6941,7 +6980,8 @@ async function openHotelEmailModal() {
 }
 async function downloadHotelPDFForEmail() {
   var hotel=window._currentEmailHotel; if(!hotel) return;
-  var r=await db.from('participants').select('*').eq('hotel',hotel.name).neq('withdraw','Ja').order('room_number');
+  var rQ=db.from('participants').select('*').eq('hotel',hotel.name).neq('withdraw','Ja').order('room_number'); if(currentEventId) rQ=rQ.eq('event_id',currentEventId);
+  var r=await rQ;
   if(!r.data||!r.data.length){toast('Keine Buchungen');return;}
   r.data.sort(function(a,b){return (a.room_number||'zzz').localeCompare(b.room_number||'zzz',undefined,{numeric:true});});
   var rm={}; r.data.forEach(function(p){if(p.room_number){if(!rm[p.room_number])rm[p.room_number]=[];rm[p.room_number].push(p.lastname+', '+p.firstname);}});
@@ -7930,11 +7970,11 @@ async function generateEventpass(participantId) {
 
   // Load package category from packagesData
   var pkgData = packagesData && packagesData.find(function(pd){ return pd.code === p.package; });
-  var pkgCategory = pkgData ? pkgData.category : '';
-  var pkgInfo = p.package ? p.package + (pkgCategory ? ' – ' + pkgCategory : '') : '–';
+  var pkgDisplayCode = pkgData && pkgData.short_code ? pkgData.short_code : p.package;
+  var pkgInfo = p.package ? pkgDisplayCode : '–';
 
   // Meal dots
-  // Fixed meal grid: Thu/Fri/Sat/Sun × Lunch/Dinner only
+  // Fixed meal grid: Thu/Fri/Sat/Sun × Breakfast/Lunch/Dinner — only rows/columns/boxes that are actually booked are rendered
   var PASS_MEAL_DAYS = [
     {day:'Thursday', short:'THU', code:'do'},
     {day:'Friday',   short:'FRI', code:'fr'},
@@ -7942,29 +7982,42 @@ async function generateEventpass(participantId) {
     {day:'Sunday',   short:'SUN', code:'so'},
   ];
   var PASS_MEALS = [
-    {label:'Lunch',  key:'meal_lunch',  days_key:'meal_lunch_days'},
-    {label:'Dinner', key:'meal_dinner', days_key:'meal_dinner_days'},
+    {label:'Breakfast', key:'meal_breakfast', days_key:'meal_breakfast_days'},
+    {label:'Lunch',      key:'meal_lunch',     days_key:'meal_lunch_days'},
+    {label:'Dinner',     key:'meal_dinner',    days_key:'meal_dinner_days'},
   ];
+  function passMealBooked(m, dayCode) {
+    if (p[m.key] !== 'Ja') return false;
+    var daysVal = p[m.days_key];
+    if (!daysVal || daysVal.trim() === '') return true; // no specific days set = all days
+    return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
+  }
 
-  // Build meal grid HTML - checkbox style
+  // Build meal grid HTML - only the selected boxes are created
   var mealDotsHtml = '';
   if (p.meal_plus === 'Ja') {
-    var headerRow = '<tr><td></td>' + PASS_MEAL_DAYS.map(function(d){
-      return '<td style="text-align:center;font-size:5.5pt;font-weight:700;color:#185FA5;padding:0 1.5mm 1mm">' + d.short + '</td>';
-    }).join('') + '</tr>';
+    var activeMeals = PASS_MEALS.filter(function(m) { return p[m.key] === 'Ja'; });
+    var activeDays = PASS_MEAL_DAYS.filter(function(d) {
+      return activeMeals.some(function(m) { return passMealBooked(m, d.code); });
+    });
+    if (activeMeals.length && activeDays.length) {
+      var headerRow = '<tr><td></td>' + activeDays.map(function(d){
+        return '<td style="text-align:center;font-size:5.5pt;font-weight:700;color:#185FA5;padding:0 1.5mm 1mm">' + d.short + '</td>';
+      }).join('') + '</tr>';
 
-    var mealRows = PASS_MEALS.map(function(m) {
-      var cells = PASS_MEAL_DAYS.map(function(d) {
-        var booked = p[m.key] === 'Ja' && p[m.days_key] && p[m.days_key].includes(d.code);
-        var box = booked
-          ? '<div style="width:4mm;height:4mm;background:#185FA5;border-radius:0.6mm;margin:auto;display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:6pt;font-weight:700;line-height:1">✓</span></div>'
-          : '<div style="width:4mm;height:4mm;border:1.5px solid #bbb;border-radius:0.6mm;margin:auto"></div>';
-        return '<td style="text-align:center;padding:0.5mm 1.5mm">' + box + '</td>';
+      var mealRows = activeMeals.map(function(m) {
+        var cells = activeDays.map(function(d) {
+          var booked = passMealBooked(m, d.code);
+          var box = booked
+            ? '<div style="width:4mm;height:4mm;border:1.5px solid #185FA5;border-radius:0.6mm;margin:auto"></div>'
+            : '';
+          return '<td style="text-align:center;padding:0.5mm 1.5mm">' + box + '</td>';
+        }).join('');
+        return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + '</td>' + cells + '</tr>';
       }).join('');
-      return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + '</td>' + cells + '</tr>';
-    }).join('');
 
-    mealDotsHtml = '<table style="border-collapse:collapse">' + headerRow + mealRows + '</table>';
+      mealDotsHtml = '<table style="border-collapse:collapse">' + headerRow + mealRows + '</table>';
+    }
   }
 
   // Sponsor logos
@@ -8267,15 +8320,19 @@ function openSquashlevelProfile() {
 var hotelRoomsCache = [];
 
 async function loadHotelRooms() {
-  var r = await db.from('hotel_rooms').select('*, hotels(name)').order('room_number');
+  var q = db.from('hotel_rooms').select('*, hotels(name)').order('room_number');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
   hotelRoomsCache = r.data || [];
 }
 
 async function populateRoomDropdown() {
   await loadHotelRooms();
 
-  // Get current occupancy with names for all rooms
-  var occ = await db.from('participants').select('room_number,room_type,lastname,firstname').neq('withdraw','Ja').not('room_number','is',null);
+  // Get current occupancy with names for all rooms (nur im aktiven Event)
+  var occQ = db.from('participants').select('room_number,room_type,lastname,firstname').neq('withdraw','Ja').not('room_number','is',null);
+  if (currentEventId) occQ = occQ.eq('event_id', currentEventId);
+  var occ = await occQ;
   var occMap = {};       // room_number -> count
   var occupantsMap = {}; // room_number -> [names]
   (occ.data||[]).forEach(function(p) {
@@ -8464,12 +8521,15 @@ async function loadRoomsSettings() {
 
   // Load rooms
   var q = db.from('hotel_rooms').select('*, hotels(name)').order('room_number');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
   if (hotelFilter) q = q.eq('hotel_id', hotelFilter);
   var r = await q;
   var rooms = r.data || [];
 
-  // Get occupancy
-  var occ = await db.from('participants').select('room_number').neq('withdraw','Ja').not('room_number','is',null);
+  // Get occupancy (nur im aktiven Event)
+  var occQ2 = db.from('participants').select('room_number').neq('withdraw','Ja').not('room_number','is',null);
+  if (currentEventId) occQ2 = occQ2.eq('event_id', currentEventId);
+  var occ = await occQ2;
   var occMap = {};
   (occ.data||[]).forEach(function(p) { if (p.room_number) occMap[p.room_number] = (occMap[p.room_number]||0) + 1; });
 
@@ -8541,6 +8601,7 @@ async function saveRoom() {
   if (!type) { toast('Bitte Zimmerkategorie wählen'); return; }
   var id = document.getElementById('roomEditId') && document.getElementById('roomEditId').value;
   var row = { hotel_id: hotelId, room_number: number, room_type: type, notes: document.getElementById('roomNotes').value.trim() || null };
+  if (!id) row.event_id = currentEventId || null;
   var r = id ? await db.from('hotel_rooms').update(row).eq('id', id) : await db.from('hotel_rooms').insert(row);
   if (r.error) { toast('Fehler: ' + r.error.message); return; }
   closeModal('roomModal'); toast('Zimmer gespeichert');
@@ -8568,12 +8629,14 @@ async function autoCreateRooms() {
     '\nBestehende Zimmer mit gleicher Nummer werden übersprungen.')) return;
 
   var rows = [];
-  for (var i = 1; i <= single; i++) rows.push({ hotel_id: hotelId, room_number: 'EZ' + pad(i), room_type: 'Einzelzimmer' });
-  for (var i = 1; i <= doub;   i++) rows.push({ hotel_id: hotelId, room_number: 'DZ' + pad(i), room_type: 'Doppelzimmer' });
-  for (var i = 1; i <= triple; i++) rows.push({ hotel_id: hotelId, room_number: 'DBZ' + pad(i), room_type: 'Dreibettzimmer' });
+  for (var i = 1; i <= single; i++) rows.push({ hotel_id: hotelId, room_number: 'EZ' + pad(i), room_type: 'Einzelzimmer', event_id: currentEventId || null });
+  for (var i = 1; i <= doub;   i++) rows.push({ hotel_id: hotelId, room_number: 'DZ' + pad(i), room_type: 'Doppelzimmer', event_id: currentEventId || null });
+  for (var i = 1; i <= triple; i++) rows.push({ hotel_id: hotelId, room_number: 'DBZ' + pad(i), room_type: 'Dreibettzimmer', event_id: currentEventId || null });
 
-  // Get existing room numbers for this hotel to skip duplicates
-  var existing = await db.from('hotel_rooms').select('room_number').eq('hotel_id', hotelId);
+  // Get existing room numbers for this hotel + Event, um Duplikate zu überspringen
+  var existingQ = db.from('hotel_rooms').select('room_number').eq('hotel_id', hotelId);
+  if (currentEventId) existingQ = existingQ.eq('event_id', currentEventId);
+  var existing = await existingQ;
   var existingNums = new Set((existing.data || []).map(function(r) { return r.room_number; }));
 
   var toInsert = rows.filter(function(r) { return !existingNums.has(r.room_number); });
@@ -10455,7 +10518,7 @@ async function applyEntrySync() {
       pkgSel.value = savedPackage;
       var pkgPrice = document.getElementById('f_package_price');
       if (pkgPrice && savedPackagePrice) pkgPrice.value = savedPackagePrice;
-      updatePackagePrice();
+      updatePackagePrice(false); // false: this is restoring an already-known package, not a genuine change
     }
   }, 100);
   updateEntrySquashlevelLink();
@@ -10516,48 +10579,22 @@ async function applyPackageMealDays(packageCode) {
 
   var days = ['mo','di','mi','do','fr','sa','so'];
   var hasMealDays = pkg.pkg_breakfast_days || pkg.pkg_lunch_days || pkg.pkg_dinner_days;
-
   var mealIncluded = pkg.meal_included === 'Ja';
 
-  // Set meal_plus checkbox
-  var mealPlusEl = document.getElementById('f_meal_plus');
-  if (mealPlusEl) {
-    mealPlusEl.checked = mealIncluded || !!hasMealDays;
-    updateMealFee();
-  }
-
-  if (!mealIncluded && !hasMealDays) {
-    // Package has no meal → uncheck everything
-    ['breakfast','lunch','dinner'].forEach(function(meal) {
-      var mainCb = document.getElementById('f_meal_'+meal);
-      if (mainCb) mainCb.checked = false;
-      toggleMealDays(meal);
-      days.forEach(function(d) {
-        var cb = document.getElementById('f_meal_'+meal+'_'+d);
-        if (cb) cb.checked = false;
-      });
-    });
-    return;
-  }
-
-  // Apply each meal's days
+  // Note: the master "Event Meals" checkbox (f_meal_plus) is intentionally left untouched —
+  // it's a fully independent, manual toggle (see updatePackagePrice()). This only pre-fills
+  // the breakfast/lunch/dinner day template from the package as a starting point; it stays
+  // freely editable per person afterwards.
   ['breakfast','lunch','dinner'].forEach(function(meal) {
     var pkgDays = pkg['pkg_'+meal+'_days'] || '';
     var activeDays = pkgDays ? pkgDays.split(',').filter(Boolean) : [];
 
-    // If meal_included=Ja but no specific days configured → check ALL days
-    if (mealIncluded && !hasMealDays) {
-      activeDays = days.slice();
-    }
+    // If meal_included=Ja but no specific days configured → template covers ALL days
+    if (mealIncluded && !hasMealDays) activeDays = days.slice();
 
-    // Check/uncheck main meal checkbox
     var mainCb = document.getElementById('f_meal_'+meal);
     if (mainCb) mainCb.checked = activeDays.length > 0;
-
-    // Show/hide day section
     toggleMealDays(meal);
-
-    // Set individual day checkboxes
     days.forEach(function(d) {
       var cb = document.getElementById('f_meal_'+meal+'_'+d);
       if (cb) cb.checked = activeDays.indexOf(d) >= 0;
@@ -11742,25 +11779,37 @@ function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtm
   var roleColors = {Player:'#185FA5',Coach:'#2E7D32',Parent:'#6a6a9e',Referee:'#c87a00',Official:'#7b3fa0','ESF Official':'#1a7a4a'};
   var roleColor = roleColors[p.role] || '#185FA5';
   var pkgData = packagesData && packagesData.find(function(pd){ return pd.code === p.package; });
-  var pkgCategory = pkgData ? pkgData.category : '';
-  var pkgInfo = p.package ? p.package + (pkgCategory ? ' – ' + pkgCategory : '') : '–';
+  var pkgDisplayCode = pkgData && pkgData.short_code ? pkgData.short_code : p.package;
+  var pkgInfo = p.package ? pkgDisplayCode : '–';
 
   var PASS_MEAL_DAYS = [{day:'Thursday',short:'THU',code:'do'},{day:'Friday',short:'FRI',code:'fr'},{day:'Saturday',short:'SAT',code:'sa'},{day:'Sunday',short:'SUN',code:'so'}];
-  var PASS_MEALS = [{label:'Lunch',key:'meal_lunch',days_key:'meal_lunch_days'},{label:'Dinner',key:'meal_dinner',days_key:'meal_dinner_days'}];
+  var PASS_MEALS = [{label:'Breakfast',key:'meal_breakfast',days_key:'meal_breakfast_days'},{label:'Lunch',key:'meal_lunch',days_key:'meal_lunch_days'},{label:'Dinner',key:'meal_dinner',days_key:'meal_dinner_days'}];
+  function passMealBooked2(m, dayCode) {
+    if (p[m.key] !== 'Ja') return false;
+    var daysVal = p[m.days_key];
+    if (!daysVal || daysVal.trim() === '') return true; // no specific days set = all days
+    return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
+  }
   var mealDotsHtml = '';
   if (p.meal_plus === 'Ja') {
-    var headerRow = '<tr><td></td>' + PASS_MEAL_DAYS.map(function(d){ return '<td style="text-align:center;font-size:5.5pt;font-weight:700;color:#185FA5;padding:0 1.5mm 1mm">' + d.short + '</td>'; }).join('') + '</tr>';
-    var mealRows = PASS_MEALS.map(function(m) {
-      var cells = PASS_MEAL_DAYS.map(function(d) {
-        var booked = p[m.key] === 'Ja' && p[m.days_key] && p[m.days_key].includes(d.code);
-        var box = booked
-          ? '<div style="width:4mm;height:4mm;background:#185FA5;border-radius:0.6mm;margin:auto;display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:6pt;font-weight:700;line-height:1">✓</span></div>'
-          : '<div style="width:4mm;height:4mm;border:1.5px solid #bbb;border-radius:0.6mm;margin:auto"></div>';
-        return '<td style="text-align:center;padding:0.5mm 1.5mm">' + box + '</td>';
+    var activeMeals = PASS_MEALS.filter(function(m) { return p[m.key] === 'Ja'; });
+    var activeDays = PASS_MEAL_DAYS.filter(function(d) {
+      return activeMeals.some(function(m) { return passMealBooked2(m, d.code); });
+    });
+    if (activeMeals.length && activeDays.length) {
+      var headerRow = '<tr><td></td>' + activeDays.map(function(d){ return '<td style="text-align:center;font-size:5.5pt;font-weight:700;color:#185FA5;padding:0 1.5mm 1mm">' + d.short + '</td>'; }).join('') + '</tr>';
+      var mealRows = activeMeals.map(function(m) {
+        var cells = activeDays.map(function(d) {
+          var booked = passMealBooked2(m, d.code);
+          var box = booked
+            ? '<div style="width:4mm;height:4mm;border:1.5px solid #185FA5;border-radius:0.6mm;margin:auto"></div>'
+            : '';
+          return '<td style="text-align:center;padding:0.5mm 1.5mm">' + box + '</td>';
+        }).join('');
+        return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + '</td>' + cells + '</tr>';
       }).join('');
-      return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + '</td>' + cells + '</tr>';
-    }).join('');
-    mealDotsHtml = '<table style="border-collapse:collapse">' + headerRow + mealRows + '</table>';
+      mealDotsHtml = '<table style="border-collapse:collapse">' + headerRow + mealRows + '</table>';
+    }
   }
 
   var photoHtml = photoSrc
@@ -12039,7 +12088,7 @@ var rolePermissions = {};
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
-  'idcard','waitlist','users','backup'];
+  'idcard','waitlist','users','backup','mealcheck'];
 
 async function loadRolePermissions() {
   // Load permissions from DB
@@ -12065,10 +12114,10 @@ function canAccess(page) {
   if (!currentUserRole || currentUserRole === 'Admin') return 'write';
   var perms = rolePermissions[currentUserRole];
   if (!perms) return 'hidden';
-  if (Array.isArray(perms) && perms.includes('*')) return 'write';
+  if (Array.isArray(perms)) return (perms.includes('*') || perms.includes(page)) ? 'write' : 'hidden';
   if (perms === '*') return 'write';
   // Object with per-page values: 'hidden', 'read', 'write'
-  if (typeof perms === 'object' && !Array.isArray(perms)) {
+  if (typeof perms === 'object') {
     return perms[page] || 'hidden';
   }
   return 'hidden';
@@ -12111,7 +12160,8 @@ var PAGE_LABELS = {
   mahnlog:'Zahlungslog', withdrawals:'Absagen', reports:'Berichte',
   airport:'Airport', persons:'Personendatenbank', import:'Import',
   events:'Events', settings:'Einstellungen', marketing:'Marketing',
-  idcard:'ID Cards', waitlist:'Warteliste', users:'Benutzer', backup:'Backup'
+  idcard:'ID Cards', waitlist:'Warteliste', users:'Benutzer', backup:'Backup',
+  mealcheck:'Meal-Check'
 };
 
 async function loadRolePermissionsSettings() {
