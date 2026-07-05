@@ -8104,9 +8104,12 @@ async function generateEventpass(participantId) {
     return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
   }
 
-  // Build meal grid HTML - only the selected boxes are created
+  // Build meal grid HTML - only the selected boxes are created. Note: this is intentionally
+  // independent of the master "Event Meals" checkbox (p.meal_plus) — that toggle is fully
+  // manual (see updatePackagePrice()) and can be out of sync with the actual per-meal flags,
+  // so the display is driven purely by whichever individual meals/days are actually set.
   var mealDotsHtml = '';
-  if (p.meal_plus === 'Ja') {
+  {
     var activeMeals = PASS_MEALS.filter(function(m) { return p[m.key] === 'Ja'; });
     var activeDays = PASS_MEAL_DAYS.filter(function(d) {
       return activeMeals.some(function(m) { return passMealBooked(m, d.code); });
@@ -11946,7 +11949,7 @@ function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtm
     return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
   }
   var mealDotsHtml = '';
-  if (p.meal_plus === 'Ja') {
+  {
     var activeMeals = PASS_MEALS.filter(function(m) { return p[m.key] === 'Ja'; });
     var activeDays = PASS_MEAL_DAYS.filter(function(d) {
       return activeMeals.some(function(m) { return passMealBooked2(m, d.code); });
