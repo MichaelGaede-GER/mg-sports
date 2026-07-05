@@ -768,13 +768,28 @@ function populateShirtSelect() {
   if (cur) sel.value = cur;
 }
 
+// Determines which roles may be selected, based on the chosen "Age Category / Event":
+// - "Adult Pass" or "Supporter" → Coach, Parent only
+// - "Official" → Referee, Official, ESF Official only
+// - any regular junior age category (under 19) → Player only
+// - nothing selected yet → fall back to the broader isAdult-based set
+function getRoleOptionsForCategory(catVal, isAdult) {
+  var v = (catVal || '').trim().toLowerCase();
+  if (v === 'adult pass' || v === 'supporter') return ['Coach', 'Parent'];
+  if (v === 'official') return ['Referee', 'Official', 'ESF Official'];
+  if (v) return ['Player'];
+  return isAdult ? ROLE_OPTIONS_ADULT : ROLE_OPTIONS_FULL;
+}
+
 function populateRoleSelect(isAdult) {
   var sel = document.getElementById('r_role');
   var cur = sel.value;
-  var opts = isAdult ? ROLE_OPTIONS_ADULT : ROLE_OPTIONS_FULL;
+  var catEl = document.getElementById('r_events');
+  var opts = getRoleOptionsForCategory(catEl ? catEl.value : '', isAdult);
   var labels = ROLE_LABELS[LANG] || ROLE_LABELS.en;
   sel.innerHTML = '<option value="">' + t('ph_select') + '</option>' + opts.map(function(o) { return '<option value="' + o + '">' + labels[o] + '</option>'; }).join('');
-  if (isAdult && (!cur || cur === 'Player')) sel.value = 'Coach';
+  if (opts.length === 1) sel.value = opts[0];
+  else if (isAdult && (!cur || cur === 'Player')) sel.value = 'Coach';
   else if (opts.indexOf(cur) !== -1) sel.value = cur;
   onRoleChange();
 }
@@ -1147,7 +1162,9 @@ function calcAgeCategory() {
 // only re-checks whether it still matches the recommendation, without overwriting anything.
 function checkAgeMatch() {
   ageAutoFilledFlag = false; // the user just picked this themselves, protect it from now on
-  renderAgeHint(computeAgeInfo());
+  var info = computeAgeInfo();
+  renderAgeHint(info);
+  populateRoleSelect(info ? info.isAdult : false);
 }
 
 function v2(id) { return v(id); }
