@@ -1526,6 +1526,14 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             </div>
           </div>
 
+          <!-- Turniersoftware-Import -->
+          <div class="card" style="margin:0">
+            <div class="card-header"><div style="font-size:20px;margin-right:8px">🏆</div><div><div style="font-weight:600;font-size:13px">Turniersoftware-Import</div><div style="font-size:11px;color:var(--text3)">Nur GU/BU 13-19, ohne U11/Adult/Official</div></div></div>
+            <div class="card-body" style="display:flex;gap:8px">
+              <button class="btn primary" style="flex:1" onclick="exportTournamentSoftwareExcel()">📊 Excel herunterladen</button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -12205,6 +12213,22 @@ async function exportWithdrawExcel() {
     return [p.lastname,p.firstname,p.country||'',p.package||'',p.withdraw_date||'',total.toFixed(2),recv.toFixed(2),owes.toFixed(2),payBack.toFixed(2)];
   });
   await exportExcelBase('Withdrawals', 'Absagen', headers, rows);
+}
+
+// Export for import into the tournament software: only the actual junior competitive
+// categories (GU/BU 13-19) — deliberately excludes U11, Adult Pass, Official, Supporter etc.,
+// since those aren't playing categories the tournament software needs to seed.
+async function exportTournamentSoftwareExcel() {
+  var TOURNAMENT_CATEGORIES = ['GU13', 'GU15', 'GU17', 'GU19', 'BU13', 'BU15', 'BU17', 'BU19'];
+  var q = db.from('participants').select('*').in('events', TOURNAMENT_CATEGORIES).not('withdraw', 'eq', 'Ja').order('events').order('lastname');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q; var data = r.data || [];
+  var headers = ['MemberID', 'Name', 'Firstname', 'Country', 'Gender', 'Event'];
+  var genderMap = { 'Männlich': 'M', 'Weiblich': 'F' };
+  var rows = data.map(function(p) {
+    return [p.member_id || '', p.lastname || '', p.firstname || '', p.country || '', genderMap[p.gender] || p.gender || '', p.events || ''];
+  });
+  await exportExcelBase('Turniersoftware-Import', 'Import', headers, rows);
 }
 
 async function exportShirtExcel() {
