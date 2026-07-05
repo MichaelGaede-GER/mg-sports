@@ -7935,15 +7935,30 @@ async function calcAgeCheck() {
 // the device's native share sheet (WhatsApp/Mail/Messages...), falling back to a small
 // menu with WhatsApp/E-Mail/Copy-Link if the Web Share API isn't available (desktop).
 async function sendDigitalPass(participantId) {
-  var pr = await db.from('participants').select('firstname,lastname,mobile,email').eq('id', participantId).single();
+  var pr = await db.from('participants').select('firstname,lastname,mobile,email,event_id').eq('id', participantId).single();
   var p = pr.data;
   if (!p) { toast('Teilnehmer nicht gefunden'); return; }
 
+  var ev = null;
+  if (p.event_id) {
+    var evR = await db.from('events').select('*').eq('id', p.event_id).single();
+    ev = evR.data;
+  }
+  function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : ''; }
+  var tournamentName = ev && ev.name ? ev.name : 'the tournament';
+  var city = ev && ev.location ? ev.location : '';
+  var dateFrom = fmtDate(ev && ev.date_from);
+  var dateTo = fmtDate(ev && ev.date_to);
+
   var passUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'digital-pass.html?id=' + participantId;
-  var text = 'Hi ' + (p.firstname || '') + ', here is your digital tournament pass: ' + passUrl;
+  var text = 'Dear ' + (p.firstname || '') + ',\n\n'
+    + 'We are delighted to welcome you to our tournament "' + tournamentName + '"' + (city ? ' in ' + city : '') + (dateFrom ? ' from ' + dateFrom + ' to ' + dateTo : '') + '.\n\n'
+    + 'As our event is managed digitally, your personal event pass is now available for download or web view:\n\n'
+    + 'YOUR EVENT PASS: ' + passUrl + '\n\n'
+    + 'Kind regards,\nMichael Gäde';
 
   if (navigator.share) {
-    try { await navigator.share({ title: 'Digital Pass', text: text, url: passUrl }); return; }
+    try { await navigator.share({ title: 'Your Digital Event Pass', text: text }); return; }
     catch (e) { /* user cancelled the native share sheet — fall through to the manual menu below */ }
   }
   showPassSendMenu(passUrl, text, p);
@@ -7953,7 +7968,7 @@ function showPassSendMenu(passUrl, text, p) {
   var existing = document.getElementById('passSendMenu'); if (existing) existing.remove();
   var phoneDigits = (p.mobile || '').replace(/[^0-9+]/g, '').replace(/^\+/, '');
   var waLink = 'https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(text);
-  var mailLink = 'mailto:' + encodeURIComponent(p.email || '') + '?subject=' + encodeURIComponent('Your Digital Pass') + '&body=' + encodeURIComponent(text);
+  var mailLink = 'mailto:' + encodeURIComponent(p.email || '') + '?subject=' + encodeURIComponent('Your Digital Event Pass') + '&body=' + encodeURIComponent(text);
 
   var menu = document.createElement('div');
   menu.id = 'passSendMenu';
