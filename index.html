@@ -4840,7 +4840,8 @@ async function loadParticipants() {
     var eb = '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>';
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
     var sendBtns = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button>'
-      + ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>';
+      + ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>'
+      + (p.digital_pass_sent_at ? ' <span style="font-size:12px;color:var(--green)" title="Digitaler Pass gesendet am '+new Date(p.digital_pass_sent_at).toLocaleString('de-DE')+'">✅</span>' : '');
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr>'
 + '<td style="white-space:nowrap">'
@@ -7985,6 +7986,7 @@ async function sendPassWhatsApp(participantId) {
   if (!info.p.mobile) { toast('⚠️ Keine Mobilnummer für diese Person hinterlegt'); return; }
   var phoneDigits = info.p.mobile.replace(/[^0-9+]/g, '').replace(/^\+/, '');
   window.open('https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(info.text), '_blank');
+  markDigitalPassSent(participantId);
 }
 
 // Opens the default mail client with the participant's stored e-mail and the
@@ -7994,6 +7996,15 @@ async function sendPassEmail(participantId) {
   if (!info) return;
   if (!info.p.email) { toast('⚠️ Keine E-Mail für diese Person hinterlegt'); return; }
   window.location.href = 'mailto:' + encodeURIComponent(info.p.email) + '?subject=' + encodeURIComponent('Your Digital Event Pass') + '&body=' + encodeURIComponent(info.text);
+  markDigitalPassSent(participantId);
+}
+
+// Records that the digital pass was sent (best-effort — we can only know the admin
+// clicked "send", not whether the message actually went through or was read).
+async function markDigitalPassSent(participantId) {
+  await db.from('participants').update({ digital_pass_sent_at: new Date().toISOString() }).eq('id', participantId);
+  if (typeof loadParticipants === 'function') loadParticipants().catch(function(){});
+  if (typeof loadIdCards === 'function') loadIdCards().catch(function(){});
 }
 
 // Kept as a fallback: shows a small menu (WhatsApp/E-Mail/Copy link) — used only if
@@ -8001,10 +8012,10 @@ async function sendPassEmail(participantId) {
 async function sendDigitalPass(participantId) {
   var info = await buildPassMessage(participantId);
   if (!info) return;
-  showPassSendMenu(info.passUrl, info.text, info.p);
+  showPassSendMenu(info.passUrl, info.text, info.p, participantId);
 }
 
-function showPassSendMenu(passUrl, text, p) {
+function showPassSendMenu(passUrl, text, p, participantId) {
   var existing = document.getElementById('passSendMenu'); if (existing) existing.remove();
   var phoneDigits = (p.mobile || '').replace(/[^0-9+]/g, '').replace(/^\+/, '');
   var waLink = 'https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(text);
@@ -8016,8 +8027,8 @@ function showPassSendMenu(passUrl, text, p) {
   menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
   menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:20px;width:280px;border:1px solid var(--border)">'
     + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">📲 Pass senden</h3>'
-    + (p.mobile ? '<a href="' + waLink + '" target="_blank" style="display:block;padding:10px;margin-bottom:8px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;text-align:center;font-weight:600">WhatsApp</a>' : '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Keine Mobilnummer hinterlegt</div>')
-    + (p.email ? '<a href="' + mailLink + '" style="display:block;padding:10px;margin-bottom:8px;background:var(--blue);color:#fff;border-radius:8px;text-decoration:none;text-align:center;font-weight:600">E-Mail</a>' : '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Keine E-Mail hinterlegt</div>')
+    + (p.mobile ? '<a href="' + waLink + '" target="_blank" onclick="markDigitalPassSent(\'' + participantId + '\')" style="display:block;padding:10px;margin-bottom:8px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;text-align:center;font-weight:600">WhatsApp</a>' : '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Keine Mobilnummer hinterlegt</div>')
+    + (p.email ? '<a href="' + mailLink + '" onclick="markDigitalPassSent(\'' + participantId + '\')" style="display:block;padding:10px;margin-bottom:8px;background:var(--blue);color:#fff;border-radius:8px;text-decoration:none;text-align:center;font-weight:600">E-Mail</a>' : '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Keine E-Mail hinterlegt</div>')
     + '<button onclick="navigator.clipboard.writeText(\'' + passUrl + '\');toast(\'✅ Link kopiert\')" style="display:block;width:100%;padding:10px;margin-bottom:8px;background:var(--border2);color:var(--text);border:none;border-radius:8px;font-weight:600;cursor:pointer">🔗 Link kopieren</button>'
     + '<button onclick="document.getElementById(\'passSendMenu\').remove()" style="display:block;width:100%;padding:8px;background:none;border:none;color:var(--text3);cursor:pointer">Abbrechen</button>'
     + '</div>';
@@ -11817,6 +11828,7 @@ async function loadIdCards() {
         + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button> '
         + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button> '
         + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>'
+        + (p.digital_pass_sent_at ? ' <span style="font-size:12px;color:var(--green)" title="Digitaler Pass gesendet am '+new Date(p.digital_pass_sent_at).toLocaleString('de-DE')+'">✅</span>' : '')
         + '</td>'
         + '</tr>';
     }).join('');
