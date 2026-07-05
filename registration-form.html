@@ -113,8 +113,17 @@
             <select id="r_events" onchange="checkAgeMatch()"><option value="">– Auto / Select –</option></select>
             <div class="esid-hint" id="r_age_hint"></div>
           </div>
-          <div class="form-group"><label data-i18n="f_coach_name">Coach Name</label><input type="text" id="r_coach_name" data-i18n-ph="f_coach_name_ph" placeholder="Coach last name, first name" /></div>
-          <div class="form-group"><label data-i18n="f_coach_esid">Coach ESID</label><input type="text" id="r_coach_esid" data-i18n-ph="f_coach_esid_ph" placeholder="Coach Member ID" /></div>
+          <div class="form-group full" id="r_coach_group" style="display:none">
+            <div class="form-grid">
+              <div class="form-group"><label data-i18n="f_coach_name">Coach Name</label><input type="text" id="r_coach_name" data-i18n-ph="f_coach_name_ph" placeholder="Coach last name, first name" /></div>
+              <div class="form-group"><label data-i18n="f_coach_esid">Coach ESID</label><input type="text" id="r_coach_esid" data-i18n-ph="f_coach_esid_ph" placeholder="Coach Member ID" /></div>
+            </div>
+          </div>
+          <div class="form-group full" id="r_official_code_group" style="display:none">
+            <label data-i18n="f_official_code">Official Access Code <span class="req">*</span></label>
+            <input type="text" id="r_official_code" placeholder="Official2026" />
+            <div class="esid-hint" data-i18n="hint_official_code">This code is issued by Michael Gäde.</div>
+          </div>
           <div class="form-group full" id="r_shirt_wrap" style="display:none"><label data-i18n="f_shirt">Shirt Size <span class="req">*</span></label>
             <select id="r_shirt"></select>
           </div>
@@ -405,6 +414,9 @@ en: {
   err_package: "Package",
   err_declaration: "Declaration (please accept the terms)",
   err_access_code: "Invalid access code for the Tournament Team package (T)",
+  err_official_code: "Invalid access code for the Official role",
+  f_official_code: 'Official Access Code <span class="req">*</span>',
+  hint_official_code: "This code is issued by Michael Gäde.",
   err_esid_duplicate: "This ESID is already registered:",
   err_esid_duplicate_contact: "Please contact the organizer if you believe this is an error.",
   err_room_full: "Sorry, this room type just became fully booked. Please choose another one.",
@@ -522,6 +534,9 @@ de: {
   err_package: "Package",
   err_declaration: "Erklärung (bitte den Bedingungen zustimmen)",
   err_access_code: "Ungültiger Zugangscode für das Package \"Tournament Team\" (T)",
+  err_official_code: "Ungültiger Zugangscode für die Rolle Official",
+  f_official_code: 'Official Zugangscode <span class="req">*</span>',
+  hint_official_code: "Dieser Code wird von Michael Gäde vergeben.",
   err_esid_duplicate: "Diese ESID ist bereits registriert:",
   err_esid_duplicate_contact: "Bitte kontaktiere den Veranstalter, falls das ein Fehler ist.",
   err_room_full: "Dieser Zimmertyp ist gerade ausgebucht worden. Bitte einen anderen wählen.",
@@ -770,6 +785,12 @@ function onRoleChange() {
   var show = role === 'Player';
   wrap.style.display = show ? '' : 'none';
   if (!show) document.getElementById('r_shirt').value = '';
+
+  var officialGroup = document.getElementById('r_official_code_group');
+  var showOfficial = role === 'Official';
+  officialGroup.style.display = showOfficial ? '' : 'none';
+  if (!showOfficial) document.getElementById('r_official_code').value = '';
+
   populatePackageSelect();
 }
 
@@ -1099,6 +1120,17 @@ function calcAgeCategory() {
 
   populateRoleSelect(info.isAdult);
 
+  // Coach Name / Coach ESID are only relevant for minors (who may be accompanied by a personal
+  // coach) — hidden entirely for adults (19+), and cleared when hidden
+  var coachGroup = document.getElementById('r_coach_group');
+  if (coachGroup) {
+    coachGroup.style.display = info.isAdult ? 'none' : '';
+    if (info.isAdult) {
+      document.getElementById('r_coach_name').value = '';
+      document.getElementById('r_coach_esid').value = '';
+    }
+  }
+
   // Minors default to Player (unless a manual, non-default role was already chosen)
   if (!info.isAdult) {
     var roleSel = document.getElementById('r_role');
@@ -1177,6 +1209,12 @@ async function submitRegistration() {
     var codeEl = document.getElementById('r_accessCode');
     if (v('r_accessCode') !== 'REFEREE-2026') { errors.push(t('err_access_code')); codeEl.classList.add('error'); }
     else { codeEl.classList.remove('error'); }
+  }
+
+  if (document.getElementById('r_role').value === 'Official') {
+    var officialCodeEl = document.getElementById('r_official_code');
+    if (v('r_official_code') !== 'Official2026') { errors.push(t('err_official_code')); officialCodeEl.classList.add('error'); }
+    else { officialCodeEl.classList.remove('error'); }
   }
 
   var errBox = document.getElementById('errorBox');

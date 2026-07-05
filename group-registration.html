@@ -299,6 +299,9 @@ en: {
   f_transport: "Transport",
   f_airport_transfer: "Airport Transfer",
   f_visa: "Confirmation Letter required?",
+  f_official_code: 'Official Access Code <span class="req">*</span>',
+  hint_official_code: "This code is issued by Michael Gäde.",
+  err_official_code: "Invalid access code for the Official role",
   f_arrival_date: "Arrival Date",
   f_arrival_time: "Arrival Time",
   f_flight_in: "Incoming Flight No.",
@@ -435,6 +438,9 @@ de: {
   f_transport: "Transport",
   f_airport_transfer: "Flughafentransfer",
   f_visa: "Bestätigungsschreiben erforderlich?",
+  f_official_code: 'Official Zugangscode <span class="req">*</span>',
+  hint_official_code: "Dieser Code wird von Michael Gäde vergeben.",
+  err_official_code: "Ungültiger Zugangscode für die Rolle Official",
   f_arrival_date: "Ankunftsdatum",
   f_arrival_time: "Ankunftszeit",
   f_flight_in: "Ankunftsflug Nr.",
@@ -750,6 +756,10 @@ function addParticipantRow() {
     + '<div class="form-group"><label data-i18n="f_mobile_optional">' + t('f_mobile_optional') + '</label><input type="tel" id="p_mobile_' + id + '" data-i18n-ph="f_mobile_ph" placeholder="' + t('f_mobile_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_email_optional">' + t('f_email_optional') + '</label><input type="email" id="p_email_' + id + '" data-i18n-ph="f_email_ph" placeholder="' + t('f_email_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_role">' + t('f_role') + '</label><select id="p_role_' + id + '" onchange="onRoleChange(' + id + ')"></select></div>'
+    + '<div class="form-group full" id="p_official_code_wrap_' + id + '" style="display:none">'
+      + '<label data-i18n="f_official_code">' + t('f_official_code') + '</label><input type="text" id="p_official_code_' + id + '" placeholder="Official2026" />'
+      + '<div class="esid-hint" data-i18n="hint_official_code">' + t('hint_official_code') + '</div>'
+    + '</div>'
     + '<div class="form-group"><label data-i18n="f_age_category">' + t('f_age_category') + '</label><select id="p_events_' + id + '" onchange="checkAgeMatch(' + id + ')"><option value="">' + t('ph_auto_select') + '</option></select><div class="esid-hint" id="p_age_hint_' + id + '"></div></div>'
     + '<div class="form-group" id="p_shirt_wrap_' + id + '" style="display:none"><label data-i18n="f_shirt">' + t('f_shirt') + '</label><select id="p_shirt_' + id + '"></select></div>'
     + '<div class="form-group"><label data-i18n="f_package">' + t('f_package') + '</label><select id="p_package_' + id + '" onchange="onPackageChange(' + id + ')"><option value="">' + t('ph_loading') + '</option></select></div>'
@@ -1334,6 +1344,15 @@ function onRoleChange(id) {
     var shirtEl = document.getElementById('p_shirt_' + id);
     if (shirtEl) shirtEl.value = '';
   }
+
+  var officialWrap = document.getElementById('p_official_code_wrap_' + id);
+  var showOfficial = role === 'Official';
+  if (officialWrap) officialWrap.style.display = showOfficial ? '' : 'none';
+  if (!showOfficial) {
+    var codeEl = document.getElementById('p_official_code_' + id);
+    if (codeEl) codeEl.value = '';
+  }
+
   populateShirtSelect(id);
   populatePackageSelect(id);
 }
@@ -1450,6 +1469,15 @@ async function submitGroupRegistration() {
         var el = document.getElementById(f[0]);
         if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
       });
+    }
+
+    // Official Access Code is only required while this participant's role is "Official"
+    if (document.getElementById('p_role_' + id).value === 'Official') {
+      var officialCodeEl = document.getElementById('p_official_code_' + id);
+      if (v('p_official_code_' + id) !== 'Official2026') {
+        errors.push(label + ': ' + t('err_official_code'));
+        officialCodeEl.classList.add('error');
+      } else { officialCodeEl.classList.remove('error'); }
     }
 
     if (pEsid) {
