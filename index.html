@@ -1600,9 +1600,11 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <button class="btn" onclick="openEsfRankingImport()">🏆 ESF Jugend-Ranking</button>
             <button class="btn" onclick="openMastersRankingImport()">🏆 ESF Masters-Ranking</button>
             <button class="btn" onclick="exportPersonsCSV()">⬇ Kontakte exportieren</button>
+            <button class="btn" style="background:var(--orange-bg,#fff3e0);color:#e65100" onclick="migratePersonMediaToStorage()" title="Verschiebt bestehende Fotos/Dokumente aus der Datenbank in Supabase Storage, um Speicherplatz zu sparen">🗜️ Fotos in Storage verschieben</button>
             <button class="btn primary" onclick="openPersonModal()">+ Person hinzufügen</button>
           </div>
         </div>
+        <div id="storageMigrationLog" style="display:none;margin:0 0 10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px;max-height:160px;overflow-y:auto"></div>
         <div id="personImportResult" style="display:none;margin:0;padding:0;height:0;overflow:hidden;font-size:13px"></div>
         <div class="filter-bar">
           <input type="search" id="personSearch" placeholder="Suche Name, Land, Member ID…" oninput="loadPersons()" />
@@ -7580,6 +7582,47 @@ function deletePersonPhoto() { personPhotoFile=null; personCurrentPhotoUrl=null;
 function deletePersonPassportDoc() { personPassportFile=null; personCurrentPassportUrl=null; var p=document.getElementById('personPassportDocPreview');if(p)p.innerHTML='<span style="font-size:28px">Dok</span><span style="font-size:11px;color:var(--text3)">PDF oder Bild</span>';var b=document.getElementById('personPassportDeleteBtn');if(b)b.style.display='none';if(document.getElementById('personPassportDocInput'))document.getElementById('personPassportDocInput').value=''; }
 function showUploadProgress(pct, text) { var p=document.getElementById('personUploadProgress');if(p)p.style.display='block';var b=document.getElementById('personUploadBar');if(b)b.style.width=pct+'%';var t=document.getElementById('personUploadText');if(t)t.textContent=text; }
 function hideUploadProgress() { var p=document.getElementById('personUploadProgress');if(p)p.style.display='none'; }
+
+// --- Storage-Helfer: Bilder client-seitig verkleinern/komprimieren, bevor sie hochgeladen werden ---
+function compressImageFile(file, maxDim, quality) {
+  maxDim = maxDim || 900; quality = quality || 0.75;
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob) {
+          if (blob) resolve(blob); else reject(new Error('Bildkomprimierung fehlgeschlagen'));
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = function() { reject(new Error('Bild konnte nicht gelesen werden')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function() { reject(new Error('Datei konnte nicht gelesen werden')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Lädt eine Blob/File in den Supabase Storage Bucket 'person-media' hoch und liefert die öffentliche URL zurück
+async function uploadPersonMediaFile(path, blobOrFile, contentType) {
+  var up = await db.storage.from('person-media').upload(path, blobOrFile, {
+    upsert: true,
+    contentType: contentType || blobOrFile.type || 'application/octet-stream'
+  });
+  if (up.error) throw up.error;
+  var pub = db.storage.from('person-media').getPublicUrl(path);
+  return pub.data.publicUrl;
+}
+
 async function savePerson() {
   var lastname=document.getElementById('personLastname')&&document.getElementById('personLastname').value.trim();
   var firstname=document.getElementById('personFirstname')&&document.getElementById('personFirstname').value.trim();
@@ -7587,8 +7630,35 @@ async function savePerson() {
   var id=document.getElementById('personEditId')&&document.getElementById('personEditId').value;
   var tempId=id||crypto.randomUUID();
   var photoUrl=personCurrentPhotoUrl; var passportUrl=personCurrentPassportUrl;
-  if(personPhotoFile){showUploadProgress(20,'Foto wird verarbeitet...');var pr=new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(personPhotoFile);});photoUrl=await pr;showUploadProgress(60,'Fast fertig...');}
-  if(personPassportFile){showUploadProgress(60,'Dokument wird verarbeitet...');var pr2=new Promise(function(res){var r2=new FileReader();r2.onload=function(e){res(e.target.result);};r2.readAsDataURL(personPassportFile);});passportUrl=await pr2;showUploadProgress(90,'Speichere...');}
+  if(personPhotoFile){
+    showUploadProgress(15,'Foto wird komprimiert...');
+    try {
+      var compressedPhoto = await compressImageFile(personPhotoFile, 900, 0.75);
+      showUploadProgress(45,'Foto wird hochgeladen...');
+      photoUrl = await uploadPersonMediaFile(tempId + '/photo.jpg', compressedPhoto, 'image/jpeg');
+      showUploadProgress(60,'Fast fertig...');
+    } catch (e) {
+      hideUploadProgress();
+      toast('⚠️ Foto-Upload fehlgeschlagen: ' + (e.message||e));
+      return;
+    }
+  }
+  if(personPassportFile){
+    showUploadProgress(60,'Dokument wird verarbeitet...');
+    try {
+      if (personPassportFile.type.startsWith('image/')) {
+        var compressedDoc = await compressImageFile(personPassportFile, 1400, 0.8);
+        passportUrl = await uploadPersonMediaFile(tempId + '/passport.jpg', compressedDoc, 'image/jpeg');
+      } else {
+        passportUrl = await uploadPersonMediaFile(tempId + '/passport.pdf', personPassportFile, 'application/pdf');
+      }
+      showUploadProgress(90,'Speichere...');
+    } catch (e) {
+      hideUploadProgress();
+      toast('⚠️ Dokument-Upload fehlgeschlagen: ' + (e.message||e));
+      return;
+    }
+  }
   var row={lastname:lastname,firstname:firstname,
     country:document.getElementById('personCountry')&&document.getElementById('personCountry').value||null,
     dob:document.getElementById('personDob')&&document.getElementById('personDob').value||null,
@@ -7650,6 +7720,90 @@ async function savePerson() {
 }
 function editPerson(id) { db.from('persons').select('*').eq('id',id).single().then(function(r){if(r.data)openPersonModal(r.data);}); }
 async function deletePerson(id) { if(!confirm('Person wirklich loeschen?')) return; await db.from('persons').delete().eq('id',id); toast('Person geloescht'); loadPersons(); }
+
+// --- Einmalige Migration: bestehende Base64-Fotos/Dokumente aus der persons-Tabelle in Storage verschieben ---
+function base64ToBlob(dataUrl) {
+  var parts = dataUrl.split(',');
+  var meta = parts[0].match(/data:(.*?)(;base64)?$/);
+  var contentType = meta ? meta[1] : 'application/octet-stream';
+  var isBase64 = /;base64/.test(parts[0]);
+  var byteString = isBase64 ? atob(parts[1]) : decodeURIComponent(parts[1]);
+  var arr = new Uint8Array(byteString.length);
+  for (var i = 0; i < byteString.length; i++) arr[i] = byteString.charCodeAt(i);
+  return new Blob([arr], { type: contentType });
+}
+
+// Komprimiert ein bereits vorhandenes Blob (z.B. aus Base64 dekodiert) über Canvas
+function compressBlobImage(blob, maxDim, quality) {
+  if (!blob.type || !blob.type.startsWith('image/')) return Promise.resolve(blob);
+  return new Promise(function(resolve) {
+    var url = URL.createObjectURL(blob);
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(function(outBlob) { resolve(outBlob || blob); }, 'image/jpeg', quality);
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); resolve(blob); };
+    img.src = url;
+  });
+}
+
+async function migratePersonMediaToStorage() {
+  var logEl = document.getElementById('storageMigrationLog');
+  function log(msg) { if (logEl) logEl.innerHTML += msg + '<br>'; }
+  if (logEl) { logEl.style.display = 'block'; logEl.innerHTML = ''; }
+  if (!confirm('Bestehende Fotos/Dokumente in Storage verschieben? Dies kann bei vielen Personen einige Minuten dauern.')) return;
+
+  var r = await db.from('persons').select('id,photo_url,passport_doc_url')
+    .or('photo_url.like.data:%,passport_doc_url.like.data:%');
+  var rows = r.data || [];
+  if (!rows.length) { toast('✅ Keine Base64-Daten mehr gefunden – nichts zu migrieren'); return; }
+
+  log('Gefunden: ' + rows.length + ' Personen mit Base64-Daten. Starte Migration...');
+  var done = 0, errors = 0;
+
+  for (var i = 0; i < rows.length; i++) {
+    var p = rows[i];
+    var updates = {};
+    try {
+      if (p.photo_url && p.photo_url.indexOf('data:') === 0) {
+        var photoBlob = base64ToBlob(p.photo_url);
+        var compressedPhoto = await compressBlobImage(photoBlob, 900, 0.75);
+        updates.photo_url = await uploadPersonMediaFile(p.id + '/photo.jpg', compressedPhoto, 'image/jpeg');
+      }
+      if (p.passport_doc_url && p.passport_doc_url.indexOf('data:') === 0) {
+        var docBlob = base64ToBlob(p.passport_doc_url);
+        if (docBlob.type.startsWith('image/')) {
+          var compressedDoc = await compressBlobImage(docBlob, 1400, 0.8);
+          updates.passport_doc_url = await uploadPersonMediaFile(p.id + '/passport.jpg', compressedDoc, 'image/jpeg');
+        } else {
+          updates.passport_doc_url = await uploadPersonMediaFile(p.id + '/passport.pdf', docBlob, 'application/pdf');
+        }
+      }
+      if (Object.keys(updates).length) {
+        var upd = await db.from('persons').update(updates).eq('id', p.id);
+        if (upd.error) throw upd.error;
+      }
+      done++;
+      if (done % 10 === 0 || done === rows.length) log(done + ' / ' + rows.length + ' erledigt...');
+    } catch (e) {
+      errors++;
+      log('⚠️ Fehler bei Person-ID ' + p.id + ': ' + (e.message || e));
+    }
+  }
+  log('Fertig. ' + done + ' migriert, ' + errors + ' Fehler.');
+  toast('✅ Migration abgeschlossen: ' + done + ' migriert' + (errors ? ', ' + errors + ' Fehler' : ''));
+}
+
 async function savePersonFromEntry() {
   var ln=document.getElementById('f_lastname')&&document.getElementById('f_lastname').value.trim();
   var fn=document.getElementById('f_firstname')&&document.getElementById('f_firstname').value.trim();
