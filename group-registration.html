@@ -343,6 +343,8 @@ en: {
   err_esid_already_registered: "⛔ These ESIDs are already registered:",
   note_esid_pending_review: "ℹ️ ESID already registered — submitted for organizer review",
   note_esid_review_success: "ℹ️ The following ESIDs were already registered. Your changes for these participants have been submitted to the organizer for review and will be merged into the existing registration:",
+  note_requested_room: "🛏 Requested room type",
+  note_sharing_with: "👥 Sharing room with",
   err_generic: "❌ Error: ",
   err_at_least_one_participant: "At least one participant is required",
   err_declaration: "Declaration (please accept the terms)",
@@ -484,6 +486,8 @@ de: {
   err_esid_already_registered: "⛔ Diese ESIDs sind bereits registriert:",
   note_esid_pending_review: "ℹ️ ESID bereits registriert — zur Prüfung an den Veranstalter übermittelt",
   note_esid_review_success: "ℹ️ Folgende ESIDs waren bereits registriert. Deine Änderungen für diese Teilnehmer wurden zur Prüfung an den Veranstalter übermittelt und werden mit der bestehenden Anmeldung zusammengeführt:",
+  note_requested_room: "🛏 Gewünschter Zimmertyp",
+  note_sharing_with: "👥 Teilt Zimmer mit",
   err_generic: "❌ Fehler: ",
   err_at_least_one_participant: "Mindestens ein Teilnehmer ist erforderlich",
   err_declaration: "Erklärung (bitte den Bedingungen zustimmen)",
@@ -1207,6 +1211,14 @@ function participantLabel(id) {
   return name || (t('pt_participant_prefix') + (participantIds.indexOf(id) + 1));
 }
 
+// Returns the names of the other people this participant is sharing a room with (or null)
+function getRoommateNames(id) {
+  var anchor = roomShareOf[id] || id;
+  var grp = roomShareGroups[anchor];
+  if (!grp || grp.members.length <= 1) return null;
+  return grp.members.filter(function(m) { return m !== id; }).map(function(m) { return participantLabel(m); });
+}
+
 function refreshAllShareSelects() {
   var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
   participantIds.forEach(function(id, idx) {
@@ -1538,6 +1550,18 @@ async function submitGroupRegistration() {
     var letterSel = document.getElementById('p_letter_type_' + id);
     var letterOpt = needsLetter && letterSel ? letterSel.selectedOptions[0] : null;
 
+    // Preserve room-related info that would otherwise be lost:
+    // - if past deadline, room_type gets overwritten with 'Warteliste' below, so the
+    //   actually requested room type needs to be noted somewhere for the organizer.
+    // - the "share room with" grouping is only ever a client-side UI convenience and is
+    //   never otherwise persisted, so note it here too regardless of deadline status.
+    var roomTypeLabels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+    var roommates = getRoommateNames(id);
+    var roomMemoParts = [];
+    if (isPastDeadline && roomType) roomMemoParts.push(t('note_requested_room') + ': ' + (roomTypeLabels[roomType] || roomType));
+    if (roommates && roommates.length) roomMemoParts.push(t('note_sharing_with') + ': ' + roommates.join(', '));
+    var roomMemo = roomMemoParts.length ? roomMemoParts.join(' | ') : null;
+
     rows.push({
       event_id: eventId,
       lastname: pLast, firstname: pFirst, country: pCountry,
@@ -1562,7 +1586,7 @@ async function submitGroupRegistration() {
       visa_date_of_expiry: needsLetter ? (v('p_date_of_expiry_' + id) || null) : null,
       confirmation_letter_type: needsLetter ? (letterSel.value || null) : null,
       confirmation_letter_price: letterOpt ? (parseFloat(letterOpt.getAttribute('data-price')) || null) : null,
-      memo: (isPastDeadline ? '⏰ Registered after deadline' + (v('g_memo') ? ' | ' + v('g_memo') : '') : v('g_memo')) || null,
+      memo: [(isPastDeadline ? '⏰ Registered after deadline' : null), roomMemo, v('g_memo')].filter(Boolean).join(' | ') || null,
       payment_status: 'Pending',
       updated_at: new Date().toISOString()
     });

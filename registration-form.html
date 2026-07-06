@@ -347,6 +347,7 @@ en: {
   f_roompartner_ph: "Full name",
   room_partner_hint: "This person will share your room. Please make sure they also complete their own registration.",
   room_partner_memo_prefix: "Roommate(s): ",
+  note_requested_room: "🛏 Requested room type",
   f_sharing_with_1: "Sharing With",
   f_sharing_with_2: "Sharing With (2nd Roommate)",
   opt_player: "Player",
@@ -469,6 +470,7 @@ de: {
   f_roompartner_ph: "Vollständiger Name",
   room_partner_hint: "Diese Person teilt sich das Zimmer mit dir. Bitte stelle sicher, dass sie sich ebenfalls eigenständig anmeldet.",
   room_partner_memo_prefix: "Zimmerpartner: ",
+  note_requested_room: "🛏 Gewünschter Zimmertyp",
   f_sharing_with_1: "Zimmer teilen mit",
   f_sharing_with_2: "Zimmer teilen mit (2. Partner)",
   opt_player: "Spieler",
@@ -1288,6 +1290,10 @@ async function submitRegistration() {
   }
   var memoParts = [];
   if (isPastDeadline) memoParts.push('⏰ Registered after deadline');
+  if (isPastDeadline && roomType) {
+    var roomTypeLabelsMemo = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+    memoParts.push(t('note_requested_room') + ': ' + (roomTypeLabelsMemo[roomType] || roomType));
+  }
   if (partnerNames.length) memoParts.push(t('room_partner_memo_prefix') + partnerNames.join(' / '));
   if (v('r_memo')) memoParts.push(v('r_memo'));
   var combinedMemo = memoParts.join(' | ') || null;
