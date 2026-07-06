@@ -7826,7 +7826,7 @@ async function uploadPersonMediaFile(path, blobOrFile, contentType) {
   });
   if (up.error) throw up.error;
   var pub = db.storage.from('person-media').getPublicUrl(path);
-  return pub.data.publicUrl;
+  return pub.data.publicUrl + '?v=' + Date.now();
 }
 
 async function savePerson() {
