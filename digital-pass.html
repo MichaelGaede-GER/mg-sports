@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Digital Pass</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -87,6 +88,15 @@
     font-size: 10px; font-weight: 700; background: #185FA5; color: #fff;
   }
   .footer-note { text-align: center; font-size: 10px; color: #9aa3b2; padding: 14px 20px 20px; }
+  .save-actions { padding: 0 20px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .save-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: #fff; color: #185FA5; border: none; border-radius: 12px;
+    padding: 12px 16px; font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  }
+  .save-btn:active { transform: scale(0.98); }
+  .save-hint { text-align: center; font-size: 11px; color: #cfd8e8; padding: 0 24px; }
   .sponsors-section { margin-top: 22px; padding-top: 16px; border-top: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
   .sponsors-section img { max-height: 26px; max-width: 90px; object-fit: contain; }
   .state-box { max-width: 380px; width: 100%; background: #1a1d23; border-radius: 16px; padding: 40px 24px; text-align: center; }
@@ -114,6 +124,7 @@
     <div style="margin-top:18px;text-align:left">
       <div class="info-row"><span class="info-label">Gender</span><span class="info-value" id="pGender">–</span></div>
       <div class="info-row"><span class="info-label">Package</span><span class="info-value" id="pPackage">–</span></div>
+      <div class="info-row" id="eventsRow" style="display:none"><span class="info-label">Altersklasse</span><span class="info-value" id="pEvents">–</span></div>
       <div class="info-row" id="roomRow" style="display:none"><span class="info-label">Hotel</span><span class="info-value" id="pHotel">–</span></div>
     </div>
 
@@ -130,6 +141,11 @@
     <div class="sponsors-section" id="sponsorsSection" style="display:none"></div>
   </div>
   <div class="footer-note">This pass is personal — please don't share the link with others.</div>
+</div>
+
+<div class="save-actions" id="saveActions" style="display:none">
+  <button class="save-btn" id="saveImgBtn" onclick="savePassAsImage()">📷 Als Bild speichern</button>
+  <div class="save-hint">Speichere den Pass als Bild in deiner Fotos-App / Galerie — funktioniert offline, auch ohne Internet.</div>
 </div>
 
 <script>
@@ -262,6 +278,12 @@ async function init() {
     document.getElementById('pPackage').textContent = (pkg && pkg.short_code) ? pkg.short_code : p.package;
   }
 
+  // Age category / events
+  if (p.events) {
+    document.getElementById('eventsRow').style.display = 'flex';
+    document.getElementById('pEvents').textContent = p.events;
+  }
+
   // Hotel
   if (p.hotel) {
     document.getElementById('roomRow').style.display = 'flex';
@@ -301,6 +323,47 @@ async function init() {
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('passCard').style.display = 'block';
+  document.getElementById('saveActions').style.display = 'flex';
+}
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+async function savePassAsImage() {
+  var btn = document.getElementById('saveImgBtn');
+  var originalText = btn.textContent;
+  btn.textContent = '⏳ Wird erstellt…';
+  btn.disabled = true;
+  try {
+    var card = document.getElementById('passCard');
+    var canvas = await html2canvas(card, { backgroundColor: '#0f1115', scale: 2, useCORS: true });
+    var dataUrl = canvas.toDataURL('image/png');
+    var fileName = 'digital-pass-' + (document.getElementById('pName').textContent || 'pass').trim().replace(/\s+/g, '-').toLowerCase() + '.png';
+
+    if (isIOS()) {
+      // iOS Safari ignores the download attribute for data URLs — open the image
+      // in a new tab instead, so the user can long-press → "Add to Photos".
+      var w = window.open();
+      if (w) {
+        w.document.write('<html><head><title>Digital Pass</title></head><body style="margin:0;background:#0f1115;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="' + dataUrl + '" style="max-width:100%;height:auto" /></body></html>');
+      } else {
+        alert('Bitte Pop-ups erlauben, um das Bild zu speichern.');
+      }
+    } else {
+      var a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  } catch (e) {
+    alert('Fehler beim Erstellen des Bilds: ' + e.message);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 
 init();
