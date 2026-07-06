@@ -984,7 +984,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <!-- Confirmation Letter Tab -->
             <div id="visaTab-confirmation" style="display:none">
               <div style="background:var(--blue-bg);border:1px solid var(--blue);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
-                ℹ Felder werden automatisch aus den persönlichen Daten übernommen. Bitte fehlende Angaben ergänzen.
+                ℹ Felder werden automatisch aus den persönlichen Daten übernommen (auch aus Online-Anmeldungen). Bitte fehlende Angaben ergänzen.
               </div>
               <div class="form-grid">
                 <div class="form-group" style="grid-column:1/-1"><label>Full Name</label>
@@ -1004,6 +1004,14 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 </div>
                 <div class="form-group"><label>Date of Expiry</label>
                   <input type="date" id="cl_date_of_expiry" />
+                </div>
+                <div class="form-group"><label>Letter Type</label>
+                  <select id="f_confirmation_letter_type" onchange="updateConfirmationLetterPrice()">
+                    <option value="">– keine Angabe –</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Letter-Preis (€)</label>
+                  <input type="number" id="f_confirmation_letter_price" step="0.01" placeholder="0.00" />
                 </div>
               </div>
               <div style="display:flex;gap:10px;margin-top:16px">
@@ -5075,6 +5083,8 @@ function clearForm() {
   const vl = document.getElementById('visaExpressFeeLabel'); if (vl) vl.style.display='none';
   document.getElementById('f_withdraw').value = 'Nein';
   document.getElementById('withdrawDateGroup').style.display = 'none';
+  ['cl_fullname','cl_dob','cl_place_of_birth','cl_passport','cl_date_of_issue','cl_date_of_expiry','f_confirmation_letter_price'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var clTypeEl = document.getElementById('f_confirmation_letter_type'); if (clTypeEl) { clTypeEl.value=''; clTypeEl.removeAttribute('data-pending-value'); }
 }
 
 async function editEntry(id) {
@@ -5109,6 +5119,11 @@ async function editEntry(id) {
     }
   });
   ['dob','checkin','checkout','arrival_date','departure_date','payment_date','withdraw_date','mahnung_date'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
+  var clPob = document.getElementById('cl_place_of_birth'); if (clPob) clPob.value = p.place_of_birth || '';
+  var clIssue = document.getElementById('cl_date_of_issue'); if (clIssue) clIssue.value = p.visa_date_of_issue || '';
+  var clExpiry = document.getElementById('cl_date_of_expiry'); if (clExpiry) clExpiry.value = p.visa_date_of_expiry || '';
+  var clType = document.getElementById('f_confirmation_letter_type'); if (clType) { clType.value = p.confirmation_letter_type || ''; clType.setAttribute('data-pending-value', p.confirmation_letter_type || ''); }
+  var clPrice = document.getElementById('f_confirmation_letter_price'); if (clPrice) clPrice.value = p.confirmation_letter_price || '';
   setTimeout(checkMahnungDateRequired, 100);
   setTimeout(updateTotalBreakdown, 200);
   var syncBtn = document.getElementById('syncPersonBtnTop');
@@ -5274,6 +5289,11 @@ async function saveEntry() {
     group_tp: v('group_tp'), lastname, firstname,
     country: v('country').toUpperCase(), mobile: v('mobile'), email: v('email'),
     dob: v('dob')||null, passport_id: v('passport_id'), gender: v('gender'),
+    place_of_birth: document.getElementById('cl_place_of_birth')&&document.getElementById('cl_place_of_birth').value.trim()||null,
+    visa_date_of_issue: document.getElementById('cl_date_of_issue')&&document.getElementById('cl_date_of_issue').value||null,
+    visa_date_of_expiry: document.getElementById('cl_date_of_expiry')&&document.getElementById('cl_date_of_expiry').value||null,
+    confirmation_letter_type: document.getElementById('f_confirmation_letter_type')&&document.getElementById('f_confirmation_letter_type').value||null,
+    confirmation_letter_price: parseFloat(document.getElementById('f_confirmation_letter_price')&&document.getElementById('f_confirmation_letter_price').value)||null,
     member_id: v('member_id'), role, events: v('events'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
     shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'),
@@ -5361,10 +5381,11 @@ async function saveEntry() {
   nav('participants');
 }
 
-var PARTICIPANT_CRITICAL_FIELDS = ['package','package_price','entry_fee','total','payment_status','amount_received','payment_date'];
+var PARTICIPANT_CRITICAL_FIELDS = ['package','package_price','entry_fee','total','payment_status','amount_received','payment_date','confirmation_letter_type','confirmation_letter_price'];
 var PARTICIPANT_FIELD_LABELS = {
   package:'Package', package_price:'Package-Preis', entry_fee:'Meldegebühr', total:'Gesamt',
   payment_status:'Payment Status', amount_received:'Erhalten', payment_date:'Zahlungsdatum',
+  confirmation_letter_type:'Letter Type', confirmation_letter_price:'Letter-Preis',
   lastname:'Nachname', firstname:'Vorname', hotel:'Hotel', room_type:'Zimmertyp', room_number:'Zimmer-Nr.',
   checkin:'Check-in', checkout:'Check-out', flight_in:'Flug Hinflug', flight_out:'Flug Rückflug',
   arrival_date:'Ankunftsdatum', arrival_time:'Ankunftszeit', departure_date:'Abreisedatum', departure_time:'Abreisezeit'
@@ -6887,12 +6908,23 @@ async function loadWaitlist() {
   var badge = document.getElementById('pendingBadge');
   if (badge) { badge.textContent = pending.length; badge.style.background = pending.length > 0 ? 'var(--amber,#ef9f27)' : 'var(--text3)'; }
 
+  // Load all ACTIVE participants (not Pending, not Warteliste) in this event, to detect ESID duplicates
+  var aq = db.from('participants').select('id,member_id').not('payment_status','eq','Pending').not('room_type','eq','Warteliste');
+  if (currentEventId) aq = aq.eq('event_id', currentEventId);
+  var ar = await aq;
+  var activeByMemberId = {};
+  (ar.data||[]).forEach(function(p){ if (p.member_id) activeByMemberId[p.member_id] = p.id; });
+
   var ptb = document.getElementById('pendingTable');
   if (ptb) {
     ptb.innerHTML = pending.length ? pending.map(function(p, i) {
       var bg = i%2===0 ? '' : 'background:var(--bg2)';
+      var isDup = p.member_id && activeByMemberId[p.member_id] && activeByMemberId[p.member_id] !== p.id;
+      var confirmBtn = isDup
+        ? '<button class="btn primary" style="font-size:11px;padding:3px 8px;background:var(--orange-bg,#fff3e0);color:#e65100" data-id="'+p.id+'" onclick="mergeWaitlistRow(this.dataset.id)">🔀 Duplikat zusammenführen</button>'
+        : '<button class="btn primary" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="confirmPending(this.dataset.id)">✅ Bestätigen</button>';
       return '<tr style="'+bg+'">'
-        + '<td><strong>'+p.lastname+', '+p.firstname+'</strong></td>'
+        + '<td><strong>'+p.lastname+', '+p.firstname+'</strong>'+(isDup?' <span style="font-size:10px;color:#e65100;font-weight:700">⚠️ ESID bereits registriert</span>':'')+'</td>'
         + '<td>'+(p.country||'–')+'</td>'
         + '<td>'+(p.events||'–')+'</td>'
         + '<td>'+(p.package ? '<span class="badge">'+p.package+'</span>' : '–')+'</td>'
@@ -6900,7 +6932,7 @@ async function loadWaitlist() {
         + '<td style="font-size:12px">'+(p.email ? '<a href="mailto:'+p.email+'" style="color:var(--blue)">'+p.email+'</a>' : '–')+'</td>'
         + '<td style="font-size:12px;color:var(--text3)">'+fmtDate(p.updated_at||p.created_at)+'</td>'
         + '<td style="display:flex;gap:4px">'
-        + '<button class="btn primary" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="confirmPending(this.dataset.id)">✅ Bestätigen</button>'
+        + confirmBtn
         + '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>'
         + '<button class="btn danger" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="rejectWaitlist(this.dataset.id,this.dataset.name)">❌ Ablehnen</button>'
         + '</td></tr>';
@@ -6919,7 +6951,10 @@ async function loadWaitlist() {
   var tb=document.getElementById('waitlistTable'); if(!tb) return;
   tb.innerHTML=all.length?all.map(function(p){
     var ablehnenBtn = '<button class="btn danger" style="font-size:11px;padding:3px 6px" onclick="rejectWaitlist(\'' + p.id + '\',\'' + (p.lastname+', '+p.firstname).replace(/'/g,"\\'\\'") + '\')">' + '❌ Ablehnen</button>';
-    return '<tr><td>'+p.lastname+', '+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+(p.events||'-')+'</td><td>'+(p.package?'<span class="badge">'+p.package+'</span>':'-')+'</td><td><span class="status pending">Warteliste</span></td><td style="color:var(--text3)">'+fmtDate(p.created_at)+'</td><td style="font-size:12px">'+(p.memo||'-')+'</td><td style="white-space:nowrap"><button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button> '+ablehnenBtn+'</td></tr>';
+    var isDup = p.member_id && activeByMemberId[p.member_id] && activeByMemberId[p.member_id] !== p.id;
+    var mergeBtn = isDup ? '<button class="btn primary" style="font-size:11px;padding:3px 8px;background:var(--orange-bg,#fff3e0);color:#e65100" data-id="'+p.id+'" onclick="mergeWaitlistRow(this.dataset.id)">🔀 Übernehmen</button> ' : '';
+    var dupLbl = isDup ? ' <span style="font-size:10px;color:#e65100;font-weight:700">⚠️ ESID bereits registriert</span>' : '';
+    return '<tr><td>'+p.lastname+', '+p.firstname+dupLbl+'</td><td>'+(p.country||'-')+'</td><td>'+(p.events||'-')+'</td><td>'+(p.package?'<span class="badge">'+p.package+'</span>':'-')+'</td><td><span class="status pending">Warteliste</span></td><td style="color:var(--text3)">'+fmtDate(p.created_at)+'</td><td style="font-size:12px">'+(p.memo||'-')+'</td><td style="white-space:nowrap">'+mergeBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button> '+ablehnenBtn+'</td></tr>';
   }).join(''):'<tr><td colspan="8" class="empty">Keine Personen auf der Warteliste</td></tr>';
 }
 
@@ -6930,6 +6965,50 @@ async function confirmPending(id) {
   toast('✅ Registrierung bestätigt');
   loadWaitlist();
 }
+
+// Merge a Pending/Warteliste row that duplicates an already-active participant (same ESID)
+async function mergeWaitlistRow(id) {
+  var wRes = await db.from('participants').select('*').eq('id', id).single();
+  if (wRes.error || !wRes.data) { toast('Fehler beim Laden des Eintrags'); return; }
+  var waitRow = wRes.data;
+  if (!waitRow.member_id) { toast('Kein Member ID / ESID auf diesem Eintrag'); return; }
+
+  var dq = db.from('participants').select('*').eq('member_id', waitRow.member_id).neq('id', id)
+    .not('payment_status','eq','Pending').not('room_type','eq','Warteliste');
+  if (currentEventId) dq = dq.eq('event_id', currentEventId);
+  var dRes = await dq;
+  if (dRes.error || !dRes.data || !dRes.data.length) { toast('Kein aktiver Eintrag mit dieser ESID gefunden'); return; }
+  var existing = dRes.data[0];
+
+  var conflicts = computeParticipantConflicts(existing, waitRow);
+  var mergedCritical = {};
+  if (conflicts.length > 0) {
+    var resolved = await showParticipantDupModal(existing, waitRow, conflicts);
+    if (!resolved) { toast('Abgebrochen — nichts verändert'); return; }
+    mergedCritical = resolved;
+  } else {
+    PARTICIPANT_CRITICAL_FIELDS.forEach(function(f) {
+      if (waitRow[f] !== null && waitRow[f] !== '' && waitRow[f] !== undefined) mergedCritical[f] = waitRow[f];
+    });
+  }
+  var mergedRow = Object.assign({}, existing);
+  Object.keys(waitRow).forEach(function(k) {
+    if (['id','created_at','payment_status','room_type'].indexOf(k) >= 0) return;
+    if (PARTICIPANT_CRITICAL_FIELDS.indexOf(k) >= 0) return;
+    if (waitRow[k] !== null && waitRow[k] !== '' && waitRow[k] !== undefined) mergedRow[k] = waitRow[k];
+  });
+  Object.assign(mergedRow, mergedCritical);
+  delete mergedRow.id;
+  mergedRow.updated_at = new Date().toISOString();
+
+  var updRes = await db.from('participants').update(mergedRow).eq('id', existing.id);
+  if (updRes.error) { toast('Fehler beim Aktualisieren: ' + updRes.error.message); return; }
+  var delRes = await db.from('participants').delete().eq('id', id);
+  if (delRes.error) { toast('⚠️ Eintrag aktualisiert, aber Warteliste-Duplikat konnte nicht gelöscht werden: ' + delRes.error.message); }
+  else { toast('✅ Zusammengeführt — Duplikat von der Warteliste entfernt'); }
+  loadWaitlist();
+}
+
 async function rejectWaitlist(id, name) {
   if (!confirm('Registrierung von ' + name + ' ablehnen und löschen?')) return;
   var r = await db.from('participants').delete().eq('id', id);
@@ -7377,7 +7456,25 @@ function switchVisaTab(tab, btn) {
   var s=document.getElementById('visaTab-status'); var c=document.getElementById('visaTab-confirmation');
   if(s) s.style.display=tab==='status'?'block':'none';
   if(c) c.style.display=tab==='confirmation'?'block':'none';
-  if(tab==='confirmation') prefillConfirmationLetter();
+  if(tab==='confirmation') { populateConfirmationLetterTypeSelect(); prefillConfirmationLetter(); }
+}
+function populateConfirmationLetterTypeSelect() {
+  var sel = document.getElementById('f_confirmation_letter_type');
+  if (!sel) return;
+  var cur = sel.value || sel.getAttribute('data-pending-value') || '';
+  var options = (packagesData||[]).filter(function(p){ return p.code === 'Confirmation Letter' || p.code === 'Confirmation Letter Express'; });
+  sel.innerHTML = '<option value="">– keine Angabe –</option>' + options.map(function(p) {
+    return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + p.code + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
+  }).join('');
+  if (cur && options.some(function(p){ return p.code === cur; })) sel.value = cur;
+  sel.removeAttribute('data-pending-value');
+}
+function updateConfirmationLetterPrice() {
+  var sel = document.getElementById('f_confirmation_letter_type');
+  var priceEl = document.getElementById('f_confirmation_letter_price');
+  if (!sel || !priceEl) return;
+  var opt = sel.selectedOptions[0];
+  if (opt && opt.value) priceEl.value = parseFloat(opt.getAttribute('data-price')) || 0;
 }
 function prefillConfirmationLetter() {
   var fn=document.getElementById('f_firstname')&&document.getElementById('f_firstname').value||'';
@@ -8002,7 +8099,7 @@ async function importPersonToEntry(id) {
 
 // IMPORT
 var importData=[];
-var TEMPLATE_HEADERS=['group_tp', 'lastname', 'firstname', 'country', 'mobile', 'email', 'dob', 'passport_id', 'gender', 'member_id', 'role', 'events', 'package', 'package_price', 'entry_fee', 'shirt', 'shirt_color', 'shirt_qty', 'coach_name', 'coach_esid', 'payment_status', 'amount_received', 'payment_date', 'total', 'payment_link', 'penalty', 'visa', 'express', 'mahnung', 'mahnung_date', 'memo', 'checkin', 'checkout', 'hotel', 'room_number', 'room_type', 'meal_plus', 'meal_breakfast', 'meal_lunch', 'meal_dinner', 'transport_booked', 'airport_plus', 'ams_bus', 'travel_amount', 'arrival_date', 'arrival_time', 'flight_in', 'departure_date', 'departure_time', 'flight_out', 'batch', 'tp_check', 'country_check', 'age_check', 'room_check', 'withdraw', 'withdraw_date', 'withdraw_refund', 'withdraw_refund_due'];
+var TEMPLATE_HEADERS=['group_tp', 'lastname', 'firstname', 'country', 'mobile', 'email', 'dob', 'passport_id', 'gender', 'member_id', 'role', 'events', 'package', 'package_price', 'entry_fee', 'shirt', 'shirt_color', 'shirt_qty', 'coach_name', 'coach_esid', 'payment_status', 'amount_received', 'payment_date', 'total', 'payment_link', 'penalty', 'visa', 'express', 'mahnung', 'mahnung_date', 'memo', 'checkin', 'checkout', 'hotel', 'room_number', 'room_type', 'meal_plus', 'meal_breakfast', 'meal_lunch', 'meal_dinner', 'transport_booked', 'airport_plus', 'ams_bus', 'travel_amount', 'arrival_date', 'arrival_time', 'flight_in', 'departure_date', 'departure_time', 'flight_out', 'batch', 'tp_check', 'country_check', 'age_check', 'room_check', 'withdraw', 'withdraw_date', 'withdraw_refund', 'withdraw_refund_due', 'place_of_birth', 'visa_date_of_issue', 'visa_date_of_expiry', 'confirmation_letter_type', 'confirmation_letter_price'];
 function downloadTemplate() {
   var ex1=['DE-001', 'Mueller', 'Thomas', 'GER', '+49 151 12345678', 'thomas@example.com', '2010-03-15', 'C01234567', 'Maennlich', 'ESID-001', 'Player', 'BU15', 'B', '505.00', '90.00', 'M', 'Blau', '1', 'Schmidt Karl', 'COACH-001', 'Ausstehend', '0', '', '595.00', '', '0', 'Nicht erforderlich', 'Nein', 'Keine', '', '', '2026-07-18', '2026-07-22', 'Hotel Beispiel', '201', 'Doppelzimmer', 'Ja', 'Nein', 'Ja', 'Ja', 'Nein', 'Ja - Ankunft', 'Flugzeug', '0', '2026-07-18', '14:30', 'LH1234', '2026-07-22', '16:00', 'LH5678', '', 'OK', 'OK', 'OK', 'OK', 'Nein', '', '0', '0'];
   var rows=[TEMPLATE_HEADERS,ex1];
@@ -10272,7 +10369,7 @@ async function exportShirtPDF() {
   w.document.close();
 }
 
-var PARTICIPANT_IMPORT_FIELDS = ['group_tp', 'lastname', 'firstname', 'country', 'mobile', 'email', 'dob', 'passport_id', 'gender', 'member_id', 'role', 'events', 'package', 'package_price', 'entry_fee', 'shirt', 'shirt_color', 'shirt_qty', 'coach_name', 'coach_esid', 'payment_status', 'amount_received', 'payment_date', 'total', 'payment_link', 'penalty', 'visa', 'express', 'mahnung', 'mahnung_date', 'memo', 'checkin', 'checkout', 'hotel', 'room_number', 'room_type', 'meal_plus', 'meal_option', 'meal_breakfast', 'meal_lunch', 'meal_dinner', 'transport_booked', 'airport_plus', 'ams_bus', 'travel_amount', 'arrival_date', 'arrival_time', 'flight_in', 'departure_date', 'departure_time', 'flight_out', 'batch', 'withdraw', 'withdraw_date', 'withdraw_refund', 'withdraw_refund_due'];
+var PARTICIPANT_IMPORT_FIELDS = ['group_tp', 'lastname', 'firstname', 'country', 'mobile', 'email', 'dob', 'passport_id', 'gender', 'member_id', 'role', 'events', 'package', 'package_price', 'entry_fee', 'shirt', 'shirt_color', 'shirt_qty', 'coach_name', 'coach_esid', 'payment_status', 'amount_received', 'payment_date', 'total', 'payment_link', 'penalty', 'visa', 'express', 'mahnung', 'mahnung_date', 'memo', 'checkin', 'checkout', 'hotel', 'room_number', 'room_type', 'meal_plus', 'meal_option', 'meal_breakfast', 'meal_lunch', 'meal_dinner', 'transport_booked', 'airport_plus', 'ams_bus', 'travel_amount', 'arrival_date', 'arrival_time', 'flight_in', 'departure_date', 'departure_time', 'flight_out', 'batch', 'withdraw', 'withdraw_date', 'withdraw_refund', 'withdraw_refund_due', 'place_of_birth', 'visa_date_of_issue', 'visa_date_of_expiry', 'confirmation_letter_type', 'confirmation_letter_price'];
 
 // PARTICIPANT IMPORT/EXPORT
 function downloadParticipantTemplate() {
@@ -10340,8 +10437,8 @@ async function runParticipantImport(input) {
   }
 
   var BOOL_FIELDS = ['express','transport_booked','meal_plus','meal_breakfast','meal_lunch','meal_dinner'];
-  var NUM_FIELDS = ['package_price','entry_fee','amount_received','total','travel_amount','shirt_qty','withdraw_refund','withdraw_refund_due','penalty','meal_option_price'];
-  var DATE_FIELDS = ['dob','checkin','checkout','arrival_date','departure_date','payment_date','withdraw_date','mahnung_date'];
+  var NUM_FIELDS = ['package_price','entry_fee','amount_received','total','travel_amount','shirt_qty','withdraw_refund','withdraw_refund_due','penalty','meal_option_price','confirmation_letter_price'];
+  var DATE_FIELDS = ['dob','checkin','checkout','arrival_date','departure_date','payment_date','withdraw_date','mahnung_date','visa_date_of_issue','visa_date_of_expiry'];
 
   var headers = parseRow(lines[0]).map(function(h){return h.trim().toLowerCase();});
   var rows = lines.slice(1);
@@ -11895,6 +11992,11 @@ async function exportParticipantsExcel() {
     {key:'coach_name',    label:'Coach'},
     {key:'coach_esid',    label:'Coach ESID'},
     {key:'memo',          label:'Memo'},
+    {key:'place_of_birth', label:'Geburtsort (Visa)'},
+    {key:'visa_date_of_issue', label:'Reisepass Ausstellungsdatum'},
+    {key:'visa_date_of_expiry', label:'Reisepass Ablaufdatum'},
+    {key:'confirmation_letter_type', label:'Letter Type'},
+    {key:'confirmation_letter_price', label:'Letter Preis (€)'},
     {key:'withdraw',      label:'Withdraw'},
     {key:'withdraw_date', label:'Withdraw Datum'},
     {key:'updated_at',    label:'Zuletzt bearbeitet'},
