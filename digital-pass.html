@@ -291,8 +291,10 @@ function mealBooked(p, m, dayCode) {
 }
 
 var mealSettings = {};
+function getMealLocation(mealKeyPrefix) {
+  return mealSettings[mealKeyPrefix + '_location'] || '';
+}
 function getMealTimeText(mealKeyPrefix) {
-  var loc = mealSettings[mealKeyPrefix + '_location'];
   var timeParts = [];
   if (mealKeyPrefix === 'meal_breakfast') {
     var wdFrom = mealSettings['meal_breakfast_weekday_from'], wdTo = mealSettings['meal_breakfast_weekday_to'];
@@ -303,9 +305,7 @@ function getMealTimeText(mealKeyPrefix) {
     var from = mealSettings[mealKeyPrefix + '_from'], to = mealSettings[mealKeyPrefix + '_to'];
     if (from && to) timeParts.push(from + '–' + to);
   }
-  var timeText = timeParts.join(' · ');
-  if (loc && timeText) return timeText + ' — ' + loc;
-  return timeText || loc || '';
+  return timeParts.join(' · ');
 }
 
 function showError(msg) {
@@ -407,8 +407,9 @@ async function init() {
     var rowsHtml = activeMeals.map(function(m) {
       var chips = PASS_MEAL_DAYS.filter(function(d) { return mealBooked(p, m, d.code); })
         .map(function(d) { return '<div class="meal-day-chip">' + d.short.slice(0, 2) + '</div>'; }).join('');
+      var loc = getMealLocation(m.key);
       var timeText = getMealTimeText(m.key);
-      return '<div class="meal-row"><span>' + m.label + '</span><div class="meal-days">' + chips + '</div></div>'
+      return '<div class="meal-row"><span>' + m.label + (loc ? ' — ' + loc : '') + '</span><div class="meal-days">' + chips + '</div></div>'
         + (timeText ? '<div class="meal-time">' + timeText + '</div>' : '');
     }).join('');
       document.getElementById('mealRows').innerHTML = rowsHtml;
