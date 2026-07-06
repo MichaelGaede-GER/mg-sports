@@ -121,7 +121,7 @@
 <div id="errorState" class="state-box" style="display:none"><p id="errorText">Pass not found.</p></div>
 
 <div class="card" id="passCard" style="display:none">
-  <button class="save-icon-btn" id="saveImgBtn" onclick="savePassAsImage()" title="Als Bild speichern">📷</button>
+  <button class="save-icon-btn" id="saveImgBtn" onclick="savePassAsImage()" title="Save as Image">⬇️</button>
   <div class="lang-switch">
     <button id="langBtnDe" onclick="setLang('de')">DE</button>
     <button id="langBtnEn" onclick="setLang('en')">EN</button>
@@ -160,9 +160,7 @@
   <div class="footer-note" id="footerNote">This pass is personal — please don't share the link with others.</div>
 </div>
 
-<div class="save-actions" id="saveActions" style="display:none">
-  <div class="save-hint" id="saveHint">Speichere den Pass als Bild in deiner Fotos-App / Galerie — funktioniert offline, auch ohne Internet.</div>
-</div>
+
 
 <script>
 const SUPABASE_URL = 'https://xngiyfqbjyhnmgukhanj.supabase.co';
@@ -177,7 +175,7 @@ var I18N = {
     gender: 'Geschlecht', package: 'Package', events: 'Altersklasse', hotel: 'Hotel',
     meal_package: 'Mahlzeiten-Paket',
     footer_note: "Dieser Pass ist persönlich — bitte teile den Link nicht mit anderen.",
-    save_btn: '📷 Als Bild speichern',
+    save_btn: 'Als Bild speichern',
     save_hint: 'Speichere den Pass als Bild in deiner Fotos-App / Galerie — funktioniert offline, auch ohne Internet.',
     qr_meal_hint: 'Beim Check-in zu den Mahlzeiten vorzeigen',
     qr_memberid_hint: 'Das ist deine Mitgliedsnummer',
@@ -192,7 +190,7 @@ var I18N = {
     gender: 'Gender', package: 'Package', events: 'Age Category', hotel: 'Hotel',
     meal_package: 'Meal Package',
     footer_note: "This pass is personal — please don't share the link with others.",
-    save_btn: '📷 Save as Image',
+    save_btn: 'Save as Image',
     save_hint: 'Save the pass as an image to your Photos / Gallery app — works offline, no internet needed.',
     qr_meal_hint: 'Show this at meal check-in',
     qr_memberid_hint: 'This is your Member ID',
@@ -221,7 +219,6 @@ function applyTranslations() {
   document.getElementById('lbl_mealpackage').textContent = t('meal_package');
   document.getElementById('footerNote').textContent = t('footer_note');
   document.getElementById('saveImgBtn').title = t('save_btn');
-  document.getElementById('saveHint').textContent = t('save_hint');
 
   var p = currentParticipant;
   if (p) {
@@ -404,7 +401,6 @@ async function init() {
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('passCard').style.display = 'block';
-  document.getElementById('saveActions').style.display = 'flex';
   applyTranslations();
 }
 
