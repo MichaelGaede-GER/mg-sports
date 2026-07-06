@@ -100,6 +100,14 @@
   .lang-switch { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 4px; background: rgba(255,255,255,0.15); border-radius: 16px; padding: 4px; z-index: 5; }
   .lang-switch button { border: none; background: transparent; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 12px; cursor: pointer; opacity: 0.6; min-width: 34px; }
   .lang-switch button.active { background: #fff; color: #185FA5; opacity: 1; }
+  .save-icon-btn {
+    position: absolute; top: 14px; left: 14px; z-index: 5;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    font-size: 18px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .save-icon-btn:active { transform: scale(0.94); }
   .card { position: relative; }
   .sponsors-section { margin-top: 22px; padding-top: 16px; border-top: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
   .sponsors-section img { max-height: 26px; max-width: 90px; object-fit: contain; }
@@ -113,6 +121,7 @@
 <div id="errorState" class="state-box" style="display:none"><p id="errorText">Pass not found.</p></div>
 
 <div class="card" id="passCard" style="display:none">
+  <button class="save-icon-btn" id="saveImgBtn" onclick="savePassAsImage()" title="Als Bild speichern">📷</button>
   <div class="lang-switch">
     <button id="langBtnDe" onclick="setLang('de')">DE</button>
     <button id="langBtnEn" onclick="setLang('en')">EN</button>
@@ -152,7 +161,6 @@
 </div>
 
 <div class="save-actions" id="saveActions" style="display:none">
-  <button class="save-btn" id="saveImgBtn" onclick="savePassAsImage()">📷 Als Bild speichern</button>
   <div class="save-hint" id="saveHint">Speichere den Pass als Bild in deiner Fotos-App / Galerie — funktioniert offline, auch ohne Internet.</div>
 </div>
 
@@ -212,7 +220,7 @@ function applyTranslations() {
   document.getElementById('lbl_hotel').textContent = t('hotel');
   document.getElementById('lbl_mealpackage').textContent = t('meal_package');
   document.getElementById('footerNote').textContent = t('footer_note');
-  document.getElementById('saveImgBtn').textContent = t('save_btn');
+  document.getElementById('saveImgBtn').title = t('save_btn');
   document.getElementById('saveHint').textContent = t('save_hint');
 
   var p = currentParticipant;
@@ -406,15 +414,17 @@ function isIOS() {
 
 async function savePassAsImage() {
   var btn = document.getElementById('saveImgBtn');
-  var originalText = btn.textContent;
-  btn.textContent = '⏳ Wird erstellt…';
+  var originalIcon = btn.textContent;
+  btn.textContent = '⏳';
   btn.disabled = true;
   try {
     var card = document.getElementById('passCard');
     var langSwitch = card.querySelector('.lang-switch');
     if (langSwitch) langSwitch.style.visibility = 'hidden';
+    btn.style.visibility = 'hidden';
     var canvas = await html2canvas(card, { backgroundColor: '#0f1115', scale: 2, useCORS: true });
     if (langSwitch) langSwitch.style.visibility = 'visible';
+    btn.style.visibility = 'visible';
     var dataUrl = canvas.toDataURL('image/png');
     var fileName = 'digital-pass-' + (document.getElementById('pName').textContent || 'pass').trim().replace(/\s+/g, '-').toLowerCase() + '.png';
 
@@ -438,7 +448,7 @@ async function savePassAsImage() {
   } catch (e) {
     alert(t('save_error_prefix') + e.message);
   } finally {
-    btn.textContent = originalText;
+    btn.textContent = originalIcon;
     btn.disabled = false;
   }
 }
