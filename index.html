@@ -8550,11 +8550,31 @@ async function generateEventpass(participantId) {
   // manual (see updatePackagePrice()) and can be out of sync with the actual per-meal flags,
   // so the display is driven purely by whichever individual meals/days are actually set.
   var mealDotsHtml = '';
+  var mealTimesHtml = '';
   {
     var activeMeals = PASS_MEALS.filter(function(m) { return p[m.key] === 'Ja'; });
     var activeDays = PASS_MEAL_DAYS.filter(function(d) {
       return activeMeals.some(function(m) { return passMealBooked(m, d.code); });
     });
+    var msR = await db.from('app_settings').select('key,value').like('key', 'meal\_%');
+    var mealSettingsForPrint = {};
+    (msR.data || []).forEach(function(s) { mealSettingsForPrint[s.key] = s.value; });
+    function getPassMealLocation(mealKeyPrefix) {
+      return mealSettingsForPrint[mealKeyPrefix + '_location'] || '';
+    }
+    function getPassMealTimeText(mealKeyPrefix) {
+      var timeParts = [];
+      if (mealKeyPrefix === 'meal_breakfast') {
+        var wdFrom = mealSettingsForPrint['meal_breakfast_weekday_from'], wdTo = mealSettingsForPrint['meal_breakfast_weekday_to'];
+        var weFrom = mealSettingsForPrint['meal_breakfast_weekend_from'], weTo = mealSettingsForPrint['meal_breakfast_weekend_to'];
+        if (wdFrom && wdTo) timeParts.push('Mon–Fri ' + wdFrom + '–' + wdTo);
+        if (weFrom && weTo) timeParts.push('Sat–Sun ' + weFrom + '–' + weTo);
+      } else {
+        var from = mealSettingsForPrint[mealKeyPrefix + '_from'], to = mealSettingsForPrint[mealKeyPrefix + '_to'];
+        if (from && to) timeParts.push(from + '–' + to);
+      }
+      return timeParts.join(' · ');
+    }
     if (activeMeals.length && activeDays.length) {
       var headerRow = '<tr><td></td>' + activeDays.map(function(d){
         return '<td style="text-align:center;font-size:5.5pt;font-weight:700;color:#185FA5;padding:0 1.5mm 1mm">' + d.short + '</td>';
@@ -8568,10 +8588,15 @@ async function generateEventpass(participantId) {
             : '';
           return '<td style="text-align:center;padding:0.5mm 1.5mm">' + box + '</td>';
         }).join('');
-        return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + '</td>' + cells + '</tr>';
+        var loc = getPassMealLocation(m.key);
+        return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + (loc ? ' — ' + loc : '') + '</td>' + cells + '</tr>';
       }).join('');
 
       mealDotsHtml = '<table style="border-collapse:collapse">' + headerRow + mealRows + '</table>';
+      mealTimesHtml = activeMeals.map(function(m) {
+        var timeText = getPassMealTimeText(m.key);
+        return timeText ? '<div style="font-size:5pt;color:#888;margin-top:0.5mm">' + m.label + ': ' + timeText + '</div>' : '';
+      }).join('');
     }
   }
 
@@ -8643,7 +8668,7 @@ async function generateEventpass(participantId) {
     + '<div class="field"><div class="lbl">Package</div><div class="val">' + pkgInfo + '</div></div>'
     + (p.coach_name ? '<div class="field"><div class="lbl">Coach</div><div class="val">' + p.coach_name + '</div></div>' : '')
     + '</div></div>'
-    + (mealDotsHtml ? '<div class="meals"><div class="meal-lbl">Meals included</div><div class="meal-dots">' + mealDotsHtml + '</div></div>' : '')
+    + (mealDotsHtml ? '<div class="meals"><div class="meal-lbl">Meals included</div><div class="meal-dots">' + mealDotsHtml + '</div>' + mealTimesHtml + '</div>' : '')
     + '<div class="bottom">'
     + '<img src="' + qrUrl + '" style="width:17mm;height:17mm;flex-shrink:0" />'
     + '<div><div class="esid-lbl">Member ID / ESID</div><div class="esid-val">' + (p.member_id||'–') + '</div></div>'
@@ -12438,11 +12463,28 @@ function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtm
     return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
   }
   var mealDotsHtml = '';
+  var mealTimesHtml = '';
   {
     var activeMeals = PASS_MEALS.filter(function(m) { return p[m.key] === 'Ja'; });
     var activeDays = PASS_MEAL_DAYS.filter(function(d) {
       return activeMeals.some(function(m) { return passMealBooked2(m, d.code); });
     });
+    function getPassMealLocation(mealKeyPrefix) {
+      return passMealSettingsCache[mealKeyPrefix + '_location'] || '';
+    }
+    function getPassMealTimeText(mealKeyPrefix) {
+      var timeParts = [];
+      if (mealKeyPrefix === 'meal_breakfast') {
+        var wdFrom = passMealSettingsCache['meal_breakfast_weekday_from'], wdTo = passMealSettingsCache['meal_breakfast_weekday_to'];
+        var weFrom = passMealSettingsCache['meal_breakfast_weekend_from'], weTo = passMealSettingsCache['meal_breakfast_weekend_to'];
+        if (wdFrom && wdTo) timeParts.push('Mon–Fri ' + wdFrom + '–' + wdTo);
+        if (weFrom && weTo) timeParts.push('Sat–Sun ' + weFrom + '–' + weTo);
+      } else {
+        var from = passMealSettingsCache[mealKeyPrefix + '_from'], to = passMealSettingsCache[mealKeyPrefix + '_to'];
+        if (from && to) timeParts.push(from + '–' + to);
+      }
+      return timeParts.join(' · ');
+    }
     if (activeMeals.length && activeDays.length) {
       var headerRow = '<tr><td></td>' + activeDays.map(function(d){ return '<td style="text-align:center;font-size:5.5pt;font-weight:700;color:#185FA5;padding:0 1.5mm 1mm">' + d.short + '</td>'; }).join('') + '</tr>';
       var mealRows = activeMeals.map(function(m) {
@@ -12453,9 +12495,14 @@ function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtm
             : '';
           return '<td style="text-align:center;padding:0.5mm 1.5mm">' + box + '</td>';
         }).join('');
-        return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + '</td>' + cells + '</tr>';
+        var loc = getPassMealLocation(m.key);
+        return '<tr><td style="font-size:5.5pt;font-weight:600;color:#555;padding-right:2mm;white-space:nowrap">' + m.label + (loc ? ' — ' + loc : '') + '</td>' + cells + '</tr>';
       }).join('');
       mealDotsHtml = '<table style="border-collapse:collapse">' + headerRow + mealRows + '</table>';
+      mealTimesHtml = activeMeals.map(function(m) {
+        var timeText = getPassMealTimeText(m.key);
+        return timeText ? '<div style="font-size:5pt;color:#888;margin-top:0.5mm">' + m.label + ': ' + timeText + '</div>' : '';
+      }).join('');
     }
   }
 
@@ -12483,7 +12530,7 @@ function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtm
     + '<div class="field"><div class="lbl">Package</div><div class="val">' + pkgInfo + '</div></div>'
     + (p.coach_name ? '<div class="field"><div class="lbl">Coach</div><div class="val">' + p.coach_name + '</div></div>' : '')
     + '</div></div>'
-    + (mealDotsHtml ? '<div class="meals"><div class="meal-lbl">Meals included</div><div class="meal-dots">' + mealDotsHtml + '</div></div>' : '')
+    + (mealDotsHtml ? '<div class="meals"><div class="meal-lbl">Meals included</div><div class="meal-dots">' + mealDotsHtml + '</div>' + mealTimesHtml + '</div>' : '')
     + '<div class="bottom">'
     + '<img src="' + qrUrl + '" style="width:17mm;height:17mm;flex-shrink:0" />'
     + '<div><div class="esid-lbl">Member ID / ESID</div><div class="esid-val">' + (p.member_id||'–') + '</div></div>'
@@ -12494,9 +12541,14 @@ function buildPassCardFragment(p, photoSrc, evName, evDates, evLocation, logoHtm
 
 // Erzeugt EINEN Druckauftrag (ein Fenster) mit mehreren A6-Pässen hintereinander -
 // statt wie zuvor ein separates Fenster pro Person zu öffnen.
+var passMealSettingsCache = {};
 async function printIdCardsBatch(participantIds) {
   if (!participantIds || !participantIds.length) { toast('Keine Teilnehmer in diesem Block'); return; }
   toast('Generiere ' + participantIds.length + ' Pässe…');
+
+  var msR = await db.from('app_settings').select('key,value').like('key', 'meal\_%');
+  passMealSettingsCache = {};
+  (msR.data || []).forEach(function(s) { passMealSettingsCache[s.key] = s.value; });
 
   var pr = await db.from('participants').select('*').in('id', participantIds);
   var parts = pr.data || [];
