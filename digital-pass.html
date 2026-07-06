@@ -81,6 +81,7 @@
   .meal-section { margin-top: 20px; text-align: left; }
   .meal-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #5a6272; margin-bottom: 8px; }
   .meal-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
+  .meal-time { font-size: 11px; color: #8a92a3; padding: 0 0 8px 0; }
   .meal-days { display: flex; gap: 4px; margin-left: auto; }
   .meal-day-chip {
     width: 24px; height: 24px; border-radius: 6px;
@@ -289,6 +290,24 @@ function mealBooked(p, m, dayCode) {
   return daysVal.split(',').map(function(x){ return x.trim(); }).indexOf(dayCode) >= 0;
 }
 
+var mealSettings = {};
+function getMealTimeText(mealKeyPrefix) {
+  var loc = mealSettings[mealKeyPrefix + '_location'];
+  var timeParts = [];
+  if (mealKeyPrefix === 'meal_breakfast') {
+    var wdFrom = mealSettings['meal_breakfast_weekday_from'], wdTo = mealSettings['meal_breakfast_weekday_to'];
+    var weFrom = mealSettings['meal_breakfast_weekend_from'], weTo = mealSettings['meal_breakfast_weekend_to'];
+    if (wdFrom && wdTo) timeParts.push('Mon–Fri ' + wdFrom + '–' + wdTo);
+    if (weFrom && weTo) timeParts.push('Sat–Sun ' + weFrom + '–' + weTo);
+  } else {
+    var from = mealSettings[mealKeyPrefix + '_from'], to = mealSettings[mealKeyPrefix + '_to'];
+    if (from && to) timeParts.push(from + '–' + to);
+  }
+  var timeText = timeParts.join(' · ');
+  if (loc && timeText) return timeText + ' — ' + loc;
+  return timeText || loc || '';
+}
+
 function showError(msg) {
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('errorState').style.display = 'block';
@@ -372,6 +391,11 @@ async function init() {
   var qrData = encodeURIComponent(p.member_id || p.id);
   document.getElementById('qrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=' + qrData;
 
+  // Meal times (breakfast/lunch/dinner location & hours, set by the organizer)
+  var mealSettingsR = await db.from('app_settings').select('key,value').like('key', 'meal\_%');
+  mealSettings = {};
+  (mealSettingsR.data || []).forEach(function(s) { mealSettings[s.key] = s.value; });
+
   // Meal grid (informational — same booked logic as the printed pass). Intentionally
   // independent of the master "Event Meals" checkbox (p.meal_plus), which is a fully
   // manual toggle and can be out of sync with the actual per-meal flags — so this is
@@ -383,7 +407,9 @@ async function init() {
     var rowsHtml = activeMeals.map(function(m) {
       var chips = PASS_MEAL_DAYS.filter(function(d) { return mealBooked(p, m, d.code); })
         .map(function(d) { return '<div class="meal-day-chip">' + d.short.slice(0, 2) + '</div>'; }).join('');
-      return '<div class="meal-row"><span>' + m.label + '</span><div class="meal-days">' + chips + '</div></div>';
+      var timeText = getMealTimeText(m.key);
+      return '<div class="meal-row"><span>' + m.label + '</span><div class="meal-days">' + chips + '</div></div>'
+        + (timeText ? '<div class="meal-time">' + timeText + '</div>' : '');
     }).join('');
       document.getElementById('mealRows').innerHTML = rowsHtml;
   }
