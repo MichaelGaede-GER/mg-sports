@@ -3008,6 +3008,22 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
   </div>
 </div>
 
+<div class="modal-overlay" id="participantDupModal">
+  <div class="modal" style="width:640px">
+    <button class="modal-close" onclick="resolveParticipantDupCancel()">×</button>
+    <h2 style="margin-bottom:4px">⚠️ ESID bereits registriert</h2>
+    <p id="participantDupInfo" style="font-size:13px;color:var(--text2);margin-bottom:16px"></p>
+    <div id="participantDupConflicts" style="margin-bottom:16px"></div>
+    <div style="background:var(--bg2);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text2);margin-bottom:16px">
+      ℹ️ Alle übrigen Felder (z.B. Flugdaten, Hotel, Kontakt) werden automatisch ergänzt, sofern im Formular ausgefüllt.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="resolveParticipantDupCancel()">Abbrechen</button>
+      <button class="btn primary" onclick="resolveParticipantDupConfirm()">✔ Übernehmen & Eintrag aktualisieren</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="personDupModal" onclick="if(event.target===this)resolvePersonDup('skip')">
   <div class="modal" style="width:660px">
     <button class="modal-close" onclick="resolvePersonDup('skip')">×</button>
@@ -5228,17 +5244,14 @@ async function saveEntry() {
     setTimeout(function(){ document.getElementById('f_member_id').style.borderColor = ''; }, 3000);
     return;
   }
-  // ESID duplicate check (only for new entries, not edits)
+  // ESID duplicate check (only for new entries, not edits) — load existing record for merge instead of blocking
+  var existingDup = null;
   if (memberId && !id) {
-    var dupCheck = await db.from('participants').select('id,firstname,lastname').eq('member_id', memberId);
+    var dupCheck = db.from('participants').select('*').eq('member_id', memberId);
     if (currentEventId) dupCheck = dupCheck.eq('event_id', currentEventId);
     var dupResult = await dupCheck;
     if (dupResult.data && dupResult.data.length > 0) {
-      var dup = dupResult.data[0];
-      toast('⛔ ESID bereits registriert: ' + dup.firstname + ' ' + dup.lastname + ' (' + memberId + ')');
-      document.getElementById('f_member_id').style.borderColor = 'var(--red)';
-      setTimeout(function(){ document.getElementById('f_member_id').style.borderColor = ''; }, 4000);
-      return;
+      existingDup = dupResult.data[0];
     }
   }
   if (!package_) {
@@ -5301,6 +5314,39 @@ async function saveEntry() {
   let error;
   if (currentEventId) row.event_id = currentEventId;
   row.updated_at = new Date().toISOString();
+
+  if (existingDup) {
+    // Duplicate ESID: merge into existing record instead of creating a new one
+    var conflicts = computeParticipantConflicts(existingDup, row);
+    var mergedCritical = {};
+    if (conflicts.length > 0) {
+      var resolved = await showParticipantDupModal(existingDup, row, conflicts);
+      if (!resolved) { toast('Abgebrochen — bestehender Eintrag wurde nicht verändert'); return; }
+      mergedCritical = resolved;
+    } else {
+      PARTICIPANT_CRITICAL_FIELDS.forEach(function(f) {
+        if (row[f] !== null && row[f] !== '' && row[f] !== undefined) mergedCritical[f] = row[f];
+      });
+    }
+    var mergedRow = Object.assign({}, existingDup);
+    Object.keys(row).forEach(function(k) {
+      if (PARTICIPANT_CRITICAL_FIELDS.indexOf(k) >= 0) return;
+      if (row[k] !== null && row[k] !== '' && row[k] !== undefined) mergedRow[k] = row[k];
+    });
+    Object.assign(mergedRow, mergedCritical);
+    delete mergedRow.id;
+    mergedRow.updated_at = new Date().toISOString();
+    if (currentEventId) mergedRow.event_id = currentEventId;
+    var updRes = await db.from('participants').update(mergedRow).eq('id', existingDup.id);
+    if (updRes.error) { toast('Fehler: ' + updRes.error.message); return; }
+    document.getElementById('editingId').value = '';
+    document.getElementById('entryFormTitle').textContent = 'Neuen Teilnehmer erfassen';
+    clearForm();
+    toast('✅ Bestehender Eintrag aktualisiert (ESID war bereits registriert)');
+    nav('participants');
+    return;
+  }
+
   if (id) {
     ({ error } = await db.from('participants').update(row).eq('id', id));
   } else {
@@ -5313,6 +5359,69 @@ async function saveEntry() {
   clearForm();
   toast(msg);
   nav('participants');
+}
+
+var PARTICIPANT_CRITICAL_FIELDS = ['package','package_price','entry_fee','total','payment_status','amount_received','payment_date'];
+var PARTICIPANT_FIELD_LABELS = {
+  package:'Package', package_price:'Package-Preis', entry_fee:'Meldegebühr', total:'Gesamt',
+  payment_status:'Payment Status', amount_received:'Erhalten', payment_date:'Zahlungsdatum',
+  lastname:'Nachname', firstname:'Vorname', hotel:'Hotel', room_type:'Zimmertyp', room_number:'Zimmer-Nr.',
+  checkin:'Check-in', checkout:'Check-out', flight_in:'Flug Hinflug', flight_out:'Flug Rückflug',
+  arrival_date:'Ankunftsdatum', arrival_time:'Ankunftszeit', departure_date:'Abreisedatum', departure_time:'Abreisezeit'
+};
+
+function computeParticipantConflicts(existingObj, newObj) {
+  return PARTICIPANT_CRITICAL_FIELDS.filter(function(f) {
+    var exVal = existingObj[f];
+    var newVal = newObj[f];
+    var exEmpty = exVal === null || exVal === undefined || exVal === '';
+    var newEmpty = newVal === null || newVal === undefined || newVal === '';
+    if (newEmpty) return false; // nothing new to consider
+    if (exEmpty) return false; // existing empty -> safe to auto-fill, no conflict
+    // Both have values — conflict only if they differ (numeric-aware compare)
+    var exNum = parseFloat(exVal), newNum = parseFloat(newVal);
+    if (!isNaN(exNum) && !isNaN(newNum)) return exNum !== newNum;
+    return String(exVal) !== String(newVal);
+  }).map(function(f) {
+    return { field: f, label: PARTICIPANT_FIELD_LABELS[f] || f, oldVal: existingObj[f], newVal: newObj[f] };
+  });
+}
+
+var _participantDupResolve = null;
+function showParticipantDupModal(existingObj, newObj, conflicts) {
+  return new Promise(function(resolve) {
+    _participantDupResolve = resolve;
+    document.getElementById('participantDupInfo').innerHTML =
+      '<strong>' + (existingObj.firstname||'') + ' ' + (existingObj.lastname||'') + '</strong> (' + (existingObj.member_id||'') + ') ist bereits registriert. '
+      + 'Bei folgenden geldrelevanten Feldern gibt es abweichende Werte — bitte pro Feld entscheiden:';
+    var rows = conflicts.map(function(c, idx) {
+      return '<div style="display:flex;align-items:center;gap:14px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px">'
+        + '<div style="flex:1;font-weight:600;font-size:12px">' + c.label + '</div>'
+        + '<label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="radio" name="pdup_' + c.field + '" value="existing" checked> Bestehend: <strong>' + (c.oldVal ?? '–') + '</strong></label>'
+        + '<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--blue)"><input type="radio" name="pdup_' + c.field + '" value="new"> Neu: <strong>' + (c.newVal ?? '–') + '</strong></label>'
+        + '</div>';
+    }).join('');
+    document.getElementById('participantDupConflicts').innerHTML = rows;
+    document.getElementById('participantDupModal').classList.add('open');
+    document.getElementById('participantDupModal').setAttribute('data-conflicts', JSON.stringify(conflicts));
+  });
+}
+
+function resolveParticipantDupCancel() {
+  document.getElementById('participantDupModal').classList.remove('open');
+  if (_participantDupResolve) { _participantDupResolve(null); _participantDupResolve = null; }
+}
+
+function resolveParticipantDupConfirm() {
+  var conflicts = JSON.parse(document.getElementById('participantDupModal').getAttribute('data-conflicts') || '[]');
+  var result = {};
+  conflicts.forEach(function(c) {
+    var checked = document.querySelector('input[name="pdup_' + c.field + '"]:checked');
+    var choice = checked ? checked.value : 'existing';
+    result[c.field] = choice === 'new' ? c.newVal : c.oldVal;
+  });
+  document.getElementById('participantDupModal').classList.remove('open');
+  if (_participantDupResolve) { _participantDupResolve(result); _participantDupResolve = null; }
 }
 
 function v(id) { const el = document.getElementById('f_'+id); return el ? el.value.trim() : ''; }
@@ -10246,15 +10355,17 @@ async function runParticipantImport(input) {
   var existingByMemberId = {};
   (existingR.data||[]).forEach(function(p){ if(p.member_id) existingByMemberId[p.member_id]=p; });
 
-  var inserted=0, skipped=0, errors=[];
+  var inserted=0, updated=0, skipped=0, errors=[];
 
   if (!currentEventId) {
     if (!confirm('⚠️ Kein aktives Event! Teilnehmer werden ohne Event-Zuordnung importiert.\nFortfahren?')) return;
   }
   toast('Importiere ' + rows.length + ' Zeilen…');
 
-  // Build all valid rows first
+  // Build all valid rows first, split into new (insert) vs duplicate (merge)
   var toInsert = [];
+  var toMerge = [];
+  var seenInBatch = {};
   for (var i=0; i<rows.length; i++) {
     var cells = parseRow(rows[i]);
     if (cells.every(function(c){return !c.trim();})) continue;
@@ -10270,14 +10381,18 @@ async function runParticipantImport(input) {
 
     if (!obj.lastname && !obj.firstname) { skipped++; continue; }
     if (!obj.member_id) { errors.push('Zeile '+(i+2)+': Member ID fehlt'); skipped++; continue; }
-    if (existingByMemberId[obj.member_id]) { skipped++; continue; } // silent skip for duplicates
+    if (seenInBatch[obj.member_id]) { skipped++; continue; } // intra-file duplicate
+    seenInBatch[obj.member_id] = true;
 
-    obj.event_id = currentEventId || null;
-    toInsert.push(obj);
-    existingByMemberId[obj.member_id] = obj; // prevent intra-import duplicates
+    if (existingByMemberId[obj.member_id]) {
+      toMerge.push({ row: i+2, obj: obj, existingId: existingByMemberId[obj.member_id].id });
+    } else {
+      obj.event_id = currentEventId || null;
+      toInsert.push(obj);
+    }
   }
 
-  // Batch insert in chunks of 50
+  // Batch insert genuinely new rows in chunks of 50
   var CHUNK = 50;
   for (var c=0; c<toInsert.length; c+=CHUNK) {
     var chunk = toInsert.slice(c, c+CHUNK);
@@ -10296,18 +10411,49 @@ async function runParticipantImport(input) {
     }
   }
 
+  // Process duplicates: merge into existing record, popup per row if critical fields conflict
+  for (var m=0; m<toMerge.length; m++) {
+    var item = toMerge[m];
+    var exR = await db.from('participants').select('*').eq('id', item.existingId).single();
+    if (exR.error || !exR.data) { errors.push('Zeile '+item.row+': bestehender Eintrag nicht ladbar'); skipped++; continue; }
+    var existingFull = exR.data;
+    var conflicts = computeParticipantConflicts(existingFull, item.obj);
+    var mergedCritical = {};
+    if (conflicts.length > 0) {
+      toast('Konflikt bei Zeile ' + item.row + ' (' + (item.obj.firstname||'') + ' ' + (item.obj.lastname||'') + ')…');
+      var resolved = await showParticipantDupModal(existingFull, item.obj, conflicts);
+      if (!resolved) { skipped++; continue; }
+      mergedCritical = resolved;
+    } else {
+      PARTICIPANT_CRITICAL_FIELDS.forEach(function(f) {
+        if (item.obj[f] !== null && item.obj[f] !== '' && item.obj[f] !== undefined) mergedCritical[f] = item.obj[f];
+      });
+    }
+    var mergedRow = Object.assign({}, existingFull);
+    Object.keys(item.obj).forEach(function(k) {
+      if (PARTICIPANT_CRITICAL_FIELDS.indexOf(k) >= 0) return;
+      if (item.obj[k] !== null && item.obj[k] !== '' && item.obj[k] !== undefined) mergedRow[k] = item.obj[k];
+    });
+    Object.assign(mergedRow, mergedCritical);
+    delete mergedRow.id;
+    mergedRow.updated_at = new Date().toISOString();
+    var updRes = await db.from('participants').update(mergedRow).eq('id', item.existingId);
+    if (updRes.error) errors.push('Zeile '+item.row+': '+updRes.error.message);
+    else updated++;
+  }
+
   var result = document.getElementById('participantImportResult');
   if (result) {
     var hasErr = errors.length > 0;
     result.style.background = hasErr ? 'var(--amber-bg,#faeeda)' : 'var(--green-bg)';
     result.style.borderColor = hasErr ? 'var(--amber,#ef9f27)' : 'var(--green)';
     result.style.color = hasErr ? 'var(--amber-text,#854f0b)' : 'var(--green)';
-    result.innerHTML = '✅ <strong>' + inserted + ' neu importiert</strong> · <strong>' + skipped + ' übersprungen</strong>'
+    result.innerHTML = '✅ <strong>' + inserted + ' neu importiert</strong> · <strong>' + updated + ' bestehende aktualisiert</strong> · <strong>' + skipped + ' übersprungen</strong>'
       + (errors.length ? '<br><small>' + errors.slice(0,5).join('<br>') + (errors.length>5 ? '…' : '') + '</small>' : '');
     result.style.display = 'block';
     setTimeout(function(){ result.style.display='none'; }, 10000);
   }
-  toast(inserted + ' importiert · ' + skipped + ' übersprungen');
+  toast(inserted + ' importiert · ' + updated + ' aktualisiert · ' + skipped + ' übersprungen');
   loadParticipants();
 }
 
