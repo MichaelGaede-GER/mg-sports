@@ -170,7 +170,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-var LANG = 'de';
+var LANG = 'en';
 var currentParticipant = null;
 var I18N = {
   de: {
@@ -299,7 +299,7 @@ function showError(msg) {
 }
 
 async function init() {
-  document.getElementById('langBtnDe').classList.add('active');
+  document.getElementById('langBtnEn').classList.add('active');
   document.querySelector('#loadingState p').textContent = t('loading');
 
   var params = new URLSearchParams(window.location.search);
