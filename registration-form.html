@@ -81,6 +81,7 @@
     <h2 data-i18n="success_title">Registration Submitted!</h2>
     <p data-i18n-html="success_text">Thank you for your registration. Your entry has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
     <p style="margin-top:16px;font-size:12px;color:var(--text3)"><span data-i18n="success_regid">Registration ID:</span> <strong id="regId">–</strong></p>
+    <div id="successDupNote" style="display:none;margin-top:14px;background:var(--amber-bg, #fff3cd);color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:12px 16px;font-size:13px;text-align:left"></div>
   </div>
 
   <div id="formContainer">
@@ -421,6 +422,8 @@ en: {
   hint_official_code: "This code is issued by Michael Gäde.",
   err_esid_duplicate: "This ESID is already registered:",
   err_esid_duplicate_contact: "Please contact the organizer if you believe this is an error.",
+  note_esid_pending_review: "ℹ️ ESID already registered — submitted for organizer review",
+  note_esid_review_success: "ℹ️ This ESID was already registered. Your changes have been submitted to the organizer for review and will be merged into the existing registration:",
   err_room_full: "Sorry, this room type just became fully booked. Please choose another one.",
   err_generic: "Error: ",
 
@@ -541,6 +544,8 @@ de: {
   hint_official_code: "Dieser Code wird von Michael Gäde vergeben.",
   err_esid_duplicate: "Diese ESID ist bereits registriert:",
   err_esid_duplicate_contact: "Bitte kontaktiere den Veranstalter, falls das ein Fehler ist.",
+  note_esid_pending_review: "ℹ️ ESID bereits registriert — zur Prüfung an den Veranstalter übermittelt",
+  note_esid_review_success: "ℹ️ Diese ESID war bereits registriert. Deine Änderungen wurden zur Prüfung an den Veranstalter übermittelt und werden mit der bestehenden Anmeldung zusammengeführt:",
   err_room_full: "Dieser Zimmertyp ist gerade ausgebucht worden. Bitte einen anderen wählen.",
   err_generic: "Fehler: ",
 
@@ -1337,19 +1342,17 @@ async function submitRegistration() {
     }
   }
 
-  // Check for duplicate ESID
+  // Check for duplicate ESID — no longer blocks submission. The registration is still
+  // submitted as "Pending" so the organizer can review and merge it (e.g. adding flight
+  // data or upgrading a package) instead of the person's changes being lost.
   var esid = row.member_id;
+  var dupInfo = null;
   if (esid) {
     var dupQ = await db.from('participants').select('id,firstname,lastname').eq('member_id', esid).eq('event_id', eventId);
     if (dupQ.data && dupQ.data.length > 0) {
-      var d = dupQ.data[0];
-      btn.disabled = false;
-      btn.textContent = t('submit_btn');
-      var eb2 = document.getElementById('errorBox');
-      eb2.style.display = 'block';
-      eb2.innerHTML = '⛔ ' + t('err_esid_duplicate') + ' ' + esid + ' – ' + d.firstname + ' ' + d.lastname + '. ' + t('err_esid_duplicate_contact');
-      window.scrollTo(0, eb2.offsetTop - 20);
-      return;
+      dupInfo = dupQ.data[0];
+      var dupNote = t('note_esid_pending_review');
+      row.memo = row.memo ? (dupNote + ' | ' + row.memo) : dupNote;
     }
   }
 
@@ -1367,6 +1370,11 @@ async function submitRegistration() {
   var sb = document.getElementById('successBox');
   sb.style.display = 'block';
   document.getElementById('regId').textContent = r.data ? r.data.id.slice(0,8).toUpperCase() : '–';
+  var dupNoteBox = document.getElementById('successDupNote');
+  if (dupInfo && dupNoteBox) {
+    dupNoteBox.style.display = 'block';
+    dupNoteBox.innerHTML = t('note_esid_review_success') + '<br>• ' + esid + ' (' + dupInfo.firstname + ' ' + dupInfo.lastname + ')';
+  }
   sb.scrollIntoView({behavior:'smooth'});
 }
 
