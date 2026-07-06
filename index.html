@@ -2007,6 +2007,32 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           </div>
         </div>
         <div class="card" style="margin-top:16px">
+          <div class="card-header"><h3>Essenszeiten / Meal Times</h3></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Ort und Uhrzeiten für die Mahlzeiten. Diese Angaben erscheinen z.B. im digitalen Pass der Teilnehmer.</p>
+            <div class="form-grid" style="max-width:700px">
+              <div class="form-group" style="grid-column:1/-1"><label style="font-weight:700">🍳 Frühstück / Breakfast</label></div>
+              <div class="form-group"><label>Ort</label><input type="text" id="meal_breakfast_location" placeholder="z.B. Hotel Restaurant" /></div>
+              <div class="form-group"><label>Von</label><input type="time" id="meal_breakfast_from" /></div>
+              <div class="form-group"><label>Bis</label><input type="time" id="meal_breakfast_to" /></div>
+
+              <div class="form-group" style="grid-column:1/-1;margin-top:8px"><label style="font-weight:700">🍽️ Mittagessen / Lunch</label></div>
+              <div class="form-group"><label>Ort</label><input type="text" id="meal_lunch_location" placeholder="z.B. Sporthalle Foyer" /></div>
+              <div class="form-group"><label>Von</label><input type="time" id="meal_lunch_from" /></div>
+              <div class="form-group"><label>Bis</label><input type="time" id="meal_lunch_to" /></div>
+
+              <div class="form-group" style="grid-column:1/-1;margin-top:8px"><label style="font-weight:700">🍷 Abendessen / Dinner</label></div>
+              <div class="form-group"><label>Ort</label><input type="text" id="meal_dinner_location" placeholder="z.B. Hotel Restaurant" /></div>
+              <div class="form-group"><label>Von</label><input type="time" id="meal_dinner_from" /></div>
+              <div class="form-group"><label>Bis</label><input type="time" id="meal_dinner_to" /></div>
+            </div>
+            <div style="margin-top:16px">
+              <button class="btn primary" onclick="saveMealTimes()">💾 Essenszeiten speichern</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
           <div class="card-header">
             <h3>Altersklassen / Events</h3>
             <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="addAgeClass()">+ Altersklasse hinzufügen</button>
@@ -7056,6 +7082,11 @@ async function loadSettings() {
     if(s.key==='rooms_single'){var el=document.getElementById('set_single');if(el)el.value=parseInt(s.value)||0;}
     if(s.key==='rooms_double'){var el2=document.getElementById('set_double');if(el2)el2.value=parseInt(s.value)||0;}
     if(s.key==='rooms_triple'){var el3=document.getElementById('set_triple');if(el3)el3.value=parseInt(s.value)||0;}
+    ['breakfast','lunch','dinner'].forEach(function(meal){
+      ['location','from','to'].forEach(function(f){
+        if(s.key==='meal_'+meal+'_'+f){var el4=document.getElementById('meal_'+meal+'_'+f);if(el4)el4.value=s.value||'';}
+      });
+    });
   });
 }
 async function saveRoomSettings() {
@@ -7065,6 +7096,18 @@ async function saveRoomSettings() {
   roomSettings={single:s,double:d,triple:t};
   await db.from('app_settings').upsert([{key:'rooms_single',value:String(s)},{key:'rooms_double',value:String(d)},{key:'rooms_triple',value:String(t)}]);
   toast('Zimmerkontingent gespeichert');
+}
+async function saveMealTimes() {
+  var rows = [];
+  ['breakfast','lunch','dinner'].forEach(function(meal){
+    ['location','from','to'].forEach(function(f){
+      var el = document.getElementById('meal_'+meal+'_'+f);
+      rows.push({key:'meal_'+meal+'_'+f, value: (el && el.value) || ''});
+    });
+  });
+  var r = await db.from('app_settings').upsert(rows);
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  toast('✅ Essenszeiten gespeichert');
 }
 async function saveEntryFeeFromSettings() {
   entryFee=parseFloat(document.getElementById('set_entry_fee')&&document.getElementById('set_entry_fee').value)||90;
