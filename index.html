@@ -10976,14 +10976,30 @@ function renderRoleCodeConfigTable() {
   var roles = (personRolesCache && personRolesCache.length) ? personRolesCache : ['Player','Coach','Parent','Referee','Official','ESF Official'];
   el.innerHTML = roles.map(function(role) {
     var cfg = roleCodeConfigCache[role] || ROLE_CODE_CONFIG_DEFAULTS[role] || {category:'adult', requiresCode:false};
+    // Rule: any role requiring a code must live in the "official" group.
+    var effectiveCategory = cfg.requiresCode ? 'official' : cfg.category;
     var catOptions = [['player','Spieler (Junior-Altersklassen)'],['adult','Erwachsene (Coach/Parent-Gruppe)'],['official','Official-Gruppe (Referee/Official/ESF/…)']]
-      .map(function(o){ return '<option value="'+o[0]+'"'+(cfg.category===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('');
+      .map(function(o){ return '<option value="'+o[0]+'"'+(effectiveCategory===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('');
     return '<tr>'
       + '<td><strong>'+role+'</strong></td>'
-      + '<td><select data-role="'+role+'" class="rcc-category" style="font-size:12px">'+catOptions+'</select></td>'
-      + '<td style="text-align:center"><input type="checkbox" data-role="'+role+'" class="rcc-code" '+(cfg.requiresCode?'checked':'')+' /></td>'
+      + '<td><select data-role="'+role+'" class="rcc-category" style="font-size:12px" '+(cfg.requiresCode?'disabled':'')+'>'+catOptions+'</select></td>'
+      + '<td style="text-align:center"><input type="checkbox" data-role="'+role+'" class="rcc-code" onchange="onRoleCodeCheckboxChange(this)" '+(cfg.requiresCode?'checked':'')+' /></td>'
       + '</tr>';
   }).join('');
+}
+
+function onRoleCodeCheckboxChange(checkbox) {
+  var role = checkbox.getAttribute('data-role');
+  var catSel = document.querySelector('#roleCodeConfigTable .rcc-category[data-role="'+role+'"]');
+  if (!catSel) return;
+  if (checkbox.checked) {
+    // Code required → must be in the "official" group, and lock the dropdown
+    // so it can't be set back to something else while code is required.
+    catSel.value = 'official';
+    catSel.disabled = true;
+  } else {
+    catSel.disabled = false;
+  }
 }
 
 async function saveRoleCodeConfig() {
@@ -10991,7 +11007,9 @@ async function saveRoleCodeConfig() {
   document.querySelectorAll('#roleCodeConfigTable .rcc-category').forEach(function(sel) {
     var role = sel.getAttribute('data-role');
     var codeEl = document.querySelector('#roleCodeConfigTable .rcc-code[data-role="'+role+'"]');
-    newConfig[role] = { category: sel.value, requiresCode: !!(codeEl && codeEl.checked) };
+    var requiresCode = !!(codeEl && codeEl.checked);
+    // Enforce the rule regardless of dropdown state: code required → official group.
+    newConfig[role] = { category: requiresCode ? 'official' : sel.value, requiresCode: requiresCode };
   });
   roleCodeConfigCache = newConfig;
   await db.from('app_settings').delete().eq('key','role_code_config');
