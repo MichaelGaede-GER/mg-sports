@@ -2418,6 +2418,26 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
             </div>
           </div>
         </div>
+
+        <!-- ROLLEN-KONFIGURATION FÜR ONLINE-ANMELDUNG -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <h3>Online-Anmeldung – Rollen-Konfiguration</h3>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+              Legt fest, wie jede Personendatenbank-Rolle in Registration-Form und Group-Registration behandelt wird:
+              in welcher Gruppe sie bei der Altersklassen-Auswahl erscheint, und ob ein Zugangscode nötig ist.
+            </p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Rolle</th><th>Gruppe</th><th style="text-align:center">Code erforderlich</th></tr></thead>
+              <tbody id="roleCodeConfigTable"><tr><td colspan="3" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+            <div style="margin-top:14px">
+              <button class="btn primary" onclick="saveRoleCodeConfig()">💾 Speichern</button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -10883,6 +10903,7 @@ async function loadPersonRoles() {
   }
   renderPersonRolesList();
   updatePersonRoleSelects();
+  await loadRoleCodeConfig();
 }
 
 async function savePersonRoles() {
@@ -10913,6 +10934,7 @@ async function addPersonRole() {
   await savePersonRoles();
   renderPersonRolesList();
   updatePersonRoleSelects();
+  renderRoleCodeConfigTable();
   if (input) input.value = '';
   toast(val + ' hinzugefügt');
 }
@@ -10923,7 +10945,59 @@ async function deletePersonRole(idx) {
   await savePersonRoles();
   renderPersonRolesList();
   updatePersonRoleSelects();
+  renderRoleCodeConfigTable();
   toast('Rolle gelöscht');
+}
+
+// Default category/code-requirement, matching the previous hardcoded behavior in the
+// registration forms — used as a fallback for roles that haven't been configured yet.
+var ROLE_CODE_CONFIG_DEFAULTS = {
+  'Player': {category:'player', requiresCode:false},
+  'Coach': {category:'adult', requiresCode:false},
+  'Parent': {category:'adult', requiresCode:false},
+  'Referee': {category:'official', requiresCode:true},
+  'Official': {category:'official', requiresCode:true},
+  'ESF Official': {category:'official', requiresCode:true}
+};
+var roleCodeConfigCache = {};
+
+async function loadRoleCodeConfig() {
+  var r = await db.from('app_settings').select('value').eq('key','role_code_config').limit(1);
+  roleCodeConfigCache = {};
+  if (r.data && r.data.length) {
+    try { roleCodeConfigCache = JSON.parse(r.data[0].value) || {}; } catch(e) {}
+  }
+  renderRoleCodeConfigTable();
+}
+
+function renderRoleCodeConfigTable() {
+  var el = document.getElementById('roleCodeConfigTable');
+  if (!el) return;
+  var roles = (personRolesCache && personRolesCache.length) ? personRolesCache : ['Player','Coach','Parent','Referee','Official','ESF Official'];
+  el.innerHTML = roles.map(function(role) {
+    var cfg = roleCodeConfigCache[role] || ROLE_CODE_CONFIG_DEFAULTS[role] || {category:'adult', requiresCode:false};
+    var catOptions = [['player','Spieler (Junior-Altersklassen)'],['adult','Erwachsene (Coach/Parent-Gruppe)'],['official','Official-Gruppe (Referee/Official/ESF/…)']]
+      .map(function(o){ return '<option value="'+o[0]+'"'+(cfg.category===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('');
+    return '<tr>'
+      + '<td><strong>'+role+'</strong></td>'
+      + '<td><select data-role="'+role+'" class="rcc-category" style="font-size:12px">'+catOptions+'</select></td>'
+      + '<td style="text-align:center"><input type="checkbox" data-role="'+role+'" class="rcc-code" '+(cfg.requiresCode?'checked':'')+' /></td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function saveRoleCodeConfig() {
+  var newConfig = {};
+  document.querySelectorAll('#roleCodeConfigTable .rcc-category').forEach(function(sel) {
+    var role = sel.getAttribute('data-role');
+    var codeEl = document.querySelector('#roleCodeConfigTable .rcc-code[data-role="'+role+'"]');
+    newConfig[role] = { category: sel.value, requiresCode: !!(codeEl && codeEl.checked) };
+  });
+  roleCodeConfigCache = newConfig;
+  await db.from('app_settings').delete().eq('key','role_code_config');
+  var r = await db.from('app_settings').insert({key:'role_code_config', value: JSON.stringify(newConfig)});
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  toast('✅ Rollen-Konfiguration gespeichert');
 }
 
 function updatePersonRoleSelects() {

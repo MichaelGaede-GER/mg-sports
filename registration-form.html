@@ -307,6 +307,40 @@ var ROOM_TYPES = ['Einzelzimmer', 'Doppelzimmer', 'Dreibettzimmer'];
 var ROLE_OPTIONS_FULL = ['Player', 'Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
 var ROLE_OPTIONS_ADULT = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
 var ADULT_ROLES = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+var ROLE_CATEGORY_MAP = {'Player':'player','Coach':'adult','Parent':'adult','Referee':'official','Official':'official','ESF Official':'official'};
+var ROLES_REQUIRING_CODE = ['Referee', 'Official', 'ESF Official'];
+
+// Loads the organizer-configured role list (added via the Personendatenbank role
+// manager) plus each role's category (player / adult / official) and whether it
+// requires an access code. Falls back to the hardcoded defaults above if nothing
+// has been configured yet, or for any role that predates this config.
+async function loadRoleConfig() {
+  var rolesR = await db.from('app_settings').select('value').eq('key','person_roles').limit(1);
+  var allRoles = ROLE_OPTIONS_FULL;
+  if (rolesR.data && rolesR.data[0]) {
+    try { var parsed = JSON.parse(rolesR.data[0].value); if (parsed && parsed.length) allRoles = parsed; } catch(e) {}
+  }
+  var cfgR = await db.from('app_settings').select('value').eq('key','role_code_config').limit(1);
+  var cfg = {};
+  if (cfgR.data && cfgR.data[0]) {
+    try { cfg = JSON.parse(cfgR.data[0].value) || {}; } catch(e) {}
+  }
+  ROLE_CATEGORY_MAP = {};
+  ROLES_REQUIRING_CODE = [];
+  allRoles.forEach(function(role) {
+    var roleCfg = cfg[role] || {category: (ROLE_CATEGORY_MAP0[role] || 'adult'), requiresCode: (ROLES_REQUIRING_CODE0.indexOf(role) !== -1)};
+    ROLE_CATEGORY_MAP[role] = roleCfg.category || 'adult';
+    if (roleCfg.requiresCode) ROLES_REQUIRING_CODE.push(role);
+    // Ensure every role has a display label — fall back to the role name itself
+    if (!ROLE_LABELS.en[role]) ROLE_LABELS.en[role] = role;
+    if (!ROLE_LABELS.de[role]) ROLE_LABELS.de[role] = role;
+  });
+  ROLE_OPTIONS_FULL = allRoles;
+  ROLE_OPTIONS_ADULT = allRoles.filter(function(r){ return ROLE_CATEGORY_MAP[r] !== 'player'; });
+  ADULT_ROLES = ROLE_OPTIONS_ADULT;
+}
+var ROLE_CATEGORY_MAP0 = {'Player':'player','Coach':'adult','Parent':'adult','Referee':'official','Official':'official','ESF Official':'official'};
+var ROLES_REQUIRING_CODE0 = ['Referee', 'Official', 'ESF Official'];
 
 // ---------- I18N ----------
 var LANG = 'en';
@@ -656,6 +690,7 @@ async function init() {
   applyStaticTranslations();
   document.getElementById('r_country').innerHTML = countryOptionsHtml();
   populateGenderSelect();
+  await loadRoleConfig();
   populateRoleSelect(false);
   populateShirtSelect();
 
@@ -786,9 +821,9 @@ function populateShirtSelect() {
 // - nothing selected yet → fall back to the broader isAdult-based set
 function getRoleOptionsForCategory(catVal, isAdult) {
   var v = (catVal || '').trim().toLowerCase();
-  if (v === 'adult pass' || v === 'supporter') return ['Coach', 'Parent'];
-  if (v === 'official') return ['Referee', 'Official', 'ESF Official'];
-  if (v) return ['Player'];
+  if (v === 'adult pass' || v === 'supporter') return ROLE_OPTIONS_FULL.filter(function(r){ return ROLE_CATEGORY_MAP[r] === 'adult'; });
+  if (v === 'official') return ROLE_OPTIONS_FULL.filter(function(r){ return ROLE_CATEGORY_MAP[r] === 'official'; });
+  if (v) return ROLE_OPTIONS_FULL.filter(function(r){ return ROLE_CATEGORY_MAP[r] === 'player'; });
   return isAdult ? ROLE_OPTIONS_ADULT : ROLE_OPTIONS_FULL;
 }
 
@@ -813,7 +848,7 @@ function onRoleChange() {
   if (!show) document.getElementById('r_shirt').value = '';
 
   var officialGroup = document.getElementById('r_official_code_group');
-  var showOfficial = (role === 'Official' || role === 'Referee' || role === 'ESF Official');
+  var showOfficial = ROLES_REQUIRING_CODE.indexOf(role) !== -1;
   officialGroup.style.display = showOfficial ? '' : 'none';
   if (!showOfficial) document.getElementById('r_official_code').value = '';
 
@@ -1241,7 +1276,7 @@ async function submitRegistration() {
   }
 
   var roleForCode = document.getElementById('r_role').value;
-  if (roleForCode === 'Official' || roleForCode === 'Referee' || roleForCode === 'ESF Official') {
+  if (ROLES_REQUIRING_CODE.indexOf(roleForCode) !== -1) {
     var officialCodeEl = document.getElementById('r_official_code');
     var expectedOfficialCode = officialAccessCode || 'Official2026'; // fallback if not yet configured in event settings
     if (v('r_official_code') !== expectedOfficialCode) { errors.push(t('err_official_code')); officialCodeEl.classList.add('error'); }

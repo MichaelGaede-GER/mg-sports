@@ -676,6 +676,7 @@ async function init() {
   await loadPackages();
   await loadRoomAvailability();
   await loadHotels();
+  await loadRoleConfig();
 
   // Start with 2 participant rows to make the "group" nature obvious
   addParticipantRow();
@@ -855,6 +856,39 @@ function updateParticipantCountLabel() {
 var ROLE_OPTIONS_FULL = ['Player', 'Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
 var ROLE_OPTIONS_ADULT = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
 var ADULT_ROLES = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
+var ROLE_CATEGORY_MAP = {'Player':'player','Coach':'adult','Parent':'adult','Referee':'official','Official':'official','ESF Official':'official'};
+var ROLES_REQUIRING_CODE = ['Referee', 'Official', 'ESF Official'];
+var ROLE_CATEGORY_MAP0 = {'Player':'player','Coach':'adult','Parent':'adult','Referee':'official','Official':'official','ESF Official':'official'};
+var ROLES_REQUIRING_CODE0 = ['Referee', 'Official', 'ESF Official'];
+
+// Loads the organizer-configured role list (added via the Personendatenbank role
+// manager) plus each role's category (player / adult / official) and whether it
+// requires an access code. Falls back to the hardcoded defaults above if nothing
+// has been configured yet, or for any role that predates this config.
+async function loadRoleConfig() {
+  var rolesR = await db.from('app_settings').select('value').eq('key','person_roles').limit(1);
+  var allRoles = ROLE_OPTIONS_FULL;
+  if (rolesR.data && rolesR.data[0]) {
+    try { var parsed = JSON.parse(rolesR.data[0].value); if (parsed && parsed.length) allRoles = parsed; } catch(e) {}
+  }
+  var cfgR = await db.from('app_settings').select('value').eq('key','role_code_config').limit(1);
+  var cfg = {};
+  if (cfgR.data && cfgR.data[0]) {
+    try { cfg = JSON.parse(cfgR.data[0].value) || {}; } catch(e) {}
+  }
+  ROLE_CATEGORY_MAP = {};
+  ROLES_REQUIRING_CODE = [];
+  allRoles.forEach(function(role) {
+    var roleCfg = cfg[role] || {category: (ROLE_CATEGORY_MAP0[role] || 'adult'), requiresCode: (ROLES_REQUIRING_CODE0.indexOf(role) !== -1)};
+    ROLE_CATEGORY_MAP[role] = roleCfg.category || 'adult';
+    if (roleCfg.requiresCode) ROLES_REQUIRING_CODE.push(role);
+    if (!ROLE_LABELS.en[role]) ROLE_LABELS.en[role] = role;
+    if (!ROLE_LABELS.de[role]) ROLE_LABELS.de[role] = role;
+  });
+  ROLE_OPTIONS_FULL = allRoles;
+  ROLE_OPTIONS_ADULT = allRoles.filter(function(r){ return ROLE_CATEGORY_MAP[r] !== 'player'; });
+  ADULT_ROLES = ROLE_OPTIONS_ADULT;
+}
 
 // Determines which roles may be selected, based on this participant's chosen "Age Category / Event":
 // - "Adult Pass" or "Supporter" → Coach, Parent only
@@ -863,9 +897,9 @@ var ADULT_ROLES = ['Coach', 'Parent', 'Referee', 'Official', 'ESF Official'];
 // - nothing selected yet → fall back to the broader isAdult-based set
 function getRoleOptionsForCategory(catVal, isAdult) {
   var v = (catVal || '').trim().toLowerCase();
-  if (v === 'adult pass' || v === 'supporter') return ['Coach', 'Parent'];
-  if (v === 'official') return ['Referee', 'Official', 'ESF Official'];
-  if (v) return ['Player'];
+  if (v === 'adult pass' || v === 'supporter') return ROLE_OPTIONS_FULL.filter(function(r){ return ROLE_CATEGORY_MAP[r] === 'adult'; });
+  if (v === 'official') return ROLE_OPTIONS_FULL.filter(function(r){ return ROLE_CATEGORY_MAP[r] === 'official'; });
+  if (v) return ROLE_OPTIONS_FULL.filter(function(r){ return ROLE_CATEGORY_MAP[r] === 'player'; });
   return isAdult ? ROLE_OPTIONS_ADULT : ROLE_OPTIONS_FULL;
 }
 
@@ -1385,7 +1419,7 @@ function onRoleChange(id) {
   }
 
   var officialWrap = document.getElementById('p_official_code_wrap_' + id);
-  var showOfficial = (role === 'Official' || role === 'Referee' || role === 'ESF Official');
+  var showOfficial = ROLES_REQUIRING_CODE.indexOf(role) !== -1;
   if (officialWrap) officialWrap.style.display = showOfficial ? '' : 'none';
   if (!showOfficial) {
     var codeEl = document.getElementById('p_official_code_' + id);
@@ -1512,7 +1546,7 @@ async function submitGroupRegistration() {
 
     // Official Access Code is only required while this participant's role is "Official"
     var roleForCode = document.getElementById('p_role_' + id).value;
-    if (roleForCode === 'Official' || roleForCode === 'Referee' || roleForCode === 'ESF Official') {
+    if (ROLES_REQUIRING_CODE.indexOf(roleForCode) !== -1) {
       var officialCodeEl = document.getElementById('p_official_code_' + id);
       var expectedOfficialCode = officialAccessCode || 'Official2026'; // fallback if not yet configured in event settings
       if (v('p_official_code_' + id) !== expectedOfficialCode) {
