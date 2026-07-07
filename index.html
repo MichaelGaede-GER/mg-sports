@@ -373,6 +373,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('payments')">
       <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg><span data-i18n="nav_payments">Zahlungen</span>
     </div>
+    <div class="nav-item" onclick="nav('invoices')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span>Rechnungen</span>
+    </div>
     <div class="nav-item" onclick="nav('mahnlog')">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="nav_mahnlog">Mahnungs-Log</span>
       <span class="nav-cnt" id="cntMahnlog" style="display:none">!</span>
@@ -1340,6 +1343,33 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="table-wrap"><table>
             <thead><tr><th>Name</th><th>Land</th><th>Package</th><th>Gesamt (€)</th><th>Erhalten (€)</th><th>Offen (€)</th><th>Datum</th><th>Status</th><th>Mahnstufe & E-Mail</th><th>Payment Link</th><th>Aktionen</th></tr></thead>
             <tbody id="paymentsTable"><tr><td colspan="10" class="loading">Lade…</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- RECHNUNGEN -->
+      <div class="page" id="page-invoices">
+        <div class="page-header"><h2>Rechnungen</h2>
+          <button class="btn primary" onclick="openInvoiceModal(null)">+ Neue Rechnung</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat" id="invStatTotal"><div class="lbl">Rechnungen gesamt</div><div class="val" id="invCountTotal">–</div></div>
+          <div class="stat amber" id="invStatOpen"><div class="lbl">Offen</div><div class="val" id="invSumOpen">–</div></div>
+          <div class="stat green" id="invStatPaid"><div class="lbl">Bezahlt</div><div class="val" id="invSumPaid">–</div></div>
+        </div>
+        <div class="card">
+          <div class="filter-bar">
+            <select id="invoiceStatusFilter" onchange="loadInvoices()">
+              <option value="">Alle Status</option>
+              <option value="Offen">Offen</option>
+              <option value="Bezahlt">Bezahlt</option>
+              <option value="Storniert">Storniert</option>
+            </select>
+            <input type="text" id="invoiceSearchInput" placeholder="Suche nach Nr. / Empfänger…" oninput="loadInvoices()" style="flex:1;min-width:200px" />
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Nr.</th><th>Datum</th><th>Empfänger</th><th>Positionen</th><th>Betrag (€)</th><th>Status</th><th>Aktionen</th></tr></thead>
+            <tbody id="invoicesTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
       </div>
@@ -3084,6 +3114,66 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
   </div>
 </div>
 
+<div class="modal-overlay" id="invoiceModal">
+  <div class="modal" style="width:820px;max-width:95vw">
+    <button class="modal-close" onclick="closeModal('invoiceModal')">×</button>
+    <h2 id="invoiceModalTitle" style="margin-bottom:16px">Neue Rechnung</h2>
+
+    <div class="form-grid">
+      <div class="form-group"><label>Rechnungsnummer</label><input type="text" id="inv_number" readonly style="background:var(--bg2)" /></div>
+      <div class="form-group"><label>Rechnungsdatum</label><input type="date" id="inv_date" /></div>
+      <div class="form-group"><label>Fällig am</label><input type="date" id="inv_due_date" /></div>
+      <div class="form-group"><label>Status</label>
+        <select id="inv_status">
+          <option value="Offen">Offen</option>
+          <option value="Bezahlt">Bezahlt</option>
+          <option value="Storniert">Storniert</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Empfänger (Name / Verein / Verband)</label>
+        <input type="text" id="inv_recipient_name" placeholder="z.B. TC Musterstadt oder Max Mustermann" />
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Adresse</label>
+        <textarea id="inv_recipient_address" rows="3" placeholder="Straße, PLZ Ort, Land"></textarea>
+      </div>
+      <div class="form-group"><label>E-Mail (optional)</label><input type="email" id="inv_recipient_email" placeholder="empfänger@email.com" /></div>
+    </div>
+
+    <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border)">
+      <h3 style="font-size:14px;margin-bottom:10px">Teilnehmer hinzufügen</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="flex:1;min-width:220px;position:relative">
+          <input type="text" id="invParticipantSearch" placeholder="Name oder ESID suchen…" oninput="searchInvoiceParticipants(this.value)" style="width:100%" />
+          <div id="invParticipantResults" style="display:none;position:absolute;z-index:20;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);max-height:220px;overflow-y:auto;width:100%;margin-top:2px"></div>
+        </div>
+        <select id="invGroupSelect" style="min-width:200px">
+          <option value="">– Gruppe wählen –</option>
+        </select>
+        <button class="btn" onclick="addGroupToInvoice()">+ Gruppe hinzufügen</button>
+        <button class="btn" onclick="addManualInvoiceLine()">+ Freie Position</button>
+      </div>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Beschreibung</th><th style="width:70px">Menge</th><th style="width:110px">Einzelpreis (€)</th><th style="width:110px">Summe (€)</th><th style="width:40px"></th></tr></thead>
+        <tbody id="invoiceItemsTable"><tr><td colspan="5" class="empty">Noch keine Positionen</td></tr></tbody>
+      </table></div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;font-size:15px;font-weight:700">
+        Gesamt: <span id="invoiceTotalDisplay" style="margin-left:8px">€ 0.00</span>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:16px"><label>Notizen (intern, erscheint nicht auf PDF)</label>
+      <textarea id="inv_notes" rows="2"></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeModal('invoiceModal')">Abbrechen</button>
+      <button class="btn primary" onclick="saveInvoice()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="personDupModal" onclick="if(event.target===this)resolvePersonDup('skip')">
   <div class="modal" style="width:660px">
     <button class="modal-close" onclick="resolvePersonDup('skip')">×</button>
@@ -3651,6 +3741,24 @@ on conflict do nothing;
 -- Row Level Security (optional, für Produktion empfohlen)
 -- alter table participants enable row level security;
 -- alter table packages enable row level security;
+
+-- RECHNUNGEN
+create table if not exists invoices (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid,
+  invoice_number text,
+  invoice_date date,
+  due_date date,
+  status text default 'Offen',
+  recipient_name text not null,
+  recipient_address text,
+  recipient_email text,
+  notes text,
+  items jsonb default '[]',
+  total numeric default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
 `;
 
 // AUTH
@@ -4650,7 +4758,7 @@ function nav(page) {
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => { if (i.getAttribute('onclick') && i.getAttribute('onclick').includes("'"+page+"'")) i.classList.add('active'); });
-  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte & PDFs',airport:'Airport Transfer',users:'Benutzer & Rollen'};
+  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',invoices:'Rechnungen',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte & PDFs',airport:'Airport Transfer',users:'Benutzer & Rollen'};
   document.getElementById('topbarTitle').textContent = titles[page] || page;
   currentPage = page;
   if (page === 'dashboard') {
@@ -4671,6 +4779,7 @@ function nav(page) {
   else if (page === 'hotel') { loadHotel(); populateHotelDropdowns(); }
   else if (page === 'shuttle') loadShuttle();
   else if (page === 'payments') loadPayments();
+  else if (page === 'invoices') loadInvoices();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
   else if (page === 'marketing') loadMarketing();
@@ -5901,6 +6010,300 @@ async function loadHotel() {
 }
 
 // PAYMENTS
+// ============ RECHNUNGEN / INVOICES ============
+var currentInvoiceId = null;
+var currentInvoiceItems = []; // {description, participant_id, quantity, unit_price}
+
+function invoiceStatusBadgeClass(status) {
+  if (status === 'Bezahlt') return 'paid';
+  if (status === 'Storniert') return 'cancel';
+  return 'pending';
+}
+
+async function loadInvoices() {
+  var tb = document.getElementById('invoicesTable');
+  if (!tb) return;
+  var q = db.from('invoices').select('*').order('invoice_date', {ascending:false});
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var statusFilter = document.getElementById('invoiceStatusFilter') && document.getElementById('invoiceStatusFilter').value;
+  if (statusFilter) q = q.eq('status', statusFilter);
+  var r = await q;
+  if (r.error) { toast('Fehler beim Laden: ' + r.error.message); return; }
+  var allRows = r.data || [];
+
+  var cntEl = document.getElementById('invCountTotal');
+  var sumOpenEl = document.getElementById('invSumOpen');
+  var sumPaidEl = document.getElementById('invSumPaid');
+  if (cntEl) cntEl.textContent = allRows.length;
+  if (sumOpenEl) sumOpenEl.textContent = '€ ' + allRows.filter(function(i){return i.status==='Offen';}).reduce(function(s,i){return s+(parseFloat(i.total)||0);},0).toFixed(2);
+  if (sumPaidEl) sumPaidEl.textContent = '€ ' + allRows.filter(function(i){return i.status==='Bezahlt';}).reduce(function(s,i){return s+(parseFloat(i.total)||0);},0).toFixed(2);
+
+  var searchVal = (document.getElementById('invoiceSearchInput') && document.getElementById('invoiceSearchInput').value || '').toLowerCase().trim();
+  var rows = searchVal ? allRows.filter(function(inv) {
+    return (inv.invoice_number||'').toLowerCase().indexOf(searchVal) >= 0 || (inv.recipient_name||'').toLowerCase().indexOf(searchVal) >= 0;
+  }) : allRows;
+
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Keine Rechnungen gefunden</td></tr>'; return; }
+  tb.innerHTML = rows.map(function(inv) {
+    var itemCount = (inv.items||[]).length;
+    return '<tr>'
+      + '<td><strong>'+(inv.invoice_number||'–')+'</strong></td>'
+      + '<td>'+(inv.invoice_date ? fmtDate(inv.invoice_date) : '–')+'</td>'
+      + '<td>'+(inv.recipient_name||'–')+'</td>'
+      + '<td>'+itemCount+'</td>'
+      + '<td>€ '+parseFloat(inv.total||0).toFixed(2)+'</td>'
+      + '<td><span class="status '+invoiceStatusBadgeClass(inv.status)+'">'+(inv.status||'Offen')+'</span></td>'
+      + '<td style="display:flex;gap:4px;flex-wrap:wrap">'
+      + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="openInvoiceModal(\''+inv.id+'\')">Bearbeiten</button>'
+      + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="printInvoicePDF(\''+inv.id+'\')">🖨 PDF</button>'
+      + '<button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteInvoice(\''+inv.id+'\')">❌</button>'
+      + '</td></tr>';
+  }).join('');
+}
+
+async function deleteInvoice(id) {
+  if (!confirm('Diese Rechnung wirklich löschen?')) return;
+  var r = await db.from('invoices').delete().eq('id', id);
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  toast('Rechnung gelöscht');
+  loadInvoices();
+}
+
+async function generateNextInvoiceNumber() {
+  var year = new Date().getFullYear();
+  var q = db.from('invoices').select('invoice_number').like('invoice_number', 'RE-'+year+'-%');
+  var r = await q;
+  var maxN = 0;
+  (r.data||[]).forEach(function(row) {
+    var m = /RE-\d{4}-(\d+)/.exec(row.invoice_number||'');
+    if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
+  });
+  return 'RE-' + year + '-' + String(maxN + 1).padStart(4, '0');
+}
+
+async function populateInvoiceGroupSelect() {
+  var sel = document.getElementById('invGroupSelect');
+  if (!sel) return;
+  var q = db.from('participants').select('group_tp').not('group_tp', 'is', null);
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
+  var groups = Array.from(new Set((r.data||[]).map(function(p){ return p.group_tp; }).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">– Gruppe wählen –</option>' + groups.map(function(g) {
+    return '<option value="'+g+'">'+g+'</option>';
+  }).join('');
+}
+
+async function openInvoiceModal(id) {
+  currentInvoiceId = id;
+  currentInvoiceItems = [];
+  document.getElementById('invParticipantSearch').value = '';
+  document.getElementById('invParticipantResults').style.display = 'none';
+  await populateInvoiceGroupSelect();
+
+  if (id) {
+    document.getElementById('invoiceModalTitle').textContent = 'Rechnung bearbeiten';
+    var r = await db.from('invoices').select('*').eq('id', id).single();
+    if (r.error || !r.data) { toast('Fehler beim Laden'); return; }
+    var inv = r.data;
+    document.getElementById('inv_number').value = inv.invoice_number || '';
+    document.getElementById('inv_date').value = inv.invoice_date || '';
+    document.getElementById('inv_due_date').value = inv.due_date || '';
+    document.getElementById('inv_status').value = inv.status || 'Offen';
+    document.getElementById('inv_recipient_name').value = inv.recipient_name || '';
+    document.getElementById('inv_recipient_address').value = inv.recipient_address || '';
+    document.getElementById('inv_recipient_email').value = inv.recipient_email || '';
+    document.getElementById('inv_notes').value = inv.notes || '';
+    currentInvoiceItems = Array.isArray(inv.items) ? inv.items.slice() : [];
+  } else {
+    document.getElementById('invoiceModalTitle').textContent = 'Neue Rechnung';
+    document.getElementById('inv_number').value = await generateNextInvoiceNumber();
+    document.getElementById('inv_date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('inv_due_date').value = '';
+    document.getElementById('inv_status').value = 'Offen';
+    document.getElementById('inv_recipient_name').value = '';
+    document.getElementById('inv_recipient_address').value = '';
+    document.getElementById('inv_recipient_email').value = '';
+    document.getElementById('inv_notes').value = '';
+  }
+  renderInvoiceItemsTable();
+  document.getElementById('invoiceModal').classList.add('open');
+}
+
+var invSearchDebounce = null;
+function searchInvoiceParticipants(query) {
+  clearTimeout(invSearchDebounce);
+  var box = document.getElementById('invParticipantResults');
+  if (!query || query.trim().length < 2) { box.style.display = 'none'; return; }
+  invSearchDebounce = setTimeout(async function() {
+    var q = db.from('participants').select('id,firstname,lastname,member_id,package,package_price,entry_fee,total')
+      .or('firstname.ilike.%'+query+'%,lastname.ilike.%'+query+'%,member_id.ilike.%'+query+'%');
+    if (currentEventId) q = q.eq('event_id', currentEventId);
+    var r = await q.limit(15);
+    var results = r.data || [];
+    if (!results.length) { box.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--text3)">Keine Treffer</div>'; box.style.display='block'; return; }
+    box.innerHTML = results.map(function(p) {
+      return '<div style="padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)" '
+        + 'onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'" '
+        + 'onclick=\'addParticipantToInvoice('+JSON.stringify(p).replace(/'/g,"&#39;")+')\'>'
+        + '<strong>'+p.lastname+', '+p.firstname+'</strong> <span style="color:var(--text3)">('+(p.member_id||'–')+')</span>'
+        + '</div>';
+    }).join('');
+    box.style.display = 'block';
+  }, 250);
+}
+
+function addParticipantToInvoice(p) {
+  var amount = parseFloat(p.total) || (parseFloat(p.package_price)||0) + (parseFloat(p.entry_fee)||0);
+  currentInvoiceItems.push({
+    description: p.lastname + ', ' + p.firstname + (p.package ? ' — Package ' + p.package : ''),
+    participant_id: p.id,
+    quantity: 1,
+    unit_price: amount
+  });
+  document.getElementById('invParticipantSearch').value = '';
+  document.getElementById('invParticipantResults').style.display = 'none';
+  renderInvoiceItemsTable();
+}
+
+async function addGroupToInvoice() {
+  var sel = document.getElementById('invGroupSelect');
+  var groupCode = sel && sel.value;
+  if (!groupCode) { toast('Bitte eine Gruppe auswählen'); return; }
+  var q = db.from('participants').select('id,firstname,lastname,member_id,package,package_price,entry_fee,total').eq('group_tp', groupCode);
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
+  var already = currentInvoiceItems.map(function(i){ return i.participant_id; });
+  var added = 0;
+  (r.data||[]).forEach(function(p) {
+    if (already.indexOf(p.id) >= 0) return; // avoid duplicates
+    var amount = parseFloat(p.total) || (parseFloat(p.package_price)||0) + (parseFloat(p.entry_fee)||0);
+    currentInvoiceItems.push({
+      description: p.lastname + ', ' + p.firstname + (p.package ? ' — Package ' + p.package : ''),
+      participant_id: p.id,
+      quantity: 1,
+      unit_price: amount
+    });
+    added++;
+  });
+  renderInvoiceItemsTable();
+  toast(added + ' Teilnehmer aus Gruppe "' + groupCode + '" hinzugefügt');
+}
+
+function addManualInvoiceLine() {
+  currentInvoiceItems.push({ description: '', participant_id: null, quantity: 1, unit_price: 0 });
+  renderInvoiceItemsTable();
+}
+
+function removeInvoiceItem(idx) {
+  currentInvoiceItems.splice(idx, 1);
+  renderInvoiceItemsTable();
+}
+
+function updateInvoiceItemField(idx, field, value) {
+  if (field === 'quantity' || field === 'unit_price') {
+    currentInvoiceItems[idx][field] = parseFloat(value) || 0;
+  } else {
+    currentInvoiceItems[idx][field] = value;
+  }
+  renderInvoiceItemsTable(true); // preserve focus while typing
+}
+
+function renderInvoiceItemsTable(skipRebuildInputs) {
+  var tb = document.getElementById('invoiceItemsTable');
+  if (!currentInvoiceItems.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="empty">Noch keine Positionen</td></tr>';
+  } else {
+    tb.innerHTML = currentInvoiceItems.map(function(item, idx) {
+      var lineTotal = (parseFloat(item.quantity)||0) * (parseFloat(item.unit_price)||0);
+      return '<tr>'
+        + '<td><input type="text" value="'+(item.description||'').replace(/"/g,'&quot;')+'" oninput="updateInvoiceItemField('+idx+',\'description\',this.value)" style="width:100%;font-size:12px" /></td>'
+        + '<td><input type="number" min="0" step="1" value="'+(item.quantity!=null?item.quantity:1)+'" oninput="updateInvoiceItemField('+idx+',\'quantity\',this.value)" style="width:100%;font-size:12px" /></td>'
+        + '<td><input type="number" min="0" step="0.01" value="'+(item.unit_price!=null?item.unit_price:0)+'" oninput="updateInvoiceItemField('+idx+',\'unit_price\',this.value)" style="width:100%;font-size:12px" /></td>'
+        + '<td style="font-size:13px;font-weight:600">€ '+lineTotal.toFixed(2)+'</td>'
+        + '<td><button onclick="removeInvoiceItem('+idx+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" title="Entfernen">×</button></td>'
+        + '</tr>';
+    }).join('');
+  }
+  var total = currentInvoiceItems.reduce(function(s,item){ return s + (parseFloat(item.quantity)||0) * (parseFloat(item.unit_price)||0); }, 0);
+  document.getElementById('invoiceTotalDisplay').textContent = '€ ' + total.toFixed(2);
+}
+
+async function saveInvoice() {
+  var recipientName = document.getElementById('inv_recipient_name').value.trim();
+  if (!recipientName) { toast('⚠️ Bitte einen Empfänger eintragen'); return; }
+  if (!currentInvoiceItems.length) { toast('⚠️ Bitte mindestens eine Position hinzufügen'); return; }
+
+  var total = currentInvoiceItems.reduce(function(s,item){ return s + (parseFloat(item.quantity)||0) * (parseFloat(item.unit_price)||0); }, 0);
+  var row = {
+    event_id: currentEventId || null,
+    invoice_number: document.getElementById('inv_number').value,
+    invoice_date: document.getElementById('inv_date').value || null,
+    due_date: document.getElementById('inv_due_date').value || null,
+    status: document.getElementById('inv_status').value,
+    recipient_name: recipientName,
+    recipient_address: document.getElementById('inv_recipient_address').value || null,
+    recipient_email: document.getElementById('inv_recipient_email').value || null,
+    notes: document.getElementById('inv_notes').value || null,
+    items: currentInvoiceItems,
+    total: total,
+    updated_at: new Date().toISOString()
+  };
+
+  var r;
+  if (currentInvoiceId) {
+    r = await db.from('invoices').update(row).eq('id', currentInvoiceId);
+  } else {
+    r = await db.from('invoices').insert(row);
+  }
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  toast('✅ Rechnung gespeichert');
+  closeModal('invoiceModal');
+  loadInvoices();
+}
+
+async function printInvoicePDF(id) {
+  var r = await db.from('invoices').select('*').eq('id', id).single();
+  if (r.error || !r.data) { toast('Fehler beim Laden'); return; }
+  var inv = r.data;
+  var evName = '';
+  if (currentEventId) {
+    var evR = await db.from('events').select('name,location').eq('id', currentEventId).single();
+    if (evR.data) evName = evR.data.name;
+  }
+  var itemsRows = (inv.items||[]).map(function(item) {
+    var lineTotal = (parseFloat(item.quantity)||0) * (parseFloat(item.unit_price)||0);
+    return '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">'+(item.description||'')+'</td>'
+      + '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center">'+(item.quantity||1)+'</td>'
+      + '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">€ '+parseFloat(item.unit_price||0).toFixed(2)+'</td>'
+      + '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">€ '+lineTotal.toFixed(2)+'</td></tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + inv.invoice_number + '</title>'
+    + '<style>body{font-family:Arial,sans-serif;color:#222;padding:40px;max-width:800px;margin:auto}'
+    + 'h1{font-size:22px;margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:20px}'
+    + 'th{text-align:left;padding:6px 8px;border-bottom:2px solid #333;font-size:12px;text-transform:uppercase;color:#555}'
+    + '.totalRow td{border-top:2px solid #333;font-weight:700;font-size:15px;padding-top:10px}'
+    + '@media print{body{padding:0}}</style></head><body>'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px">'
+    + '<div><h1>Rechnung</h1><div style="color:#555">'+ (evName||'') +'</div></div>'
+    + '<div style="text-align:right;font-size:13px"><strong>Rechnungsnr.:</strong> '+inv.invoice_number+'<br>'
+    + '<strong>Datum:</strong> '+(inv.invoice_date||'–')+'<br>'
+    + (inv.due_date ? '<strong>Fällig am:</strong> '+inv.due_date+'<br>' : '')
+    + '<strong>Status:</strong> '+inv.status+'</div></div>'
+    + '<div style="margin-bottom:20px"><strong>' + inv.recipient_name + '</strong><br>'
+    + (inv.recipient_address ? inv.recipient_address.replace(/\n/g,'<br>') : '')
+    + (inv.recipient_email ? '<br>' + inv.recipient_email : '') + '</div>'
+    + '<table><thead><tr><th>Beschreibung</th><th style="text-align:center">Menge</th><th style="text-align:right">Einzelpreis</th><th style="text-align:right">Summe</th></tr></thead>'
+    + '<tbody>' + itemsRows + '</tbody>'
+    + '<tfoot><tr class="totalRow"><td colspan="3" style="text-align:right;padding-right:8px">Gesamt</td><td style="text-align:right">€ '+parseFloat(inv.total||0).toFixed(2)+'</td></tr></tfoot>'
+    + '</table></body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+}
+
 async function loadPayments() {
   let q = db.from('participants').select('*').order('lastname');
   if (currentEventId) q = q.eq('event_id', currentEventId);
