@@ -6224,19 +6224,35 @@ async function generateRefereePenaltyPDF() {
     + '</div></div>'
     + '</body></html>';
 
-  // Render each page off-screen, then export as JPG downloads with fixed filenames
+  // Render each page in an on-screen (but invisible) position — Chrome skips
+  // painting elements that are far off-screen, which caused the background
+  // image and full layout to be missing from the captured JPGs.
   var holder = document.createElement('div');
   holder.style.position = 'fixed';
-  holder.style.left = '-99999px';
+  holder.style.left = '0';
   holder.style.top = '0';
+  holder.style.zIndex = '-1';
+  holder.style.opacity = '0.01';
+  holder.style.pointerEvents = 'none';
   holder.innerHTML = html.match(/<body>([\s\S]*)<\/body>/)[1];
   document.body.appendChild(holder);
+
+  // Make sure the background image is fully decoded before capturing —
+  // otherwise html2canvas can render a blank/partial background.
+  await new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = resolve;
+    img.onerror = resolve;
+    img.src = REFEREE_PENALTY_BG;
+  });
+  // Give the browser a couple of paint cycles to actually render the layout
+  await new Promise(function(resolve) { requestAnimationFrame(function(){ requestAnimationFrame(resolve); }); });
 
   var pages = holder.querySelectorAll('.pg');
   var fileNames = ['Refereenoshow', 'Refereenoshowcountry'];
 
   for (var i = 0; i < pages.length; i++) {
-    var canvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, useCORS: true });
+    var canvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, useCORS: true, allowTaint: true, backgroundColor: null });
     var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     var a = document.createElement('a');
     a.href = dataUrl;
