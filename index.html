@@ -6180,18 +6180,18 @@ async function generateRefereePenaltyPDF() {
 
   var namesRows = todayRows.map(function(row, idx) {
     return '<tr>'
-      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px;color:#888">'+(idx+1)+'</td>'
-      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:24px;font-weight:600">'+row.lastname+', '+row.firstname+'</td>'
-      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px">'+(row.member_id||'–')+'</td>'
-      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px">'+(row.country||'–')+'</td>'
-      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px">'+(row.events||'–')+'</td>'
+      + '<td style="padding:5px 14px;border-bottom:1px solid #ddd;font-size:14px;color:#888">'+(idx+1)+'</td>'
+      + '<td style="padding:5px 14px;border-bottom:1px solid #ddd;font-size:16px;font-weight:600">'+row.lastname+', '+row.firstname+'</td>'
+      + '<td style="padding:5px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.member_id||'–')+'</td>'
+      + '<td style="padding:5px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.country||'–')+'</td>'
+      + '<td style="padding:5px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.events||'–')+'</td>'
       + '</tr>';
   }).join('');
 
   var rankingRows = ranking.map(function(row, idx) {
     return '<tr>'
-      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px;color:#888">'+(idx+1)+'.</td>'
-      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:24px;font-weight:600">'+row.country+'</td>'
+      + '<td style="padding:5px 14px;border-bottom:1px solid #ddd;font-size:14px;color:#888">'+(idx+1)+'.</td>'
+      + '<td style="padding:5px 14px;border-bottom:1px solid #ddd;font-size:16px;font-weight:600">'+row.country+'</td>'
       + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px;text-align:right">'+row.count+'</td>'
       + '</tr>';
   }).join('');
@@ -6203,13 +6203,13 @@ async function generateRefereePenaltyPDF() {
     + '@page{size:landscape;margin:0}'
     + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
     + '.pg{width:1920px;height:1080px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:70px}'
-    + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:40px 50px;max-width:1500px;width:100%;text-align:center}'
+    + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:24px 34px;max-width:1500px;width:100%;text-align:center;max-height:940px;overflow:hidden}'
     + '.panel table{text-align:left;margin:0 auto}'
-    + 'h1{font-size:52px;margin:0 0 8px;letter-spacing:0.5px}'
-    + 'h2{font-size:24px;color:#555;font-weight:400;margin:0 0 30px}'
+    + 'h1{font-size:32px;margin:0 0 4px;letter-spacing:0.5px}'
+    + 'h2{font-size:16px;color:#555;font-weight:400;margin:0 0 14px}'
     + 'table{width:100%;border-collapse:collapse}'
-    + 'th{text-align:left;padding:12px 20px;border-bottom:2px solid #333;font-size:16px;text-transform:uppercase;color:#555}'
-    + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:14px 18px;margin-bottom:22px;font-size:15px;font-weight:700;color:#a52a2a}'
+    + 'th{text-align:left;padding:6px 14px;border-bottom:2px solid #333;font-size:12px;text-transform:uppercase;color:#555}'
+    + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#a52a2a}'
     + '</style></head><body>'
     + '<div class="pg"><div class="panel">'
     + '<h1>PENALTY LIST FOR NO SHOW REFEREE</h1><h2>' + (evName||'') + '</h2>'
@@ -6253,7 +6253,7 @@ async function generateRefereePenaltyPDF() {
   var fileNames = ['Refereenoshow', 'Refereenoshowcountry'];
 
   for (var i = 0; i < pages.length; i++) {
-    var contentCanvas = await html2canvas(pages[i], { scale: 1, backgroundColor: null, useCORS: true, allowTaint: true });
+    var contentCanvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, windowWidth: 1920, windowHeight: 1080, backgroundColor: null, useCORS: true, allowTaint: true });
 
     var finalCanvas = document.createElement('canvas');
     finalCanvas.width = 1920;
