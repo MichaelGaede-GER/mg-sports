@@ -6253,7 +6253,7 @@ async function generateRefereePenaltyPDF() {
   var fileNames = ['Refereenoshow', 'Refereenoshowcountry'];
 
   for (var i = 0; i < pages.length; i++) {
-    var contentCanvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, backgroundColor: null, useCORS: true, allowTaint: true });
+    var contentCanvas = await html2canvas(pages[i], { scale: 1, backgroundColor: null, useCORS: true, allowTaint: true });
 
     var finalCanvas = document.createElement('canvas');
     finalCanvas.width = 1920;
