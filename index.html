@@ -6202,10 +6202,7 @@ async function generateRefereePenaltyPDF() {
     + '<style>'
     + '@page{size:landscape;margin:0}'
     + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
-    + '.pg{width:1920px;height:1080px;box-sizing:border-box;display:grid}'
-    + '.pg img.bg{grid-row:1;grid-column:1;width:1920px;height:1080px;object-fit:cover}'
-    + '.pg .panelWrap{grid-row:1;grid-column:1;display:flex;align-items:center;justify-content:center;padding:70px;box-sizing:border-box}'
-    + '.pg:last-child{page-break-after:auto}'
+    + '.pg{width:1920px;height:1080px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:70px}'
     + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:40px 50px;max-width:1500px;width:100%;text-align:center}'
     + '.panel table{text-align:left;margin:0 auto}'
     + 'h1{font-size:52px;margin:0 0 8px;letter-spacing:0.5px}'
@@ -6214,22 +6211,24 @@ async function generateRefereePenaltyPDF() {
     + 'th{text-align:left;padding:12px 20px;border-bottom:2px solid #333;font-size:16px;text-transform:uppercase;color:#555}'
     + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:14px 18px;margin-bottom:22px;font-size:15px;font-weight:700;color:#a52a2a}'
     + '</style></head><body>'
-    + '<div class="pg"><img class="bg" src="' + bgUrl + '" /><div class="panelWrap"><div class="panel">'
+    + '<div class="pg"><div class="panel">'
     + '<h1>PENALTY LIST FOR NO SHOW REFEREE</h1><h2>' + (evName||'') + '</h2>'
     + '<div class="banner">⏰ Report tomorrow, ' + nextDayStr + ', at 09:00</div>'
     + '<table><thead><tr><th>#</th><th>Name</th><th>ESID</th><th>Country</th><th>Age Category</th></tr></thead>'
     + '<tbody>' + namesRows + '</tbody></table>'
-    + '</div></div></div>'
-    + '<div class="pg"><img class="bg" src="' + bgUrl + '" /><div class="panelWrap"><div class="panel">'
+    + '</div></div>'
+    + '<div class="pg"><div class="panel">'
     + '<h1>COUNTRY RANKING</h1><h2>Players who did not show up for their referee duty (whole tournament)</h2>'
     + '<table><thead><tr><th>Rank</th><th>Country</th><th style="text-align:right">Count</th></tr></thead>'
     + '<tbody>' + rankingRows + '</tbody></table>'
-    + '</div></div></div>'
+    + '</div></div>'
     + '</body></html>';
 
-  // Render each page in an on-screen (but invisible) position — Chrome skips
-  // painting elements that are far off-screen, which caused the background
-  // image and full layout to be missing from the captured JPGs.
+  // Render just the content (no background image) off-screen, transparent —
+  // then composite it over the background image ourselves using plain Canvas
+  // 2D drawing. html2canvas doesn't reliably capture overlapping DOM layers
+  // (image + semi-transparent card), so we avoid that entirely by never
+  // asking it to capture both together.
   var holder = document.createElement('div');
   holder.style.position = 'fixed';
   holder.style.left = '0';
@@ -6239,25 +6238,36 @@ async function generateRefereePenaltyPDF() {
   holder.innerHTML = html.match(/<body>([\s\S]*)<\/body>/)[1];
   document.body.appendChild(holder);
 
-  // Make sure every background <img> in the holder is fully loaded before
-  // capturing — otherwise html2canvas can render a blank/partial background.
-  var bgImgs = holder.querySelectorAll('img.bg');
-  await Promise.all(Array.prototype.map.call(bgImgs, function(img) {
-    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-    return new Promise(function(resolve) {
-      img.onload = resolve;
-      img.onerror = resolve;
-    });
-  }));
-  // Give the browser a couple of paint cycles to actually render the layout
+  // Give the browser a paint cycle so fonts/layout are ready
   await new Promise(function(resolve) { requestAnimationFrame(function(){ requestAnimationFrame(resolve); }); });
+
+  // Load the background image once via a plain Image element
+  var bgImg = await new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function(){ resolve(img); };
+    img.onerror = function(){ resolve(null); };
+    img.src = bgUrl;
+  });
 
   var pages = holder.querySelectorAll('.pg');
   var fileNames = ['Refereenoshow', 'Refereenoshowcountry'];
 
   for (var i = 0; i < pages.length; i++) {
-    var canvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, useCORS: true, allowTaint: true });
-    var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    var contentCanvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, backgroundColor: null, useCORS: true, allowTaint: true });
+
+    var finalCanvas = document.createElement('canvas');
+    finalCanvas.width = 1920;
+    finalCanvas.height = 1080;
+    var ctx = finalCanvas.getContext('2d');
+    if (bgImg) {
+      ctx.drawImage(bgImg, 0, 0, 1920, 1080);
+    } else {
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, 1920, 1080);
+    }
+    ctx.drawImage(contentCanvas, 0, 0, 1920, 1080);
+
+    var dataUrl = finalCanvas.toDataURL('image/jpeg', 0.92);
     var a = document.createElement('a');
     a.href = dataUrl;
     a.download = (fileNames[i] || ('Refereenoshow_' + (i+1))) + '.jpg';
