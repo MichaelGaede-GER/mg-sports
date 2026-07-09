@@ -6200,37 +6200,36 @@ async function generateRefereePenaltyPDF() {
 
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Penalty List</title>'
     + '<style>'
-    + '@page{size:landscape;margin:0}'
     + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
-    + '.pg{width:1920px;height:1080px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:45px}'
-    + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:22px 34px;max-width:1600px;width:100%;text-align:center;max-height:990px;overflow:hidden}'
+    + '.panel{background:rgba(255,255,255,0.95);border-radius:10px;padding:36px 46px;width:1600px;box-sizing:border-box;text-align:center;display:inline-block}'
     + '.panel table{text-align:left;margin:0 auto}'
-    + 'h1{font-size:42px;margin:0 0 6px;letter-spacing:0.5px}'
-    + 'h2{font-size:20px;color:#555;font-weight:400;margin:0 0 18px}'
+    + 'h1{font-size:44px;margin:0 0 8px;letter-spacing:0.5px}'
+    + 'h2{font-size:21px;color:#555;font-weight:400;margin:0 0 20px}'
     + 'table{width:100%;border-collapse:collapse}'
-    + 'th{text-align:left;padding:10px 18px;border-bottom:2px solid #333;font-size:14px;text-transform:uppercase;color:#555}'
+    + 'th{text-align:left;padding:11px 20px;border-bottom:2px solid #333;font-size:15px;text-transform:uppercase;color:#555}'
     + 'tbody tr:nth-child(even) td{background:#eef0fa}'
     + 'tbody tr:nth-child(odd) td{background:#ffffff}'
-    + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:12px 18px;margin-bottom:18px;font-size:17px;font-weight:700;color:#a52a2a}'
+    + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:13px 20px;margin-bottom:20px;font-size:18px;font-weight:700;color:#a52a2a}'
     + '</style></head><body>'
-    + '<div class="pg"><div class="panel">'
+    + '<div class="panel">'
     + '<h1>PENALTY LIST FOR NO SHOW REFEREE</h1><h2>' + (evName||'') + '</h2>'
     + '<div class="banner">⏰ Report tomorrow, ' + nextDayStr + ', at 09:00</div>'
     + '<table><thead><tr><th>#</th><th>Name</th><th>ESID</th><th>Country</th><th>Age Category</th></tr></thead>'
     + '<tbody>' + namesRows + '</tbody></table>'
-    + '</div></div>'
-    + '<div class="pg"><div class="panel">'
+    + '</div>'
+    + '<div class="panel">'
     + '<h1>COUNTRY RANKING</h1><h2>Players who did not show up for their referee duty (whole tournament)</h2>'
     + '<table><thead><tr><th>Rank</th><th>Country</th><th style="text-align:right">Count</th></tr></thead>'
     + '<tbody>' + rankingRows + '</tbody></table>'
-    + '</div></div>'
+    + '</div>'
     + '</body></html>';
 
-  // Render just the content (no background image) off-screen, transparent —
-  // then composite it over the background image ourselves using plain Canvas
-  // 2D drawing. html2canvas doesn't reliably capture overlapping DOM layers
-  // (image + semi-transparent card), so we avoid that entirely by never
-  // asking it to capture both together.
+  // Render just the content cards (no background image, natural size) off-screen,
+  // then composite each one centered over the background image ourselves using
+  // plain Canvas 2D drawing. html2canvas repeatedly failed to correctly capture
+  // a flex-centered layout forced to an exact 1920x1080 viewport, so instead we
+  // let it capture each card at its own natural size (much more reliable), and
+  // do the centering math ourselves when compositing onto the final canvas.
   var holder = document.createElement('div');
   holder.style.position = 'fixed';
   holder.style.left = '0';
@@ -6251,11 +6250,11 @@ async function generateRefereePenaltyPDF() {
     img.src = bgUrl;
   });
 
-  var pages = holder.querySelectorAll('.pg');
+  var pages = holder.querySelectorAll('.panel');
   var fileNames = ['Refereenoshow', 'Refereenoshowcountry'];
 
   for (var i = 0; i < pages.length; i++) {
-    var contentCanvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, windowWidth: 1920, windowHeight: 1080, backgroundColor: null, useCORS: true, allowTaint: true });
+    var contentCanvas = await html2canvas(pages[i], { scale: 2, backgroundColor: null, useCORS: true, allowTaint: true });
 
     var finalCanvas = document.createElement('canvas');
     finalCanvas.width = 1920;
@@ -6267,7 +6266,15 @@ async function generateRefereePenaltyPDF() {
       ctx.fillStyle = '#111';
       ctx.fillRect(0, 0, 1920, 1080);
     }
-    ctx.drawImage(contentCanvas, 0, 0, 1920, 1080);
+
+    // Scale the captured card down to fit within the canvas (with margin) if needed,
+    // then draw it perfectly centered.
+    var maxW = 1920 - 160, maxH = 1080 - 120;
+    var drawW = contentCanvas.width, drawH = contentCanvas.height;
+    var fitScale = Math.min(1, maxW / drawW, maxH / drawH);
+    drawW *= fitScale; drawH *= fitScale;
+    var dx = (1920 - drawW) / 2, dy = (1080 - drawH) / 2;
+    ctx.drawImage(contentCanvas, dx, dy, drawW, drawH);
 
     var dataUrl = finalCanvas.toDataURL('image/jpeg', 0.92);
     var a = document.createElement('a');
