@@ -1449,6 +1449,24 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <button class="btn" onclick="applyWithdrawPolicyStatus()" title="Setzt bei allen Abmeldungen den Zahlungsstatus gemäß Erstattungsregelung (Kostenlos / Rückerstattung / Bezahlt / Ausstehend)">💶 Zahlungsstatus nach Policy setzen</button>
           <button class="btn" onclick="exportWithdrawPDF()">PDF Withdrawals</button>
         </div>
+
+        <div class="stats-grid">
+          <div class="stat"><div class="lbl">Absagen gesamt</div><div class="val" id="wdStatTotal">–</div></div>
+          <div class="stat green"><div class="lbl">Vor Meldeschluss (100%)</div><div class="val" id="wdStatFull">–</div></div>
+          <div class="stat amber"><div class="lbl">50%-Regelung</div><div class="val" id="wdStatHalf">–</div></div>
+          <div class="stat"><div class="lbl">0%-Regelung (nach Frist)</div><div class="val" id="wdStatNone">–</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Absagen nach Land</h3></div>
+          <div class="card-body">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Land</th><th>Absagen gesamt</th><th>Vor Meldeschluss (100%)</th><th>50%-Regelung</th><th>0%-Regelung</th></tr></thead>
+              <tbody id="withdrawCountryStatsTable"><tr><td colspan="5" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="table-wrap"><table>
             <thead><tr>
@@ -6677,6 +6695,48 @@ async function loadWithdrawals() {
   if (currentEventId) q = q.eq('event_id', currentEventId);
   const { data } = await q;
   const all = data||[];
+
+  // --- Statistics: refund-tier breakdown + per-country breakdown ---
+  function refundTierOf(p) {
+    if (!p.withdraw_date) return null;
+    var wd = new Date(p.withdraw_date);
+    if (wd < WITHDRAW_DATE_FULL) return 'full';   // before deadline -> 100% refund
+    if (wd <= WITHDRAW_DATE_HALF) return 'half';  // 50% refund window
+    return 'none';                                 // after that -> 0% refund
+  }
+  var tierCounts = { full: 0, half: 0, none: 0 };
+  var countryStats = {};
+  all.forEach(function(p) {
+    var tier = refundTierOf(p);
+    if (tier) tierCounts[tier]++;
+    var c = p.country || 'Unbekannt';
+    if (!countryStats[c]) countryStats[c] = { total: 0, full: 0, half: 0, none: 0 };
+    countryStats[c].total++;
+    if (tier) countryStats[c][tier]++;
+  });
+
+  var statTotalEl = document.getElementById('wdStatTotal');
+  var statFullEl = document.getElementById('wdStatFull');
+  var statHalfEl = document.getElementById('wdStatHalf');
+  var statNoneEl = document.getElementById('wdStatNone');
+  if (statTotalEl) statTotalEl.textContent = all.length;
+  if (statFullEl) statFullEl.textContent = tierCounts.full;
+  if (statHalfEl) statHalfEl.textContent = tierCounts.half;
+  if (statNoneEl) statNoneEl.textContent = tierCounts.none;
+
+  var countryTb = document.getElementById('withdrawCountryStatsTable');
+  if (countryTb) {
+    var countryRows = Object.keys(countryStats).map(function(c){ return Object.assign({country:c}, countryStats[c]); })
+      .sort(function(a,b){ return b.total - a.total; });
+    countryTb.innerHTML = countryRows.length ? countryRows.map(function(cs) {
+      return '<tr><td><strong>'+cs.country+'</strong></td><td>'+cs.total+'</td>'
+        + '<td style="color:var(--green)">'+cs.full+'</td>'
+        + '<td style="color:var(--amber)">'+cs.half+'</td>'
+        + '<td style="color:var(--red)">'+cs.none+'</td></tr>';
+    }).join('') : '<tr><td colspan="5" class="empty">Keine Absagen vorhanden</td></tr>';
+  }
+  // --- End statistics ---
+
   document.getElementById('withdrawTable').innerHTML = all.length ? all.map(function(p) {
     const wdDate = p.withdraw_date ? new Date(p.withdraw_date) : null;
     let regel = '–', regelColor = 'var(--text2)', pct = 0;
