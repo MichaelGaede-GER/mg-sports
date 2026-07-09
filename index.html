@@ -6202,9 +6202,10 @@ async function generateRefereePenaltyPDF() {
     + '<style>'
     + '@page{size:landscape;margin:0}'
     + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
-    + '.pg{width:1920px;height:1080px;box-sizing:border-box;padding:70px;background-image:url(' + bgUrl + ');background-size:cover;background-position:center;position:relative;overflow:hidden}'
+    + '.pg{width:1920px;height:1080px;box-sizing:border-box;padding:70px;background-image:url(' + bgUrl + ');background-size:cover;background-position:center;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}'
     + '.pg:last-child{page-break-after:auto}'
-    + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:20px 26px;max-width:100%}'
+    + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:40px 50px;max-width:1500px;width:100%;text-align:center}'
+    + '.panel table{text-align:left;margin:0 auto}'
     + 'h1{font-size:52px;margin:0 0 8px;letter-spacing:0.5px}'
     + 'h2{font-size:24px;color:#555;font-weight:400;margin:0 0 30px}'
     + 'table{width:100%;border-collapse:collapse}'
@@ -6232,7 +6233,6 @@ async function generateRefereePenaltyPDF() {
   holder.style.left = '0';
   holder.style.top = '0';
   holder.style.zIndex = '-1';
-  holder.style.opacity = '0.01';
   holder.style.pointerEvents = 'none';
   holder.innerHTML = html.match(/<body>([\s\S]*)<\/body>/)[1];
   document.body.appendChild(holder);
@@ -6252,7 +6252,7 @@ async function generateRefereePenaltyPDF() {
   var fileNames = ['Refereenoshow', 'Refereenoshowcountry'];
 
   for (var i = 0; i < pages.length; i++) {
-    var canvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, useCORS: true, allowTaint: true, backgroundColor: null });
+    var canvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, useCORS: true, allowTaint: true });
     var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     var a = document.createElement('a');
     a.href = dataUrl;
