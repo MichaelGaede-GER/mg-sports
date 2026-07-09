@@ -376,9 +376,6 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('invoices')">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span>Rechnungen</span>
     </div>
-    <div class="nav-item" onclick="nav('refereepenalty')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Schieds-Pflicht</span>
-    </div>
     <div class="nav-item" onclick="nav('mahnlog')">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="nav_mahnlog">Mahnungs-Log</span>
       <span class="nav-cnt" id="cntMahnlog" style="display:none">!</span>
@@ -1410,35 +1407,6 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <thead><tr><th>Datum</th><th>Stufe</th><th>Name</th><th>E-Mail</th><th>Betreff</th><th>Gesendet von</th><th>Notiz</th></tr></thead>
             <tbody id="mahnlogTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
           </table></div>
-        </div>
-      </div>
-
-      <!-- SCHIEDS-PFLICHT / PENALTY LISTE -->
-      <div class="page" id="page-refereepenalty">
-        <div class="page-header"><h2>Schieds-Pflicht (Penalty-Liste)</h2>
-          <button class="btn primary" onclick="generateRefereePenaltyPDF()">🖨 PDF erstellen (Querformat)</button>
-        </div>
-        <div class="card">
-          <div class="card-body">
-            <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
-              Trage hier Spieler ein, die zu ihrem Schiedsrichter-Einsatz nicht erschienen sind. Sie müssen am
-              <strong> nächsten Morgen um 09:00 Uhr</strong> nachschiedsen. Die Liste wird gespeichert und kann jederzeit als PDF gedruckt werden.
-            </p>
-            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
-              <div class="form-group" style="margin:0"><label>Datum (Tag der versäumten Pflicht)</label>
-                <input type="date" id="rp_date" onchange="loadRefereePenalties()" />
-              </div>
-              <div style="flex:1;min-width:220px;position:relative">
-                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Spieler hinzufügen</label>
-                <input type="text" id="rpParticipantSearch" placeholder="Name oder ESID suchen…" oninput="searchRefereePenaltyParticipants(this.value)" style="width:100%" />
-                <div id="rpParticipantResults" style="display:none;position:absolute;z-index:20;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);max-height:220px;overflow-y:auto;width:100%;margin-top:2px"></div>
-              </div>
-            </div>
-            <div class="table-wrap"><table>
-              <thead><tr><th>Name</th><th>ESID</th><th>Land</th><th>Altersklasse</th><th style="width:50px"></th></tr></thead>
-              <tbody id="refereePenaltyTable"><tr><td colspan="5" class="loading">Lade…</td></tr></tbody>
-            </table></div>
-          </div>
         </div>
       </div>
 
@@ -3791,20 +3759,6 @@ create table if not exists invoices (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
-
--- SCHIEDS-PFLICHT / PENALTY-LISTE
-create table if not exists referee_penalties (
-  id uuid primary key default gen_random_uuid(),
-  event_id uuid,
-  participant_id uuid,
-  penalty_date date not null,
-  lastname text not null,
-  firstname text not null,
-  member_id text,
-  country text,
-  events text,
-  created_at timestamptz default now()
-);
 `;
 
 // AUTH
@@ -4804,7 +4758,7 @@ function nav(page) {
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => { if (i.getAttribute('onclick') && i.getAttribute('onclick').includes("'"+page+"'")) i.classList.add('active'); });
-  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',invoices:'Rechnungen',refereepenalty:'Schieds-Pflicht',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte & PDFs',airport:'Airport Transfer',users:'Benutzer & Rollen'};
+  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',invoices:'Rechnungen',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte & PDFs',airport:'Airport Transfer',users:'Benutzer & Rollen'};
   document.getElementById('topbarTitle').textContent = titles[page] || page;
   currentPage = page;
   if (page === 'dashboard') {
@@ -4826,7 +4780,6 @@ function nav(page) {
   else if (page === 'shuttle') loadShuttle();
   else if (page === 'payments') loadPayments();
   else if (page === 'invoices') loadInvoices();
-  else if (page === 'refereepenalty') loadRefereePenalties();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
   else if (page === 'marketing') loadMarketing();
@@ -6065,162 +6018,6 @@ function invoiceStatusBadgeClass(status) {
   if (status === 'Bezahlt') return 'paid';
   if (status === 'Storniert') return 'cancel';
   return 'pending';
-}
-
-// ============ SCHIEDS-PFLICHT / PENALTY-LISTE ============
-async function loadRefereePenalties() {
-  var dateEl = document.getElementById('rp_date');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
-  var date = dateEl ? dateEl.value : new Date().toISOString().slice(0,10);
-
-  var tb = document.getElementById('refereePenaltyTable');
-  if (!tb) return;
-  var q = db.from('referee_penalties').select('*').eq('penalty_date', date).order('created_at');
-  if (currentEventId) q = q.eq('event_id', currentEventId);
-  var r = await q;
-  if (r.error) { toast('Fehler beim Laden: ' + r.error.message); return; }
-  var rows = r.data || [];
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Noch niemand für dieses Datum eingetragen</td></tr>'; return; }
-  tb.innerHTML = rows.map(function(row) {
-    return '<tr>'
-      + '<td>'+row.lastname+', '+row.firstname+'</td>'
-      + '<td>'+(row.member_id||'–')+'</td>'
-      + '<td>'+(row.country||'–')+'</td>'
-      + '<td>'+(row.events||'–')+'</td>'
-      + '<td><button onclick="removeRefereePenalty(\''+row.id+'\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" title="Entfernen">×</button></td>'
-      + '</tr>';
-  }).join('');
-}
-
-var rpSearchDebounce = null;
-function searchRefereePenaltyParticipants(query) {
-  clearTimeout(rpSearchDebounce);
-  var box = document.getElementById('rpParticipantResults');
-  if (!query || query.trim().length < 2) { box.style.display = 'none'; return; }
-  rpSearchDebounce = setTimeout(async function() {
-    var q = db.from('participants').select('id,firstname,lastname,member_id,country,events')
-      .or('firstname.ilike.%'+query+'%,lastname.ilike.%'+query+'%,member_id.ilike.%'+query+'%');
-    if (currentEventId) q = q.eq('event_id', currentEventId);
-    var r = await q.limit(15);
-    var results = r.data || [];
-    if (!results.length) { box.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--text3)">Keine Treffer</div>'; box.style.display='block'; return; }
-    box.innerHTML = results.map(function(p) {
-      return '<div style="padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)" '
-        + 'onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'" '
-        + 'onclick=\'addRefereePenalty('+JSON.stringify(p).replace(/'/g,"&#39;")+')\'>'
-        + '<strong>'+p.lastname+', '+p.firstname+'</strong> <span style="color:var(--text3)">('+(p.member_id||'–')+') · '+(p.country||'–')+'</span>'
-        + '</div>';
-    }).join('');
-    box.style.display = 'block';
-  }, 250);
-}
-
-async function addRefereePenalty(p) {
-  var date = document.getElementById('rp_date').value || new Date().toISOString().slice(0,10);
-  // Avoid duplicate entries for the same person on the same day
-  var dupQ = db.from('referee_penalties').select('id').eq('participant_id', p.id).eq('penalty_date', date);
-  if (currentEventId) dupQ = dupQ.eq('event_id', currentEventId);
-  var dupR = await dupQ;
-  if (dupR.data && dupR.data.length) { toast(p.firstname + ' ' + p.lastname + ' ist für dieses Datum bereits eingetragen'); return; }
-
-  var row = {
-    event_id: currentEventId || null,
-    participant_id: p.id,
-    penalty_date: date,
-    lastname: p.lastname, firstname: p.firstname,
-    member_id: p.member_id || null, country: p.country || null, events: p.events || null
-  };
-  var r = await db.from('referee_penalties').insert(row);
-  if (r.error) { toast('Fehler: ' + r.error.message); return; }
-  document.getElementById('rpParticipantSearch').value = '';
-  document.getElementById('rpParticipantResults').style.display = 'none';
-  toast(p.firstname + ' ' + p.lastname + ' hinzugefügt');
-  loadRefereePenalties();
-}
-
-async function removeRefereePenalty(id) {
-  var r = await db.from('referee_penalties').delete().eq('id', id);
-  if (r.error) { toast('Fehler: ' + r.error.message); return; }
-  loadRefereePenalties();
-}
-
-async function generateRefereePenaltyPDF() {
-  var date = document.getElementById('rp_date').value || new Date().toISOString().slice(0,10);
-
-  // Page 1: names for the selected date (need to referee tomorrow 09:00)
-  var q1 = db.from('referee_penalties').select('*').eq('penalty_date', date).order('lastname');
-  if (currentEventId) q1 = q1.eq('event_id', currentEventId);
-  var r1 = await q1;
-  var todayRows = r1.data || [];
-  if (!todayRows.length) { toast('⚠️ Für dieses Datum ist niemand eingetragen'); return; }
-
-  // Page 2: country ranking across ALL recorded penalties for this event (cumulative)
-  var q2 = db.from('referee_penalties').select('country');
-  if (currentEventId) q2 = q2.eq('event_id', currentEventId);
-  var r2 = await q2;
-  var countryCounts = {};
-  (r2.data||[]).forEach(function(row) {
-    var c = row.country || 'Unbekannt';
-    countryCounts[c] = (countryCounts[c]||0) + 1;
-  });
-  var ranking = Object.keys(countryCounts).map(function(c){ return {country:c, count:countryCounts[c]}; })
-    .sort(function(a,b){ return b.count - a.count; });
-
-  var nextDay = new Date(date + 'T00:00:00');
-  nextDay.setDate(nextDay.getDate() + 1);
-  var nextDayStr = nextDay.toLocaleDateString('de-DE', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
-
-  var evName = '';
-  if (currentEventId) {
-    var evR = await db.from('events').select('name').eq('id', currentEventId).single();
-    if (evR.data) evName = evR.data.name;
-  }
-
-  var namesRows = todayRows.map(function(row, idx) {
-    return '<tr>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px;color:#888">'+(idx+1)+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:16px;font-weight:600">'+row.lastname+', '+row.firstname+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.member_id||'–')+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.country||'–')+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.events||'–')+'</td>'
-      + '</tr>';
-  }).join('');
-
-  var rankingRows = ranking.map(function(row, idx) {
-    return '<tr>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px;color:#888">'+(idx+1)+'.</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:16px;font-weight:600">'+row.country+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px;text-align:right">'+row.count+'</td>'
-      + '</tr>';
-  }).join('');
-
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Schieds-Pflicht</title>'
-    + '<style>'
-    + '@page{size:landscape;margin:16mm}'
-    + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
-    + '.pageBreak{page-break-before:always}'
-    + 'h1{font-size:26px;margin:0 0 4px}'
-    + 'h2{font-size:16px;color:#555;font-weight:400;margin:0 0 24px}'
-    + 'table{width:100%;border-collapse:collapse}'
-    + 'th{text-align:left;padding:8px 14px;border-bottom:2px solid #333;font-size:12px;text-transform:uppercase;color:#555}'
-    + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:15px;font-weight:600;color:#a52a2a}'
-    + '</style></head><body>'
-    + '<div><h1>Schiedsrichter-Pflicht</h1><h2>' + (evName||'') + '</h2>'
-    + '<div class="banner">⏰ Antreten morgen, ' + nextDayStr + ', um 09:00 Uhr</div>'
-    + '<table><thead><tr><th>#</th><th>Name</th><th>ESID</th><th>Land</th><th>Altersklasse</th></tr></thead>'
-    + '<tbody>' + namesRows + '</tbody></table>'
-    + '</div>'
-    + '<div class="pageBreak">'
-    + '<h1>Länderranking</h1><h2>Spieler, die nicht zur Schiedsrichter-Pflicht erschienen sind (gesamtes Turnier)</h2>'
-    + '<table><thead><tr><th>Platz</th><th>Land</th><th style="text-align:right">Anzahl</th></tr></thead>'
-    + '<tbody>' + rankingRows + '</tbody></table>'
-    + '</div>'
-    + '</body></html>';
-
-  var w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
-  setTimeout(function(){ w.print(); }, 300);
 }
 
 async function loadInvoices() {
