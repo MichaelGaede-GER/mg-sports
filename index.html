@@ -6202,9 +6202,10 @@ async function generateRefereePenaltyPDF() {
     + '<style>'
     + '@page{size:landscape;margin:0}'
     + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
-    + '.pg{width:1920px;height:1080px;box-sizing:border-box;padding:70px;background-image:url(' + bgUrl + ');background-size:cover;background-position:center;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}'
+    + '.pg{width:1920px;height:1080px;box-sizing:border-box;padding:70px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}'
+    + '.pg img.bg{position:absolute;top:0;left:0;width:1920px;height:1080px;object-fit:cover;z-index:0}'
     + '.pg:last-child{page-break-after:auto}'
-    + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:40px 50px;max-width:1500px;width:100%;text-align:center}'
+    + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:40px 50px;max-width:1500px;width:100%;text-align:center;position:relative;z-index:1}'
     + '.panel table{text-align:left;margin:0 auto}'
     + 'h1{font-size:52px;margin:0 0 8px;letter-spacing:0.5px}'
     + 'h2{font-size:24px;color:#555;font-weight:400;margin:0 0 30px}'
@@ -6212,13 +6213,13 @@ async function generateRefereePenaltyPDF() {
     + 'th{text-align:left;padding:12px 20px;border-bottom:2px solid #333;font-size:16px;text-transform:uppercase;color:#555}'
     + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:14px 18px;margin-bottom:22px;font-size:15px;font-weight:700;color:#a52a2a}'
     + '</style></head><body>'
-    + '<div class="pg"><div class="panel">'
+    + '<div class="pg"><img class="bg" src="' + bgUrl + '" /><div class="panel">'
     + '<h1>PENALTY LIST FOR NO SHOW REFEREE</h1><h2>' + (evName||'') + '</h2>'
     + '<div class="banner">⏰ Report tomorrow, ' + nextDayStr + ', at 09:00</div>'
     + '<table><thead><tr><th>#</th><th>Name</th><th>ESID</th><th>Country</th><th>Age Category</th></tr></thead>'
     + '<tbody>' + namesRows + '</tbody></table>'
     + '</div></div>'
-    + '<div class="pg"><div class="panel">'
+    + '<div class="pg"><img class="bg" src="' + bgUrl + '" /><div class="panel">'
     + '<h1>COUNTRY RANKING</h1><h2>Players who did not show up for their referee duty (whole tournament)</h2>'
     + '<table><thead><tr><th>Rank</th><th>Country</th><th style="text-align:right">Count</th></tr></thead>'
     + '<tbody>' + rankingRows + '</tbody></table>'
@@ -6237,14 +6238,16 @@ async function generateRefereePenaltyPDF() {
   holder.innerHTML = html.match(/<body>([\s\S]*)<\/body>/)[1];
   document.body.appendChild(holder);
 
-  // Make sure the background image is fully decoded before capturing —
-  // otherwise html2canvas can render a blank/partial background.
-  await new Promise(function(resolve) {
-    var img = new Image();
-    img.onload = resolve;
-    img.onerror = resolve;
-    img.src = REFEREE_PENALTY_BG;
-  });
+  // Make sure every background <img> in the holder is fully loaded before
+  // capturing — otherwise html2canvas can render a blank/partial background.
+  var bgImgs = holder.querySelectorAll('img.bg');
+  await Promise.all(Array.prototype.map.call(bgImgs, function(img) {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise(function(resolve) {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+  }));
   // Give the browser a couple of paint cycles to actually render the layout
   await new Promise(function(resolve) { requestAnimationFrame(function(){ requestAnimationFrame(resolve); }); });
 
