@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MG Sports Event Management 1.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1416,7 +1417,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <!-- SCHIEDS-PFLICHT / PENALTY LISTE -->
       <div class="page" id="page-refereepenalty">
         <div class="page-header"><h2>Schieds-Pflicht (Penalty-Liste)</h2>
-          <button class="btn primary" onclick="generateRefereePenaltyPDF()">🖨 PDF erstellen (Querformat)</button>
+          <button class="btn primary" onclick="generateRefereePenaltyPDF()">📷 JPGs erstellen (Refereenoshow / Refereenoshowcountry)</button>
         </div>
         <div class="card">
           <div class="card-body">
@@ -6179,18 +6180,18 @@ async function generateRefereePenaltyPDF() {
 
   var namesRows = todayRows.map(function(row, idx) {
     return '<tr>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px;color:#888">'+(idx+1)+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:16px;font-weight:600">'+row.lastname+', '+row.firstname+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.member_id||'–')+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.country||'–')+'</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px">'+(row.events||'–')+'</td>'
+      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px;color:#888">'+(idx+1)+'</td>'
+      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:24px;font-weight:600">'+row.lastname+', '+row.firstname+'</td>'
+      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px">'+(row.member_id||'–')+'</td>'
+      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px">'+(row.country||'–')+'</td>'
+      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px">'+(row.events||'–')+'</td>'
       + '</tr>';
   }).join('');
 
   var rankingRows = ranking.map(function(row, idx) {
     return '<tr>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px;color:#888">'+(idx+1)+'.</td>'
-      + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:16px;font-weight:600">'+row.country+'</td>'
+      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:20px;color:#888">'+(idx+1)+'.</td>'
+      + '<td style="padding:16px 20px;border-bottom:1px solid #ddd;font-size:24px;font-weight:600">'+row.country+'</td>'
       + '<td style="padding:10px 14px;border-bottom:1px solid #ddd;font-size:14px;text-align:right">'+row.count+'</td>'
       + '</tr>';
   }).join('');
@@ -6201,13 +6202,13 @@ async function generateRefereePenaltyPDF() {
     + '<style>'
     + '@page{size:landscape;margin:0}'
     + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
-    + '.pg{width:297mm;height:210mm;box-sizing:border-box;padding:16mm;background-image:url(' + bgUrl + ');background-size:cover;background-position:center;page-break-after:always;position:relative}'
+    + '.pg{width:1920px;height:1080px;box-sizing:border-box;padding:70px;background-image:url(' + bgUrl + ');background-size:cover;background-position:center;position:relative;overflow:hidden}'
     + '.pg:last-child{page-break-after:auto}'
     + '.panel{background:rgba(255,255,255,0.92);border-radius:10px;padding:20px 26px;max-width:100%}'
-    + 'h1{font-size:30px;margin:0 0 4px;letter-spacing:0.5px}'
-    + 'h2{font-size:15px;color:#555;font-weight:400;margin:0 0 20px}'
+    + 'h1{font-size:52px;margin:0 0 8px;letter-spacing:0.5px}'
+    + 'h2{font-size:24px;color:#555;font-weight:400;margin:0 0 30px}'
     + 'table{width:100%;border-collapse:collapse}'
-    + 'th{text-align:left;padding:8px 14px;border-bottom:2px solid #333;font-size:12px;text-transform:uppercase;color:#555}'
+    + 'th{text-align:left;padding:12px 20px;border-bottom:2px solid #333;font-size:16px;text-transform:uppercase;color:#555}'
     + '.banner{background:#fdecea;border:1px solid #f5a3a3;border-radius:8px;padding:14px 18px;margin-bottom:22px;font-size:15px;font-weight:700;color:#a52a2a}'
     + '</style></head><body>'
     + '<div class="pg"><div class="panel">'
@@ -6223,10 +6224,30 @@ async function generateRefereePenaltyPDF() {
     + '</div></div>'
     + '</body></html>';
 
-  var w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
-  setTimeout(function(){ w.print(); }, 300);
+  // Render each page off-screen, then export as JPG downloads with fixed filenames
+  var holder = document.createElement('div');
+  holder.style.position = 'fixed';
+  holder.style.left = '-99999px';
+  holder.style.top = '0';
+  holder.innerHTML = html.match(/<body>([\s\S]*)<\/body>/)[1];
+  document.body.appendChild(holder);
+
+  var pages = holder.querySelectorAll('.pg');
+  var fileNames = ['Refereenoshow', 'Refereenoshowcountry'];
+
+  for (var i = 0; i < pages.length; i++) {
+    var canvas = await html2canvas(pages[i], { scale: 1, width: 1920, height: 1080, useCORS: true });
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    var a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = (fileNames[i] || ('Refereenoshow_' + (i+1))) + '.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  document.body.removeChild(holder);
+  toast('✅ ' + pages.length + ' JPG-Datei(en) heruntergeladen');
 }
 async function loadInvoices() {
   var tb = document.getElementById('invoicesTable');
