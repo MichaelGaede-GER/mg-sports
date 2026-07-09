@@ -6180,19 +6180,19 @@ async function generateRefereePenaltyPDF() {
 
   var namesRows = todayRows.map(function(row, idx) {
     return '<tr>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:17px;color:#888">'+(idx+1)+'</td>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:21px;font-weight:600">'+row.lastname+', '+row.firstname+'</td>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:18px">'+(row.member_id||'–')+'</td>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:18px">'+(row.country||'–')+'</td>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:18px">'+(row.events||'–')+'</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:16px;color:#9a9aa2">'+(idx+1)+'</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:21px;font-weight:700;color:#ffffff">'+row.lastname+', '+row.firstname+'</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:17px;color:#e2e2e6">'+(row.member_id||'–')+'</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:17px;color:#e2e2e6">'+(row.country||'–')+'</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:17px;color:#e2e2e6">'+(row.events||'–')+'</td>'
       + '</tr>';
   }).join('');
 
   var rankingRows = ranking.map(function(row, idx) {
     return '<tr>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:17px;color:#888">'+(idx+1)+'.</td>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:21px;font-weight:600">'+row.country+'</td>'
-      + '<td style="padding:11px 18px;border-bottom:1px solid #ddd;font-size:18px;text-align:right">'+row.count+'</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:16px;color:#9a9aa2">'+(idx+1)+'.</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:21px;font-weight:700;color:#ffffff">'+row.country+'</td>'
+      + '<td style="padding:14px 20px;border-bottom:none;font-size:17px;color:#e2e2e6;text-align:right">'+row.count+'</td>'
       + '</tr>';
   }).join('');
 
@@ -6201,15 +6201,15 @@ async function generateRefereePenaltyPDF() {
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Penalty List</title>'
     + '<style>'
     + 'body{font-family:Arial,sans-serif;color:#222;margin:0}'
-    + '.panel{background:rgba(255,255,255,0.97);border-radius:14px;padding:36px 46px;width:1600px;box-sizing:border-box;text-align:center;display:inline-block;box-shadow:0 10px 40px rgba(0,0,0,0.35)}'
+    + '.panel{background:rgba(35,35,40,0.55);border-radius:14px;padding:36px 46px;width:1600px;box-sizing:border-box;text-align:left;display:inline-block;box-shadow:0 10px 40px rgba(0,0,0,0.45)}'
     + '.panel table{text-align:left;margin:0 auto}'
-    + 'h1{font-size:44px;margin:0 0 8px;letter-spacing:0.5px}'
-    + 'h2{font-size:21px;color:#555;font-weight:400;margin:0 0 20px}'
-    + 'table{width:100%;border-collapse:collapse;border:2px solid #d8dce6;border-radius:6px;overflow:hidden}'
-    + 'th{text-align:left;padding:11px 20px;border-bottom:2px solid #333;font-size:15px;text-transform:uppercase;color:#555;background:#f2f4f8}'
-    + 'tbody tr:nth-child(even) td{background:#eef0fa}'
-    + 'tbody tr:nth-child(odd) td{background:#ffffff}'
-    + '.banner{background:#e02424;border:2px solid #a51111;border-radius:10px;padding:16px 24px;margin-bottom:22px;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(160,20,20,0.3)}'
+    + 'h1{font-size:44px;margin:0 0 8px;letter-spacing:0.5px;color:#ffffff;font-weight:800}'
+    + 'h2{font-size:21px;color:#d8d8dc;font-weight:600;margin:0 0 16px}'
+    + 'table{width:100%;border-collapse:collapse;margin-top:16px}'
+    + 'th{text-align:left;padding:11px 20px;border-bottom:2px solid rgba(255,255,255,0.35);font-size:14px;text-transform:none;color:#c8c8ce;background:rgba(255,255,255,0.08);font-weight:600}'
+    + 'tbody tr td{background:transparent;border-bottom:1px solid rgba(255,255,255,0.22);color:#f0f0f2}'
+    + 'tbody tr:first-child td{border-top:none}'
+    + '.banner{color:#ffffff;font-size:19px;font-weight:700;padding-bottom:16px;margin-bottom:0;border-bottom:1px solid rgba(255,255,255,0.35)}'
     + '</style></head><body>'
     + '<div class="panel">'
     + '<h1>PENALTY LIST FOR NO SHOW REFEREE</h1><h2>' + (evName||'') + '</h2>'
