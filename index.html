@@ -1438,7 +1438,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               </div>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>Name</th><th>ESID</th><th>Land</th><th>Altersklasse</th><th style="width:170px">E-Mail / Aktionen</th></tr></thead>
+              <thead><tr><th>Name</th><th>ESID</th><th>Land</th><th>Altersklasse</th><th style="width:230px">E-Mail / Aktionen</th></tr></thead>
               <tbody id="refereePenaltyTable"><tr><td colspan="5" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
@@ -6157,10 +6157,10 @@ async function loadRefereePenalties() {
         + '<option value="Ja"' + (notified ? ' selected' : '') + '>✅ Gesendet</option>'
         + '<option value="Nein"' + (!notified ? ' selected' : '') + '>⏳ Ausstehend</option>'
         + '</select>'
-        + '<div style="display:flex;gap:4px">'
-        + (row.participant_id ? '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editEntry(\''+row.participant_id+'\')">Bearbeiten</button>' : '')
-        + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="openRefereePenaltyEmail(\''+row.id+'\')">✉ E-Mail</button>'
-        + '<button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="removeRefereePenalty(\''+row.id+'\')" title="Entfernen">×</button>'
+        + '<div style="display:flex;gap:4px;flex-wrap:nowrap">'
+        + (row.participant_id ? '<button class="btn" style="font-size:11px;padding:3px 8px;white-space:nowrap" onclick="editEntry(\''+row.participant_id+'\')">Bearbeiten</button>' : '')
+        + '<button class="btn" style="font-size:11px;padding:3px 8px;white-space:nowrap" onclick="openRefereePenaltyEmail(\''+row.id+'\')">✉ E-Mail</button>'
+        + '<button class="btn danger" style="font-size:11px;padding:3px 8px;white-space:nowrap" onclick="removeRefereePenalty(\''+row.id+'\')" title="Entfernen">×</button>'
         + '</div>'
         + '</td>'
       + '</tr>';
