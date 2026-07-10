@@ -1438,7 +1438,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               </div>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>Name</th><th>ESID</th><th>Land</th><th>Altersklasse</th><th style="width:50px"></th></tr></thead>
+              <thead><tr><th>Name</th><th>ESID</th><th>Land</th><th>Altersklasse</th><th style="width:170px">E-Mail / Aktionen</th></tr></thead>
               <tbody id="refereePenaltyTable"><tr><td colspan="5" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
@@ -3383,6 +3383,38 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button class="btn" onclick="closeModal('withdrawEmailModal')">Abbrechen</button>
       <button class="btn primary" onclick="sendWithdrawEmail()">✉ E-Mail öffnen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="refereePenaltyEmailModal">
+  <div class="modal" style="width:620px;max-height:90vh;overflow-y:auto">
+    <button class="modal-close" onclick="closeModal('refereePenaltyEmailModal')">×</button>
+    <h2 style="margin-bottom:4px">✉ Penalty Notification</h2>
+    <p id="rpEmailName" style="font-size:13px;color:var(--text2);margin-bottom:14px"></p>
+
+    <div class="form-grid" style="gap:10px;margin-bottom:14px">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Empfänger E-Mail</label>
+        <input type="email" id="rpEmailTo" placeholder="email@example.com" />
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Mobilnummer (für WhatsApp)</label>
+        <input type="text" id="rpEmailMobile" placeholder="+49 151 ..." />
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Betreff / Subject</label>
+        <input type="text" id="rpEmailSubject" />
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Nachricht / Message</label>
+        <textarea id="rpEmailBody" style="height:260px;resize:vertical;font-size:12px;line-height:1.6;font-family:monospace"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('refereePenaltyEmailModal')">Abbrechen</button>
+      <button class="btn" onclick="sendRefereePenaltyWhatsApp()">📲 WhatsApp öffnen</button>
+      <button class="btn primary" onclick="sendRefereePenaltyEmailFromModal()">✉ E-Mail öffnen</button>
     </div>
   </div>
 </div>
@@ -6119,39 +6151,94 @@ async function loadRefereePenalties() {
       + '<td>'+(row.member_id||'–')+'</td>'
       + '<td>'+(row.country||'–')+'</td>'
       + '<td>'+(row.events||'–')+'</td>'
-      + '<td style="display:flex;gap:6px;justify-content:flex-end">'
-      + '<button onclick=\'sendRefereePenaltyEmail('+JSON.stringify({id:row.id,firstname:row.firstname,email:row.email,participant_id:row.participant_id}).replace(/'/g,"&#39;")+',"'+evName.replace(/"/g,'&quot;')+'")\' style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:16px" title="'+(notified ? 'Erneut senden' : (row.email ? 'E-Mail senden an ' + row.email : 'E-Mail wird bei Bedarf aus der Teilnehmerliste geladen'))+'">✉️</button>'
-      + '<button onclick="removeRefereePenalty(\''+row.id+'\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" title="Entfernen">×</button>'
-      + '</td>'
+      + '<td>'
+        + '<select style="font-size:11px;padding:2px 6px;margin-bottom:4px;width:100%" data-id="'+row.id+'" onchange="setRefereePenaltyEmailStatus(this.dataset.id, this.value)">'
+        + '<option value="">– E-Mail Status –</option>'
+        + '<option value="Ja"' + (notified ? ' selected' : '') + '>✅ Gesendet</option>'
+        + '<option value="Nein"' + (!notified ? ' selected' : '') + '>⏳ Ausstehend</option>'
+        + '</select>'
+        + '<div style="display:flex;gap:4px">'
+        + (row.participant_id ? '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editEntry(\''+row.participant_id+'\')">Bearbeiten</button>' : '')
+        + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="openRefereePenaltyEmail(\''+row.id+'\')">✉ E-Mail</button>'
+        + '<button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="removeRefereePenalty(\''+row.id+'\')" title="Entfernen">×</button>'
+        + '</div>'
+        + '</td>'
       + '</tr>';
   }).join('');
 }
 
-async function sendRefereePenaltyEmail(p, tournamentName) {
-  var email = p.email;
-  if (!email && p.participant_id) {
-    var r = await db.from('participants').select('email').eq('id', p.participant_id).single();
-    if (r.data) email = r.data.email;
-  }
-  if (!email) { toast('⚠️ Für diese Person ist keine E-Mail-Adresse hinterlegt (weder in der Penalty-Liste noch in der Teilnehmerliste)'); return; }
-  var subject = (tournamentName || '') + ' / Penalty for no show referee';
-  var body = 'Dear ' + (p.firstname || '') + ',\n\n'
+function buildRefereePenaltyEmailBody(firstname) {
+  return 'Dear ' + (firstname || '') + ',\n\n'
     + 'Unfortunately, we have noticed that you did not report for your refereeing duty after your match.\n'
     + 'Both players are required to referee the following match on the same court. This obligation has been communicated several times and applies equally to every participant.\n'
     + 'You are therefore required to report to the Tournament Desk tomorrow morning at 9:00 a.m. You will then be assigned to referee one of the first matches of the day.\n'
     + 'Please note that failure to appear may result in your disqualification from the tournament. Refereeing is just as much a part of your tournament responsibilities as playing your own matches.\n'
     + 'We hope this will not happen again.\n\n'
     + 'Kind regards,\nMichael';
-  var mailtoUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  window.location.href = mailtoUrl;
+}
 
-  // Mark as notified. mailto: only opens the mail client — we can't confirm the
-  // email was actually sent, so this reflects "notification triggered" rather
-  // than a delivery guarantee (same caveat as elsewhere in the app).
-  if (p.id) {
-    await db.from('referee_penalties').update({ email_sent: 'Ja', email_sent_at: new Date().toISOString() }).eq('id', p.id);
-    setTimeout(loadRefereePenalties, 400);
+async function openRefereePenaltyEmail(penaltyId) {
+  var r = await db.from('referee_penalties').select('*').eq('id', penaltyId).single();
+  if (r.error || !r.data) { toast('Eintrag nicht gefunden'); return; }
+  var row = r.data;
+
+  var email = row.email, mobile = null;
+  if (row.participant_id) {
+    var pr = await db.from('participants').select('email,mobile').eq('id', row.participant_id).single();
+    if (pr.data) { email = email || pr.data.email; mobile = pr.data.mobile; }
   }
+
+  var evName = '';
+  if (currentEventId) {
+    var evR = await db.from('events').select('name').eq('id', currentEventId).single();
+    if (evR.data) evName = evR.data.name;
+  }
+
+  document.getElementById('rpEmailName').textContent = row.firstname + ' ' + row.lastname;
+  document.getElementById('rpEmailTo').value = email || '';
+  document.getElementById('rpEmailMobile').value = mobile || '';
+  document.getElementById('rpEmailSubject').value = (evName || '') + ' / Penalty for no show referee';
+  document.getElementById('rpEmailBody').value = buildRefereePenaltyEmailBody(row.firstname);
+  window._rpEmailPenaltyId = row.id;
+  document.getElementById('refereePenaltyEmailModal').classList.add('open');
+}
+
+async function markRefereePenaltyNotified() {
+  if (window._rpEmailPenaltyId) {
+    await db.from('referee_penalties').update({ email_sent: 'Ja', email_sent_at: new Date().toISOString() }).eq('id', window._rpEmailPenaltyId);
+  }
+}
+
+async function sendRefereePenaltyEmailFromModal() {
+  var to = document.getElementById('rpEmailTo').value.trim();
+  var subject = document.getElementById('rpEmailSubject').value;
+  var body = document.getElementById('rpEmailBody').value;
+  if (!to) { toast('⚠️ Bitte E-Mail-Adresse eingeben'); return; }
+  window.open('mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
+  await markRefereePenaltyNotified();
+  closeModal('refereePenaltyEmailModal');
+  toast('✅ E-Mail geöffnet und als benachrichtigt markiert');
+  loadRefereePenalties();
+}
+
+async function sendRefereePenaltyWhatsApp() {
+  var mobile = document.getElementById('rpEmailMobile').value.trim();
+  var body = document.getElementById('rpEmailBody').value;
+  if (!mobile) { toast('⚠️ Bitte Mobilnummer eingeben'); return; }
+  var phone = mobile.replace(/[^0-9+]/g, '').replace(/^00/, '+').replace('+', '');
+  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(body), '_blank');
+  await markRefereePenaltyNotified();
+  closeModal('refereePenaltyEmailModal');
+  toast('✅ WhatsApp geöffnet und als benachrichtigt markiert');
+  loadRefereePenalties();
+}
+
+async function setRefereePenaltyEmailStatus(id, val) {
+  if (!val) return;
+  var r = await db.from('referee_penalties').update({ email_sent: val }).eq('id', id);
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  toast(val === 'Ja' ? '✅ Als benachrichtigt markiert' : '⏳ Status zurückgesetzt');
+  loadRefereePenalties();
 }
 
 var rpSearchDebounce = null;
