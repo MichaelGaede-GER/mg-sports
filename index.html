@@ -3825,6 +3825,8 @@ create table if not exists referee_penalties (
   country text,
   events text,
   email text,
+  email_sent text default 'Nein',
+  email_sent_at timestamptz,
   created_at timestamptz default now()
 );
 `;
@@ -6111,21 +6113,27 @@ async function loadRefereePenalties() {
   }
 
   tb.innerHTML = rows.map(function(row) {
+    var notified = row.email_sent === 'Ja';
     return '<tr>'
-      + '<td>'+row.lastname+', '+row.firstname+'</td>'
+      + '<td>'+row.lastname+', '+row.firstname+(notified ? ' <span style="font-size:11px;color:var(--green);font-weight:600" title="'+(row.email_sent_at ? 'Benachrichtigt am '+fmtDate(row.email_sent_at) : 'Benachrichtigt')+'">✅ benachrichtigt</span>' : '')+'</td>'
       + '<td>'+(row.member_id||'–')+'</td>'
       + '<td>'+(row.country||'–')+'</td>'
       + '<td>'+(row.events||'–')+'</td>'
       + '<td style="display:flex;gap:6px;justify-content:flex-end">'
-      + '<button onclick=\'sendRefereePenaltyEmail('+JSON.stringify({firstname:row.firstname,email:row.email}).replace(/'/g,"&#39;")+',"'+evName.replace(/"/g,'&quot;')+'")\' style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:16px" title="'+(row.email ? 'E-Mail senden an ' + row.email : 'Keine E-Mail-Adresse hinterlegt')+'">✉️</button>'
+      + '<button onclick=\'sendRefereePenaltyEmail('+JSON.stringify({id:row.id,firstname:row.firstname,email:row.email,participant_id:row.participant_id}).replace(/'/g,"&#39;")+',"'+evName.replace(/"/g,'&quot;')+'")\' style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:16px" title="'+(notified ? 'Erneut senden' : (row.email ? 'E-Mail senden an ' + row.email : 'E-Mail wird bei Bedarf aus der Teilnehmerliste geladen'))+'">✉️</button>'
       + '<button onclick="removeRefereePenalty(\''+row.id+'\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" title="Entfernen">×</button>'
       + '</td>'
       + '</tr>';
   }).join('');
 }
 
-function sendRefereePenaltyEmail(p, tournamentName) {
-  if (!p.email) { toast('⚠️ Für diese Person ist keine E-Mail-Adresse hinterlegt'); return; }
+async function sendRefereePenaltyEmail(p, tournamentName) {
+  var email = p.email;
+  if (!email && p.participant_id) {
+    var r = await db.from('participants').select('email').eq('id', p.participant_id).single();
+    if (r.data) email = r.data.email;
+  }
+  if (!email) { toast('⚠️ Für diese Person ist keine E-Mail-Adresse hinterlegt (weder in der Penalty-Liste noch in der Teilnehmerliste)'); return; }
   var subject = (tournamentName || '') + ' / Penalty for no show referee';
   var body = 'Dear ' + (p.firstname || '') + ',\n\n'
     + 'Unfortunately, we have noticed that you did not report for your refereeing duty after your match.\n'
@@ -6134,8 +6142,16 @@ function sendRefereePenaltyEmail(p, tournamentName) {
     + 'Please note that failure to appear may result in your disqualification from the tournament. Refereeing is just as much a part of your tournament responsibilities as playing your own matches.\n'
     + 'We hope this will not happen again.\n\n'
     + 'Kind regards,\nMichael';
-  var mailtoUrl = 'mailto:' + encodeURIComponent(p.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  var mailtoUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   window.location.href = mailtoUrl;
+
+  // Mark as notified. mailto: only opens the mail client — we can't confirm the
+  // email was actually sent, so this reflects "notification triggered" rather
+  // than a delivery guarantee (same caveat as elsewhere in the app).
+  if (p.id) {
+    await db.from('referee_penalties').update({ email_sent: 'Ja', email_sent_at: new Date().toISOString() }).eq('id', p.id);
+    setTimeout(loadRefereePenalties, 400);
+  }
 }
 
 var rpSearchDebounce = null;
