@@ -3824,6 +3824,7 @@ create table if not exists referee_penalties (
   member_id text,
   country text,
   events text,
+  email text,
   created_at timestamptz default now()
 );
 `;
@@ -6102,15 +6103,39 @@ async function loadRefereePenalties() {
   if (r.error) { toast('Fehler beim Laden: ' + r.error.message); return; }
   var rows = r.data || [];
   if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Noch niemand für dieses Datum eingetragen</td></tr>'; return; }
+
+  var evName = '';
+  if (currentEventId) {
+    var evR = await db.from('events').select('name').eq('id', currentEventId).single();
+    if (evR.data) evName = evR.data.name;
+  }
+
   tb.innerHTML = rows.map(function(row) {
     return '<tr>'
       + '<td>'+row.lastname+', '+row.firstname+'</td>'
       + '<td>'+(row.member_id||'–')+'</td>'
       + '<td>'+(row.country||'–')+'</td>'
       + '<td>'+(row.events||'–')+'</td>'
-      + '<td><button onclick="removeRefereePenalty(\''+row.id+'\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" title="Entfernen">×</button></td>'
+      + '<td style="display:flex;gap:6px;justify-content:flex-end">'
+      + '<button onclick=\'sendRefereePenaltyEmail('+JSON.stringify({firstname:row.firstname,email:row.email}).replace(/'/g,"&#39;")+',"'+evName.replace(/"/g,'&quot;')+'")\' style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:16px" title="'+(row.email ? 'E-Mail senden an ' + row.email : 'Keine E-Mail-Adresse hinterlegt')+'">✉️</button>'
+      + '<button onclick="removeRefereePenalty(\''+row.id+'\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" title="Entfernen">×</button>'
+      + '</td>'
       + '</tr>';
   }).join('');
+}
+
+function sendRefereePenaltyEmail(p, tournamentName) {
+  if (!p.email) { toast('⚠️ Für diese Person ist keine E-Mail-Adresse hinterlegt'); return; }
+  var subject = (tournamentName || '') + ' / Penalty for no show referee';
+  var body = 'Dear ' + (p.firstname || '') + ',\n\n'
+    + 'Unfortunately, we have noticed that you did not report for your refereeing duty after your match.\n'
+    + 'Both players are required to referee the following match on the same court. This obligation has been communicated several times and applies equally to every participant.\n'
+    + 'You are therefore required to report to the Tournament Desk tomorrow morning at 9:00 a.m. You will then be assigned to referee one of the first matches of the day.\n'
+    + 'Please note that failure to appear may result in your disqualification from the tournament. Refereeing is just as much a part of your tournament responsibilities as playing your own matches.\n'
+    + 'We hope this will not happen again.\n\n'
+    + 'Kind regards,\nMichael';
+  var mailtoUrl = 'mailto:' + encodeURIComponent(p.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  window.location.href = mailtoUrl;
 }
 
 var rpSearchDebounce = null;
@@ -6119,7 +6144,7 @@ function searchRefereePenaltyParticipants(query) {
   var box = document.getElementById('rpParticipantResults');
   if (!query || query.trim().length < 2) { box.style.display = 'none'; return; }
   rpSearchDebounce = setTimeout(async function() {
-    var q = db.from('participants').select('id,firstname,lastname,member_id,country,events')
+    var q = db.from('participants').select('id,firstname,lastname,member_id,country,events,email')
       .or('firstname.ilike.%'+query+'%,lastname.ilike.%'+query+'%,member_id.ilike.%'+query+'%');
     if (currentEventId) q = q.eq('event_id', currentEventId);
     var r = await q.limit(15);
@@ -6149,7 +6174,8 @@ async function addRefereePenalty(p) {
     participant_id: p.id,
     penalty_date: date,
     lastname: p.lastname, firstname: p.firstname,
-    member_id: p.member_id || null, country: p.country || null, events: p.events || null
+    member_id: p.member_id || null, country: p.country || null, events: p.events || null,
+    email: p.email || null
   };
   var r = await db.from('referee_penalties').insert(row);
   if (r.error) { toast('Fehler: ' + r.error.message); return; }
