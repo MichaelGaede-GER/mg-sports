@@ -161,6 +161,13 @@
   <div class="footer-note" id="footerNote">This pass is personal — please don't share the link with others.</div>
 </div>
 
+<div id="googleWalletWrap" style="max-width:340px;margin:14px auto 0;display:none">
+  <button id="googleWalletBtn" onclick="addToGoogleWallet()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;border:none;border-radius:8px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Google Sans',Roboto,Arial,sans-serif">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#fff" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12s3.36-7.27 7.19-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.19 2C6.42 2 1.99 6.8 1.99 12s4.43 10 10.2 10c5.35 0 9.25-3.67 9.25-9.09 0-1.15-.09-1.81-.09-1.81Z"/></svg>
+    Add to Google Wallet
+  </button>
+</div>
+
 
 
 <script>
@@ -369,9 +376,10 @@ async function init() {
   badge.style.background = roleColor;
 
   // Package (with short_code lookup)
+  var pkg = null;
   if (p.package) {
     var pkgR = await db.from('packages').select('*').eq('code', p.package).maybeSingle();
-    var pkg = pkgR.data;
+    pkg = pkgR.data;
     document.getElementById('pPackage').textContent = (pkg && pkg.short_code) ? pkg.short_code : p.package;
   }
 
@@ -381,8 +389,11 @@ async function init() {
     document.getElementById('pEvents').textContent = p.events;
   }
 
-  // Hotel
-  if (p.hotel) {
+  // Hotel — only show if the booked package actually includes hotel nights.
+  // (p.hotel alone isn't enough: it can be set as a leftover/default value even
+  // for Entry-only packages that never included accommodation.)
+  var packageIncludesHotel = pkg && parseInt(pkg.nights, 10) > 0;
+  if (p.hotel && packageIncludesHotel) {
     document.getElementById('roomRow').style.display = 'flex';
     document.getElementById('pHotel').textContent = p.hotel;
   }
@@ -429,10 +440,39 @@ async function init() {
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('passCard').style.display = 'block';
   applyTranslations();
+
+  // Google Wallet only makes practical sense outside iOS (Apple devices use
+  // "Save as Image" instead, since Apple Wallet isn't wired up).
+  if (!isIOS()) {
+    document.getElementById('googleWalletWrap').style.display = 'block';
+  }
 }
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+async function addToGoogleWallet() {
+  var btn = document.getElementById('googleWalletBtn');
+  var originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = '⏳ ' + (LANG === 'de' ? 'Wird erstellt…' : 'Preparing…');
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var participantId = params.get('id');
+    var res = await fetch(SUPABASE_URL + '/functions/v1/google-wallet-pass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify({ participantId: participantId })
+    });
+    var data = await res.json();
+    if (!res.ok || !data.saveUrl) throw new Error(data.error || 'Unknown error');
+    window.location.href = data.saveUrl;
+  } catch (e) {
+    alert((LANG === 'de' ? 'Fehler: ' : 'Error: ') + e.message);
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
 }
 
 async function savePassAsImage() {
