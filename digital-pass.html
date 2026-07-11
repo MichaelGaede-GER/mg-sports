@@ -89,6 +89,16 @@
     font-size: 10px; font-weight: 700; background: #185FA5; color: #fff;
   }
   .footer-note { text-align: center; font-size: 10px; color: #9aa3b2; padding: 14px 20px 20px; }
+  .update-banner {
+    background: linear-gradient(90deg, #ffb020, #ff9800); color: #1a1d23; font-weight: 700;
+    font-size: 13px; text-align: center; padding: 10px 16px; cursor: pointer;
+    animation: pulseBanner 1.8s ease-in-out infinite;
+  }
+  @keyframes pulseBanner { 0%,100% { opacity: 1; } 50% { opacity: 0.75; } }
+  .new-badge {
+    display: inline-block; background: #ff5252; color: #fff; font-size: 9px; font-weight: 800;
+    padding: 2px 6px; border-radius: 8px; margin-left: 6px; vertical-align: middle; letter-spacing: 0.5px;
+  }
   .save-actions { padding: 0 20px 18px; display: flex; flex-direction: column; gap: 8px; }
   .save-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -122,6 +132,7 @@
 <div id="errorState" class="state-box" style="display:none"><p id="errorText">Pass not found.</p></div>
 
 <div class="card" id="passCard" style="display:none">
+  <div class="update-banner" id="updateBanner" style="display:none" onclick="dismissUpdateBanner()">🆕 <span id="updateBannerText">Neuer Eintrag</span></div>
   <button class="save-icon-btn" id="saveImgBtn" onclick="savePassAsImage()" title="Save as Image">⬇️</button>
   <div class="lang-switch">
     <button id="langBtnDe" onclick="setLang('de')">DE</button>
@@ -156,8 +167,13 @@
       <div id="mealRows"></div>
     </div>
 
+    <div class="meal-section" id="generalNoteSection" style="display:none">
+      <h3 id="lbl_generalnote">📢 Ankündigung <span class="new-badge" id="generalNoteBadge" style="display:none">NEU</span></h3>
+      <div id="generalNoteText" style="font-size:13px;color:#1a1d23;white-space:pre-wrap;line-height:1.5"></div>
+    </div>
+
     <div class="meal-section" id="passNoteSection" style="display:none">
-      <h3 id="lbl_passnote">Info</h3>
+      <h3 id="lbl_passnote">Info <span class="new-badge" id="passNoteBadge" style="display:none">NEU</span></h3>
       <div id="passNoteText" style="font-size:13px;color:#1a1d23;white-space:pre-wrap;line-height:1.5"></div>
     </div>
 
@@ -183,6 +199,8 @@ var I18N = {
     gender: 'Geschlecht', package: 'Package', events: 'Altersklasse', hotel: 'Hotel',
     meal_package: 'Mahlzeiten-Paket',
     info: 'Info',
+    generalnote: 'Ankündigung',
+    update_banner: 'Neuer Eintrag – zum Ausblenden tippen',
     footer_note: "Dieser Pass ist persönlich — bitte teile den Link nicht mit anderen.",
     save_btn: 'Als Bild speichern',
     save_hint: 'Speichere den Pass als Bild in deiner Fotos-App / Galerie — funktioniert offline, auch ohne Internet.',
@@ -199,6 +217,8 @@ var I18N = {
     gender: 'Gender', package: 'Package', events: 'Age Category', hotel: 'Hotel',
     meal_package: 'Meal Package',
     info: 'Info',
+    generalnote: 'Announcement',
+    update_banner: 'New update – tap to dismiss',
     footer_note: "This pass is personal — please don't share the link with others.",
     save_btn: 'Save as Image',
     save_hint: 'Save the pass as an image to your Photos / Gallery app — works offline, no internet needed.',
@@ -227,7 +247,9 @@ function applyTranslations() {
   document.getElementById('lbl_events').textContent = t('events');
   document.getElementById('lbl_hotel').textContent = t('hotel');
   document.getElementById('lbl_mealpackage').textContent = t('meal_package');
-  document.getElementById('lbl_passnote').textContent = t('info');
+  document.getElementById('lbl_passnote').childNodes[0].textContent = t('info') + ' ';
+  document.getElementById('lbl_generalnote').childNodes[0].textContent = '📢 ' + t('generalnote') + ' ';
+  document.getElementById('updateBannerText').textContent = t('update_banner');
   document.getElementById('footerNote').textContent = t('footer_note');
   document.getElementById('saveImgBtn').title = t('save_btn');
 
@@ -429,16 +451,48 @@ async function init() {
       document.getElementById('mealRows').innerHTML = rowsHtml;
   }
 
+  // Allgemeine Info + Zusatzinfo (persönlich) + "Neu"-Erkennung via localStorage
+  var extraR = await db.from('app_settings').select('key,value').in('key', ['general_pass_note', 'general_pass_note_updated_at', 'sponsor_logo_1', 'sponsor_logo_2', 'sponsor_logo_3', 'sponsor_logo_4']);
+  var extraSettings = {};
+  (extraR.data || []).forEach(function(s) { extraSettings[s.key] = s.value; });
+
+  var bannerNeeded = false;
+
+  // Allgemeine Ankündigung (gilt für alle Pässe)
+  var generalNote = extraSettings['general_pass_note'];
+  var generalUpdatedAt = extraSettings['general_pass_note_updated_at'];
+  if (generalNote && generalNote.trim()) {
+    document.getElementById('generalNoteSection').style.display = 'block';
+    document.getElementById('generalNoteText').textContent = generalNote;
+    if (generalUpdatedAt) {
+      var lastSeenGeneral = localStorage.getItem('passSeenGeneral');
+      if (!lastSeenGeneral || new Date(generalUpdatedAt) > new Date(lastSeenGeneral)) {
+        document.getElementById('generalNoteBadge').style.display = 'inline-block';
+        bannerNeeded = true;
+      }
+      localStorage.setItem('passSeenGeneral', generalUpdatedAt);
+    }
+  }
+
   // Zusatzinfo (freier Text, vom Organizer pro Teilnehmer gepflegt)
   if (p.pass_note && p.pass_note.trim()) {
     document.getElementById('passNoteSection').style.display = 'block';
     document.getElementById('passNoteText').textContent = p.pass_note;
+    if (p.pass_note_updated_at) {
+      var seenKey = 'passSeen_' + p.id;
+      var lastSeen = localStorage.getItem(seenKey);
+      if (!lastSeen || new Date(p.pass_note_updated_at) > new Date(lastSeen)) {
+        document.getElementById('passNoteBadge').style.display = 'inline-block';
+        bannerNeeded = true;
+      }
+      localStorage.setItem(seenKey, p.pass_note_updated_at);
+    }
   }
 
+  if (bannerNeeded) document.getElementById('updateBanner').style.display = 'block';
+
   // Sponsor logos
-  var sponsorR = await db.from('app_settings').select('key,value').in('key', ['sponsor_logo_1', 'sponsor_logo_2', 'sponsor_logo_3', 'sponsor_logo_4']);
-  var sponsorLogos = {};
-  (sponsorR.data || []).forEach(function(s) { sponsorLogos[s.key] = s.value; });
+  var sponsorLogos = extraSettings;
   var sponsorImgs = [1, 2, 3, 4].filter(function(n) { return sponsorLogos['sponsor_logo_' + n]; })
     .map(function(n) { return '<img src="data:image/png;base64,' + sponsorLogos['sponsor_logo_' + n] + '" alt="Sponsor" />'; }).join('');
   if (sponsorImgs) {
@@ -453,6 +507,11 @@ async function init() {
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function dismissUpdateBanner() {
+  var b = document.getElementById('updateBanner');
+  if (b) b.style.display = 'none';
 }
 
 async function savePassAsImage() {

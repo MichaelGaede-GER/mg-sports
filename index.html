@@ -2423,6 +2423,29 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           <div id="idcardSeriendruckResult" style="display:none;padding:0 16px 16px;font-size:13px"></div>
         </div>
 
+        <!-- ALLGEMEINE INFO FÜR ALLE PÄSSE -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>📢 Allgemeine Info</h3><span style="font-size:11px;color:var(--text3)">Wird zusätzlich auf ALLEN digitalen Pässen angezeigt (z.B. wichtige Durchsagen)</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+            <textarea id="generalPassNoteText" rows="3" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);box-sizing:border-box" placeholder="z.B. Änderung des Spielorts, wichtige Durchsage an alle Teilnehmer…"></textarea>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn primary" style="font-size:12px" onclick="saveGeneralPassNote()">Speichern</button>
+              <button class="btn" style="font-size:12px" onclick="clearGeneralPassNote()">Löschen</button>
+              <span id="generalPassNoteStatus" style="font-size:11px;color:var(--text3)"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUCHE -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-body" style="display:flex;gap:10px;align-items:center;padding:12px 16px">
+            <span style="font-size:16px">🔍</span>
+            <input type="text" id="idcardSearchInput" placeholder="Suche nach Name, Land, Rolle, Package…" oninput="filterIdCards()" style="flex:1;min-width:200px" />
+            <span id="idcardSearchCount" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+            <button class="btn" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('idcardSearchInput').value='';filterIdCards()">✕ Zurücksetzen</button>
+          </div>
+        </div>
+
         <!-- CATEGORIES -->
         <div id="idcardBlocks"></div>
       </div>
@@ -9440,13 +9463,13 @@ async function openPassNoteModal(participantId) {
 
   var menu = document.createElement('div');
   menu.id = 'passNoteModal';
-  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
   menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
-  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:20px;width:320px;max-width:90vw;border:1px solid var(--border)">'
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:520px;max-width:100%;border:1px solid var(--border)">'
     + '<h3 style="margin-bottom:6px;font-size:15px;color:var(--text)">📝 Zusatzinfo für digitalen Pass</h3>'
     + '<div style="font-size:12px;color:var(--text3);margin-bottom:10px">'+(p.firstname||'')+' '+(p.lastname||'')+'</div>'
-    + '<textarea id="passNoteText" rows="4" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);box-sizing:border-box">'+((p.pass_note||'').replace(/</g,'&lt;'))+'</textarea>'
-    + '<div style="font-size:11px;color:var(--text3);margin:8px 0 14px">Erscheint als zusätzliche Info direkt auf dem digitalen Pass des Teilnehmers.</div>'
+    + '<textarea id="passNoteText" rows="10" style="width:100%;min-height:220px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.5;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);box-sizing:border-box">'+((p.pass_note||'').replace(/</g,'&lt;'))+'</textarea>'
+    + '<div style="font-size:11px;color:var(--text3);margin:8px 0 14px">Erscheint als zusätzliche Info direkt auf dem digitalen Pass des Teilnehmers. Der Spieler bekommt beim nächsten Aufruf einen Hinweis auf die Änderung.</div>'
     + '<div style="display:flex;gap:8px">'
     + '<button class="btn primary" style="flex:1" data-id="'+participantId+'" onclick="savePassNote(this.dataset.id)">Speichern</button>'
     + '<button class="btn" style="flex:1" onclick="document.getElementById(\'passNoteModal\').remove()">Abbrechen</button>'
@@ -9459,7 +9482,7 @@ async function openPassNoteModal(participantId) {
 async function savePassNote(participantId) {
   var el = document.getElementById('passNoteText');
   var val = el ? el.value : '';
-  var r = await db.from('participants').update({ pass_note: val || null }).eq('id', participantId);
+  var r = await db.from('participants').update({ pass_note: val || null, pass_note_updated_at: new Date().toISOString() }).eq('id', participantId);
   if (r.error) { toast('⚠️ Fehler beim Speichern: ' + r.error.message); return; }
   toast('✅ Gespeichert');
   var m = document.getElementById('passNoteModal'); if (m) m.remove();
@@ -13289,7 +13312,39 @@ function getCountryFlagImg(countryCode, size) {
 
 
 // ID CARD MANAGEMENT PAGE
+// Allgemeine Info: ein Text, der zusätzlich auf ALLEN digitalen Pässen angezeigt wird
+// (z.B. wichtige Durchsagen). Wird in app_settings gespeichert (general_pass_note +
+// general_pass_note_updated_at), damit der digitale Pass Änderungen erkennen und dem
+// Teilnehmer als "neu" markieren kann.
+async function loadGeneralPassNote() {
+  var el = document.getElementById('generalPassNoteText');
+  if (!el) return;
+  var r = await db.from('app_settings').select('key,value').in('key', ['general_pass_note']);
+  var row = (r.data || []).find(function(x){ return x.key === 'general_pass_note'; });
+  el.value = row ? (row.value || '') : '';
+}
+
+async function saveGeneralPassNote() {
+  var el = document.getElementById('generalPassNoteText');
+  var status = document.getElementById('generalPassNoteStatus');
+  var val = el ? el.value : '';
+  var r = await db.from('app_settings').upsert([
+    { key: 'general_pass_note', value: val || '' },
+    { key: 'general_pass_note_updated_at', value: new Date().toISOString() }
+  ]);
+  if (r.error) { toast('⚠️ Fehler beim Speichern: ' + r.error.message); return; }
+  toast('✅ Gespeichert – erscheint auf allen digitalen Pässen');
+  if (status) { status.textContent = 'Zuletzt gespeichert: ' + new Date().toLocaleString('de-DE'); }
+}
+
+async function clearGeneralPassNote() {
+  var el = document.getElementById('generalPassNoteText');
+  if (el) el.value = '';
+  await saveGeneralPassNote();
+}
+
 async function loadIdCards() {
+  loadGeneralPassNote().catch(function(){});
   var q = db.from('participants').select('*').neq('withdraw','Ja').order('lastname');
   if (currentEventId) q = q.eq('event_id', currentEventId);
   var r = await q;
@@ -13403,7 +13458,8 @@ async function loadIdCards() {
       var photo = p.photo_url
         ? '<img src="'+p.photo_url+'" style="width:28px;height:34px;object-fit:cover;border-radius:3px;border:1px solid var(--border)" />'
         : '<div style="width:28px;height:34px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:14px">👤</div>';
-      return '<tr style="'+bg+'">'
+      var searchHay = ((p.lastname||'')+' '+(p.firstname||'')+' '+(p.country||'')+' '+(p.role||'')+' '+(p.package||'')+' '+(p.events||'')+' '+(p.member_id||'')).toLowerCase();
+      return '<tr style="'+bg+'" data-search="'+searchHay.replace(/"/g,'')+'">'
         + '<td style="padding:4px 8px">'+photo+'</td>'
         + '<td style="padding:4px 8px;font-weight:600">'+p.lastname+', '+p.firstname+'</td>'
         + '<td style="padding:4px 8px;font-size:11px;color:var(--text2)">'+(p.country||'–')+'</td>'
@@ -13421,10 +13477,10 @@ async function loadIdCards() {
     }).join('');
 
     var collapseId = 'idcat_' + cat.id;
-    return '<div class="card" style="margin-bottom:16px">'
+    return '<div class="card" style="margin-bottom:16px" id="idcatwrap_'+cat.id+'">'
       + '<div class="card-header" style="background:'+cat.bgColor+';border-bottom:2px solid '+cat.color+';display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleIdCardBlock(\''+collapseId+'\')">'
       + '<div style="width:12px;height:12px;border-radius:2px;background:'+cat.color+';flex-shrink:0"></div>'
-      + '<h3 style="color:'+cat.color+';margin:0;flex:1">'+cat.label+' <span style="font-size:12px;font-weight:400">('+cat.persons.length+' Personen)</span></h3>'
+      + '<h3 style="color:'+cat.color+';margin:0;flex:1">'+cat.label+' <span id="idcatcount_'+cat.id+'" style="font-size:12px;font-weight:400">('+cat.persons.length+' Personen)</span></h3>'
       + '<button class="btn" style="font-size:11px;padding:4px 10px;border-color:'+cat.color+';color:'+cat.color+'" onclick="event.stopPropagation();printCategoryPasses(\''+cat.id+'\')">🖨 Drucken</button>'
       + '<span id="toggle_'+collapseId+'" style="font-size:16px;color:'+cat.color+';margin-left:6px">▾</span>'
       + '</div>'
@@ -13442,6 +13498,41 @@ async function loadIdCards() {
   window._idcardAllParticipants = all;
   populateIdCardFilters();
   document.getElementById('idTotalList').textContent = all.length + ' Personen';
+  filterIdCards();
+}
+
+// Live-Suche über alle ID-Cards-Kategorien (Name, Land, Rolle, Package, Event, ESID/MemberID)
+function filterIdCards() {
+  var qEl = document.getElementById('idcardSearchInput');
+  var q = (qEl ? qEl.value : '').trim().toLowerCase();
+  var container = document.getElementById('idcardBlocks');
+  var countSpan = document.getElementById('idcardSearchCount');
+  if (!container) return;
+  var totalMatches = 0, totalAll = 0;
+  var categories = window._idcardCategories || [];
+  categories.forEach(function(cat) {
+    var wrap = document.getElementById('idcatwrap_' + cat.id);
+    if (!wrap) return;
+    var rows = wrap.querySelectorAll('tbody tr');
+    var visibleCount = 0;
+    rows.forEach(function(tr) {
+      totalAll++;
+      var hay = tr.getAttribute('data-search') || '';
+      var match = !q || hay.indexOf(q) !== -1;
+      tr.style.display = match ? '' : 'none';
+      if (match) { visibleCount++; totalMatches++; }
+    });
+    wrap.style.display = visibleCount > 0 ? '' : 'none';
+    var countEl = document.getElementById('idcatcount_' + cat.id);
+    if (countEl) countEl.textContent = '(' + visibleCount + (q && visibleCount !== rows.length ? ' von ' + rows.length : '') + ' Personen)';
+    if (q && visibleCount > 0) {
+      var body = document.getElementById('idcat_' + cat.id);
+      var toggle = document.getElementById('toggle_idcat_' + cat.id);
+      if (body) body.style.display = '';
+      if (toggle) toggle.textContent = '▾';
+    }
+  });
+  if (countSpan) countSpan.textContent = q ? (totalMatches + ' von ' + totalAll + ' gefunden') : '';
 }
 
 // ================= SERIENDRUCK (Filter + Blockdruck) =================
