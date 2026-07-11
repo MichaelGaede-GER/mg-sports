@@ -156,6 +156,11 @@
       <div id="mealRows"></div>
     </div>
 
+    <div class="meal-section" id="passNoteSection" style="display:none">
+      <h3 id="lbl_passnote">Info</h3>
+      <div id="passNoteText" style="font-size:13px;color:#1a1d23;white-space:pre-wrap;line-height:1.5"></div>
+    </div>
+
     <div class="sponsors-section" id="sponsorsSection" style="display:none"></div>
   </div>
   <div class="footer-note" id="footerNote">This pass is personal — please don't share the link with others.</div>
@@ -177,6 +182,7 @@ var I18N = {
   de: {
     gender: 'Geschlecht', package: 'Package', events: 'Altersklasse', hotel: 'Hotel',
     meal_package: 'Mahlzeiten-Paket',
+    info: 'Info',
     footer_note: "Dieser Pass ist persönlich — bitte teile den Link nicht mit anderen.",
     save_btn: 'Als Bild speichern',
     save_hint: 'Speichere den Pass als Bild in deiner Fotos-App / Galerie — funktioniert offline, auch ohne Internet.',
@@ -192,6 +198,7 @@ var I18N = {
   en: {
     gender: 'Gender', package: 'Package', events: 'Age Category', hotel: 'Hotel',
     meal_package: 'Meal Package',
+    info: 'Info',
     footer_note: "This pass is personal — please don't share the link with others.",
     save_btn: 'Save as Image',
     save_hint: 'Save the pass as an image to your Photos / Gallery app — works offline, no internet needed.',
@@ -220,6 +227,7 @@ function applyTranslations() {
   document.getElementById('lbl_events').textContent = t('events');
   document.getElementById('lbl_hotel').textContent = t('hotel');
   document.getElementById('lbl_mealpackage').textContent = t('meal_package');
+  document.getElementById('lbl_passnote').textContent = t('info');
   document.getElementById('footerNote').textContent = t('footer_note');
   document.getElementById('saveImgBtn').title = t('save_btn');
 
@@ -419,6 +427,12 @@ async function init() {
         + (timeText ? '<div class="meal-time">' + timeText + '</div>' : '');
     }).join('');
       document.getElementById('mealRows').innerHTML = rowsHtml;
+  }
+
+  // Zusatzinfo (freier Text, vom Organizer pro Teilnehmer gepflegt)
+  if (p.pass_note && p.pass_note.trim()) {
+    document.getElementById('passNoteSection').style.display = 'block';
+    document.getElementById('passNoteText').textContent = p.pass_note;
   }
 
   // Sponsor logos
