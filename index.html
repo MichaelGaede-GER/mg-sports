@@ -439,6 +439,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <button class="hamburger-btn" onclick="toggleMobileSidebar()" aria-label="Menü"><span></span><span></span><span></span></button>
       <span class="topbar-title" id="topbarTitle">Dashboard</span>
       <div id="activeEventDisplay" style="font-size:12px;padding:4px 10px;background:var(--green-bg);color:var(--green);border-radius:6px;display:none;cursor:pointer" onclick="nav('events')"></div>
+      <div id="noEventAccessBanner" style="font-size:12px;padding:4px 10px;background:var(--red-bg,#4a1f24);color:var(--red,#ff6b6b);border-radius:6px;display:none">⛔ Kein Zugriff auf aktuelles Event</div>
       <button class="btn" onclick="toggleDarkMode()" id="modeBtn" title="Hell/Dunkel wechseln" style="font-size:18px;padding:4px 8px;border:none;background:none;cursor:pointer">🌙</button>
       <button class="btn" onclick="toggleLanguage()" id="langBtn" title="Deutsch / English" style="font-size:18px;padding:4px 8px;border:none;background:none;cursor:pointer">🇩🇪</button>
       <span style="font-size:12px;color:var(--text2)" id="topbarUser"></span>
@@ -7170,6 +7171,7 @@ async function loadUsers() {
       + '<td style="padding:6px 10px;font-size:11px;color:var(--text3)">' + (u.created_at ? new Date(u.created_at).toLocaleDateString('de-DE') : '–') + '</td>'
       + '<td style="padding:4px 8px;display:flex;gap:6px">'
       + '<button class="btn" style="font-size:11px;padding:3px 8px" data-uid="'+u.id+'" data-email="'+u.email+'" data-role="'+u.role+'" onclick="editAppUser(this.dataset.uid,this.dataset.email,this.dataset.role)">Bearbeiten</button>'
+      + '<button class="btn" style="font-size:11px;padding:3px 8px" data-email="'+u.email+'" onclick="openEventAccessModal(this.dataset.email)" title="Festlegen, für welche Events dieser Benutzer freigeschaltet ist">🗓 Events</button>'
       + '<button class="btn danger" style="font-size:11px;padding:3px 8px" data-uid="'+u.id+'" data-email="'+u.email+'" onclick="deleteAppUser(this.dataset.uid,this.dataset.email)">Löschen</button>'
       + '</td></tr>';
   }).join('') : '<tr><td colspan="4" class="empty">Noch keine Benutzer angelegt. Klicke "+ Benutzer anlegen".</td></tr>';
@@ -7236,9 +7238,85 @@ function editAppUser(id, email, currentRole) {
 async function deleteAppUser(id, email) {
   if (!confirm('Benutzer "' + email + '" wirklich löschen?')) return;
   await db.from('app_users').delete().eq('id', id);
+  await db.from('event_user_access').delete().eq('user_email', email);
   toast('Benutzer gelöscht');
   loadUsers();
 }
+
+// EVENT-ZUGRIFF PRO BENUTZER
+// Legt fest, für welche Events (aktuelle & zukünftige) ein Benutzer freigeschaltet ist,
+// jeweils mit der für dieses Event vorgesehenen Rolle. Ohne Eintrag hier gilt weiterhin
+// die globale Rolle des Benutzers für alle Events (Legacy-Verhalten für bereits bestehende
+// Benutzer, die noch nicht event-spezifisch eingeschränkt wurden).
+async function openEventAccessModal(email) {
+  await loadEventsCache();
+  var accessR = await db.from('event_user_access').select('*').eq('user_email', email);
+  if (accessR.error) { toast('⚠️ Fehler beim Laden: ' + accessR.error.message); return; }
+  var access = {};
+  (accessR.data || []).forEach(function(a) { access[a.event_id] = a.role; });
+  var roles = userRolesCache && userRolesCache.length ? userRolesCache.map(function(r){return r.name;}) : ['Admin','Turnierstab','Registrierung'];
+
+  var rows = eventsCache.map(function(e) {
+    var current = access[e.id] || '';
+    var opts = '<option value="">– Kein Zugriff –</option>' + roles.map(function(r) {
+      return '<option value="'+r+'"'+(r===current?' selected':'')+'>'+r+'</option>';
+    }).join('');
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1;font-size:13px">'+e.name+(e.year?' ('+e.year+')':'')+'</div>'
+      + '<select data-event-id="'+e.id+'" class="eventAccessSelect" style="width:190px">'+opts+'</select>'
+      + '</div>';
+  }).join('');
+
+  var existing = document.getElementById('eventAccessModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'eventAccessModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:480px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:4px;font-size:15px;color:var(--text)">🗓 Event-Zugriff</h3>'
+    + '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">'+email+'</div>'
+    + (eventsCache.length ? rows : '<p style="font-size:12px;color:var(--text3)">Noch keine Events angelegt.</p>')
+    + '<div style="font-size:11px;color:var(--text3);margin-top:12px">"Kein Zugriff" entfernt die Freigabe für dieses Event. Neue Events erscheinen hier automatisch, sobald du sie anlegst.</div>'
+    + '<div style="display:flex;gap:8px;margin-top:14px">'
+    + '<button class="btn primary" style="flex:1" data-email="'+email+'" onclick="saveEventAccess(this.dataset.email)">Speichern</button>'
+    + '<button class="btn" style="flex:1" onclick="document.getElementById(\'eventAccessModal\').remove()">Abbrechen</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function saveEventAccess(email) {
+  var selects = document.querySelectorAll('#eventAccessModal .eventAccessSelect');
+  var toUpsert = [];
+  var toDeleteIds = [];
+  selects.forEach(function(sel) {
+    var eventId = sel.getAttribute('data-event-id');
+    var role = sel.value;
+    if (role) toUpsert.push({ event_id: eventId, user_email: email, role: role });
+    else toDeleteIds.push(eventId);
+  });
+
+  if (toDeleteIds.length) {
+    var delR = await db.from('event_user_access').delete().eq('user_email', email).in('event_id', toDeleteIds);
+    if (delR.error) { toast('⚠️ Fehler: ' + delR.error.message); return; }
+  }
+  if (toUpsert.length) {
+    var r = await db.from('event_user_access').upsert(toUpsert, { onConflict: 'event_id,user_email' });
+    if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  }
+
+  toast('✅ Event-Zugriff gespeichert');
+  var m = document.getElementById('eventAccessModal'); if (m) m.remove();
+
+  // Falls der eigene Zugriff geändert wurde, Berechtigungen sofort neu anwenden
+  if (email === currentUserEmail) {
+    var ea = await db.from('event_user_access').select('event_id,role').eq('user_email', email);
+    userEventAccessCache = ea.data || [];
+    recomputeEventRole();
+    applyPermissions();
+  }
+}
+
 
 // PDF EXPORTS
 async function exportHotelPDF() {
@@ -7855,12 +7933,17 @@ async function loadActiveEvent() {
   if (saved) { try { var p=JSON.parse(saved); currentEventId=p.id; currentEventName=p.name; updateActiveEventDisplay(); } catch(e){} }
 }
 async function setActiveEvent(id, name) {
+  if (currentGlobalUserRole !== 'Admin' && userEventAccessCache && userEventAccessCache.length) {
+    var allowed = userEventAccessCache.some(function(a) { return a.event_id === id; });
+    if (!allowed) { toast('⛔ Kein Zugriff auf dieses Event – bitte einen Admin um Freigabe bitten'); return; }
+  }
   currentEventId=id; currentEventName=name;
   localStorage.setItem('mg_active_event', JSON.stringify({id:id,name:name}));
   // Also save to DB so registration form can read it
   await db.from('app_settings').delete().eq('key','active_event');
   await db.from('app_settings').insert({key:'active_event', value: JSON.stringify({id:id,name:name})});
   updateActiveEventDisplay(); updateSidebarEventLogo();
+  recomputeEventRole(); applyPermissions();
   toast('Aktives Event: '+name);
 }
 function updateActiveEventDisplay() {
@@ -8294,8 +8377,13 @@ async function loadEvents() {
   await loadEventsCache(); updateActiveEventDisplay();
   var cnt=await db.from('participants').select('event_id'); var cntMap={};
   (cnt.data||[]).forEach(function(p){if(p.event_id)cntMap[p.event_id]=(cntMap[p.event_id]||0)+1;});
+  var visibleEvents = eventsCache;
+  if (currentGlobalUserRole !== 'Admin' && userEventAccessCache && userEventAccessCache.length) {
+    var allowedIds = userEventAccessCache.map(function(a){ return a.event_id; });
+    visibleEvents = eventsCache.filter(function(e){ return allowedIds.indexOf(e.id) !== -1; });
+  }
   var tb=document.getElementById('eventsTable'); if(!tb) return;
-  tb.innerHTML=eventsCache.length?eventsCache.map(function(e){
+  tb.innerHTML=visibleEvents.length?visibleEvents.map(function(e){
     var isActive=e.id===currentEventId;
     return '<tr style="'+(isActive?'background:var(--green-bg)':'')+'">'
       +'<td><strong>'+e.name+'</strong></td><td>'+(e.year||'-')+'</td><td>'+(e.location||'-')+'</td><td>'+fmtDate(e.date_from)+'</td><td>'+fmtDate(e.date_to)+'</td>'
@@ -8306,7 +8394,7 @@ async function loadEvents() {
       +'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editEvent(\''+e.id+'\')">Bearbeiten</button>'
       +'<button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteEvent(\''+e.id+'\')">Loeschen</button>'
       +'</td></tr>';
-  }).join(''):'<tr><td colspan="8" class="empty">Noch keine Events erfasst</td></tr>';
+  }).join(''):'<tr><td colspan="8" class="empty">Keine Events verfügbar</td></tr>';
 }
 function openEventModal(ev) {
   document.getElementById('eventModalTitle').textContent=ev?'Event bearbeiten':'Neues Event';
@@ -13951,6 +14039,10 @@ async function exportPaymentsExcel() {
 
 // ROLE PERMISSIONS SYSTEM
 var currentUserRole = null;
+var currentGlobalUserRole = null;   // Globale Rolle aus app_users.role
+var currentUserEmail = null;
+var userEventAccessCache = [];      // Event-spezifische Zugriffs-Zuweisungen des eingeloggten Benutzers
+var noEventAccess = false;          // true = Benutzer hat für das aktuell aktive Event keine Freigabe
 var rolePermissions = {};
 
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
@@ -13971,17 +14063,56 @@ async function loadRolePermissions() {
   // Load the actual role definitions (with per-page hidden/read/write) used by canAccess()
   if (!userRolesCache || !userRolesCache.length) await loadUserRoles();
 
-  // Get current user role from app_users
+  // Get current user's global role from app_users, plus event-specific access assignments
+  currentGlobalUserRole = 'Admin';
+  currentUserEmail = null;
+  userEventAccessCache = [];
   var session = await db.auth.getSession();
   if (session.data && session.data.session) {
-    var email = session.data.session.user.email;
-    var ur = await db.from('app_users').select('role').eq('email', email).single();
-    currentUserRole = (ur.data && ur.data.role) || 'Admin';
+    currentUserEmail = session.data.session.user.email;
+    var ur = await db.from('app_users').select('role').eq('email', currentUserEmail).single();
+    currentGlobalUserRole = (ur.data && ur.data.role) || 'Admin';
+
+    var ea = await db.from('event_user_access').select('event_id,role').eq('user_email', currentUserEmail);
+    userEventAccessCache = ea.data || [];
   }
+  recomputeEventRole();
   applyPermissions();
 }
 
+// Bestimmt die für das aktuell aktive Event geltende Rolle des eingeloggten Benutzers.
+// Admin hat immer vollen Zugriff auf alle Events (aktuelle & zukünftige).
+// Wurden für den Benutzer noch keine Event-Freigaben vergeben, gilt (Legacy) die globale
+// Rolle für alle Events. Sobald mind. eine Freigabe existiert, muss das aktive Event
+// explizit dabei sein, sonst gilt "kein Zugriff".
+function recomputeEventRole() {
+  if (currentGlobalUserRole === 'Admin') {
+    currentUserRole = 'Admin';
+    noEventAccess = false;
+    return;
+  }
+  if (!userEventAccessCache || !userEventAccessCache.length) {
+    currentUserRole = currentGlobalUserRole;
+    noEventAccess = false;
+    return;
+  }
+  if (!currentEventId) {
+    currentUserRole = currentGlobalUserRole;
+    noEventAccess = false;
+    return;
+  }
+  var match = userEventAccessCache.find(function(a) { return a.event_id === currentEventId; });
+  if (match) {
+    currentUserRole = match.role;
+    noEventAccess = false;
+  } else {
+    currentUserRole = null;
+    noEventAccess = true;
+  }
+}
+
 function canAccess(page) {
+  if (noEventAccess) return 'hidden';
   if (!currentUserRole || currentUserRole === 'Admin') return 'write';
   var roleObj = (userRolesCache || []).find(function(r) { return r.name === currentUserRole; });
   if (!roleObj || !roleObj.permissions) return 'hidden';
@@ -13995,6 +14126,8 @@ function canWrite(page) { return canAccess(page) === 'write'; }
 function canRead(page) { var a = canAccess(page); return a === 'read' || a === 'write'; }
 
 function applyPermissions() {
+  var banner = document.getElementById('noEventAccessBanner');
+  if (banner) banner.style.display = noEventAccess ? 'block' : 'none';
   if (!currentUserRole || currentUserRole === 'Admin') return;
   document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
     var onclick = item.getAttribute('onclick') || '';
