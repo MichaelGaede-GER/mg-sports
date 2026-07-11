@@ -6369,6 +6369,7 @@ function invoiceStatusBadgeClass(status) {
 
 // ============ SCHIEDS-PFLICHT / PENALTY-LISTE ============
 async function loadRefereePenalties() {
+  restoreRefereePenaltyFolder().catch(function(){});
   var dateEl = document.getElementById('rp_date');
   if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
   var date = dateEl ? dateEl.value : new Date().toISOString().slice(0,10);
@@ -6543,7 +6544,86 @@ var REFEREE_PENALTY_BG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wB
 // only) so that generated JPGs are written directly there with fixed filenames,
 // overwriting any existing file of the same name — instead of going through the
 // browser's normal downloads flow every time.
+//
+// The chosen folder handle is persisted per event in IndexedDB (FileSystemDirectoryHandle
+// objects can be stored there, unlike localStorage), so it survives page reloads and is
+// remembered separately for each event.
 var refereePenaltyDirHandle = null;
+var RP_DIR_DB_NAME = 'mg_referee_penalty_dirs';
+var RP_DIR_STORE = 'dirs';
+
+function openRpDirDb() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(RP_DIR_DB_NAME, 1);
+    req.onupgradeneeded = function() { req.result.createObjectStore(RP_DIR_STORE); };
+    req.onsuccess = function() { resolve(req.result); };
+    req.onerror = function() { reject(req.error); };
+  });
+}
+
+async function saveRpDirHandle(eventId, handle) {
+  if (!eventId) return;
+  try {
+    var db = await openRpDirDb();
+    await new Promise(function(resolve, reject) {
+      var tx = db.transaction(RP_DIR_STORE, 'readwrite');
+      tx.objectStore(RP_DIR_STORE).put(handle, eventId);
+      tx.oncomplete = resolve;
+      tx.onerror = function() { reject(tx.error); };
+    });
+  } catch (e) { console.error('Speicherordner konnte nicht gespeichert werden:', e); }
+}
+
+async function loadRpDirHandle(eventId) {
+  if (!eventId) return null;
+  try {
+    var db = await openRpDirDb();
+    return await new Promise(function(resolve, reject) {
+      var tx = db.transaction(RP_DIR_STORE, 'readonly');
+      var req = tx.objectStore(RP_DIR_STORE).get(eventId);
+      req.onsuccess = function() { resolve(req.result || null); };
+      req.onerror = function() { reject(req.error); };
+    });
+  } catch (e) { console.error('Speicherordner konnte nicht geladen werden:', e); return null; }
+}
+
+// Beim Öffnen der Seite (auch nach Neuladen der App) den für das aktive Event
+// gespeicherten Ordner wiederherstellen. Der Browser kann die Schreibberechtigung
+// über Sessions hinweg zurücksetzen — in dem Fall zeigen wir einen Bestätigen-Button,
+// da requestPermission() eine Nutzerinteraktion braucht.
+async function restoreRefereePenaltyFolder() {
+  var label = document.getElementById('rpFolderLabel');
+  if (!currentEventId) { refereePenaltyDirHandle = null; if (label) label.textContent = ''; return; }
+  var handle = await loadRpDirHandle(currentEventId);
+  if (!handle) { refereePenaltyDirHandle = null; if (label) label.textContent = ''; return; }
+  refereePenaltyDirHandle = handle;
+  try {
+    var perm = await handle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      if (label) label.textContent = '📁 Speicherordner: ' + handle.name + ' — Dateien werden dort automatisch überschrieben.';
+    } else if (label) {
+      label.innerHTML = '📁 Gespeicherter Ordner: ' + handle.name + ' — <button class="btn" style="font-size:11px;padding:2px 8px" onclick="confirmRefereePenaltyFolderAccess()">Zugriff bestätigen</button>';
+    }
+  } catch (e) {
+    if (label) label.textContent = '';
+  }
+}
+
+async function confirmRefereePenaltyFolderAccess() {
+  if (!refereePenaltyDirHandle) return;
+  var label = document.getElementById('rpFolderLabel');
+  try {
+    var perm = await refereePenaltyDirHandle.requestPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      if (label) label.textContent = '📁 Speicherordner: ' + refereePenaltyDirHandle.name + ' — Dateien werden dort automatisch überschrieben.';
+      toast('✅ Zugriff bestätigt');
+    } else {
+      toast('⚠️ Zugriff verweigert');
+    }
+  } catch (e) {
+    toast('⚠️ Zugriff verweigert oder abgebrochen');
+  }
+}
 
 async function chooseRefereePenaltyFolder() {
   if (!window.showDirectoryPicker) {
@@ -6552,6 +6632,7 @@ async function chooseRefereePenaltyFolder() {
   }
   try {
     refereePenaltyDirHandle = await window.showDirectoryPicker();
+    await saveRpDirHandle(currentEventId, refereePenaltyDirHandle);
     document.getElementById('rpFolderLabel').textContent = '📁 Speicherordner: ' + refereePenaltyDirHandle.name + ' — Dateien werden dort automatisch überschrieben.';
     toast('✅ Ordner gewählt: ' + refereePenaltyDirHandle.name);
   } catch (e) {
@@ -8163,6 +8244,7 @@ async function setActiveEvent(id, name) {
   await db.from('app_settings').insert({key:'active_event', value: JSON.stringify({id:id,name:name})});
   updateActiveEventDisplay(); updateSidebarEventLogo();
   recomputeEventRole(); applyPermissions();
+  if (currentPage === 'refereepenalty') restoreRefereePenaltyFolder().catch(function(){});
   toast('Aktives Event: '+name);
 }
 function updateActiveEventDisplay() {
