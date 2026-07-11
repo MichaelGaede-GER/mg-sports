@@ -1953,6 +1953,11 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <div style="font-size:16px;color:#fff;margin-top:8px" id="mc_result_stop_name"></div>
               <div style="font-size:12px;color:#ffcccc;margin-top:4px">Diese Person wurde für diese Mahlzeit bereits abgehakt!</div>
             </div>
+            <div id="mc_result_ineligible" style="display:none;padding:16px;background:#c0392b;border-radius:8px;margin-top:8px;text-align:center">
+              <div style="font-size:36px;font-weight:900;color:#fff;letter-spacing:2px">⛔ KEIN MEAL-PACKAGE</div>
+              <div style="font-size:16px;color:#fff;margin-top:8px" id="mc_result_ineligible_name"></div>
+              <div style="font-size:12px;color:#ffcccc;margin-top:4px" id="mc_result_ineligible_reason"></div>
+            </div>
           </div>
         </div>
 
@@ -4521,6 +4526,7 @@ function stopMealQR() {
 function hideMealResults() {
   var ok = document.getElementById('mc_result_ok'); if (ok) ok.style.display = 'none';
   var stop = document.getElementById('mc_result_stop'); if (stop) stop.style.display = 'none';
+  var ineligible = document.getElementById('mc_result_ineligible'); if (ineligible) ineligible.style.display = 'none';
 }
 
 function scanMealFrame() {
@@ -4557,7 +4563,10 @@ async function handleMealQR(esid) {
 
   var p = mcData.find(function(x){ return x.member_id === esid.trim(); });
   if (!p) {
-    // Try DB lookup
+    // Nicht in der (bereits auf meal_plus='Ja' gefilterten) Teilnehmerliste dieses Events gefunden.
+    // WICHTIG: Der Fallback fragt zwar die volle participants-Tabelle ab (falls z.B. das
+    // Meal-Package erst nach dem letzten Laden gebucht wurde), aber NUR zur Anzeige eines
+    // sauberen Fehlers – die Eligibility-Prüfung unten entscheidet, ob eingecheckt werden darf.
     var q = db.from('participants').select('*').eq('member_id', esid.trim());
     if (currentEventId) q = q.eq('event_id', currentEventId);
     var { data } = await q;
@@ -4571,6 +4580,32 @@ async function handleMealQR(esid) {
 
   var s = MC_SESSIONS.find(function(x){ return x.key === mcActiveSession; });
   var fullName = p.firstname + ' ' + p.lastname;
+
+  // STRIKTE BERECHTIGUNGSPRÜFUNG:
+  // Nur Teilnehmer mit aktivem Meal-Package ("Ja, Event Meals gebucht"), die nicht abgesagt
+  // haben, und die für genau dieses Essen (breakfast/lunch/dinner) an genau diesem Tag
+  // gebucht sind, dürfen über den QR-Code erkannt und eingecheckt werden.
+  var reason = null;
+  if (p.withdraw === 'Ja') {
+    reason = fullName + ' hat abgesagt (Withdrawal).';
+  } else if (p.meal_plus !== 'Ja') {
+    reason = fullName + ' hat kein Meal-Package gebucht.';
+  } else if (s && !hasMealDay(p, s.meal, s.day)) {
+    reason = fullName + ' ist für "' + (s ? s.label : mcActiveSession) + '" nicht gebucht.';
+  }
+  if (reason) {
+    if (navigator.vibrate) navigator.vibrate([200,100,200,100,400]);
+    hideMealResults();
+    var ineligEl = document.getElementById('mc_result_ineligible');
+    var ineligName = document.getElementById('mc_result_ineligible_name');
+    var ineligReason = document.getElementById('mc_result_ineligible_reason');
+    if (ineligEl) ineligEl.style.display = 'block';
+    if (ineligName) ineligName.textContent = fullName + ' · ' + (p.country||'');
+    if (ineligReason) ineligReason.textContent = reason;
+    document.getElementById('mc_scan_status').textContent = '⛔ Kein Zugriff: ' + reason;
+    setTimeout(function() { hideMealResults(); }, 5000);
+    return;
+  }
 
   // Check if already scanned for THIS session
   if (getMealChecked(p, mcActiveSession)) {
