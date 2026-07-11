@@ -1968,6 +1968,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <video id="mc_video" style="width:100%;max-width:400px;border-radius:8px;border:2px solid var(--blue)" autoplay playsinline></video>
               <canvas id="mc_canvas" style="display:none"></canvas>
               <div id="mc_scan_status" style="margin-top:8px;font-size:13px;color:var(--text3)">Kamera wird gestartet…</div>
+              <div id="mc_scan_cooldown" style="display:none;margin-top:6px;font-size:12px;font-weight:700;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber);border-radius:6px;padding:4px 10px"></div>
             </div>
             <!-- Result box -->
             <div id="mc_result_ok" style="display:none;padding:16px;background:var(--green-bg);border:2px solid var(--green);border-radius:8px;margin-top:8px;text-align:center">
@@ -4426,6 +4427,8 @@ var mcStream = null;
 var mcAnimFrame = null;
 var mcLastScan = '';
 var mcLastScanTime = 0;
+var mcScanPaused = false;
+var mcCooldownInterval = null;
 
 var MC_SESSIONS = [
   { key:'do_lunch',  label:'Thursday Lunch',   day:'do', meal:'lunch',  color:'#2e7d32', icon:'🥗' },
@@ -4630,6 +4633,9 @@ async function startMealQR() {
 function stopMealQR() {
   if (mcStream) { mcStream.getTracks().forEach(function(t){ t.stop(); }); mcStream = null; }
   if (mcAnimFrame) { cancelAnimationFrame(mcAnimFrame); mcAnimFrame = null; }
+  if (mcCooldownInterval) { clearInterval(mcCooldownInterval); mcCooldownInterval = null; }
+  mcScanPaused = false;
+  var cooldownBadge = document.getElementById('mc_scan_cooldown'); if (cooldownBadge) cooldownBadge.style.display = 'none';
   var container = document.getElementById('mc_scanner_container');
   var startBtn = document.getElementById('mc_qr_start');
   var stopBtn = document.getElementById('mc_qr_stop');
@@ -4645,10 +4651,33 @@ function hideMealResults() {
   var ineligible = document.getElementById('mc_result_ineligible'); if (ineligible) ineligible.style.display = 'none';
 }
 
+// Pausiert die QR-Erkennung für 5 Sekunden nach jedem erkannten Code, um versehentliche
+// Doppelscans durch zu schnelles Nachscannen zu vermeiden. Die Kamera bleibt sichtbar,
+// nur die Auswertung neuer Codes wird für diese Zeit ausgesetzt.
+function startMealScanCooldown() {
+  mcScanPaused = true;
+  var badge = document.getElementById('mc_scan_cooldown');
+  var remaining = 5;
+  if (badge) { badge.style.display = 'inline-block'; badge.textContent = '⏸ Scanner pausiert – bereit in ' + remaining + 's'; }
+  if (mcCooldownInterval) clearInterval(mcCooldownInterval);
+  mcCooldownInterval = setInterval(function() {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(mcCooldownInterval);
+      mcCooldownInterval = null;
+      mcScanPaused = false;
+      if (badge) badge.style.display = 'none';
+    } else if (badge) {
+      badge.textContent = '⏸ Scanner pausiert – bereit in ' + remaining + 's';
+    }
+  }, 1000);
+}
+
 function scanMealFrame() {
   var video = document.getElementById('mc_video');
   var canvas = document.getElementById('mc_canvas');
   if (!video || !canvas || !mcStream) return;
+  if (mcScanPaused) { mcAnimFrame = requestAnimationFrame(scanMealFrame); return; }
   if (video.readyState === video.HAVE_ENOUGH_DATA) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -4672,10 +4701,16 @@ function scanMealFrame() {
 
 async function handleMealQR(esid) {
   if (!esid || !mcActiveSession) return;
+  if (mcScanPaused) return; // Cooldown läuft noch – Erkennung ignorieren
   var now = Date.now();
   if (esid === mcLastScan && now - mcLastScanTime < 3000) return;
   mcLastScan = esid;
   mcLastScanTime = now;
+
+  // QR-Code wurde erkannt: sofort 5 Sekunden Pause starten, damit ein zu schnelles
+  // erneutes Scannen (z.B. Kamera wackelt, Karte bleibt zu lange im Bild) nicht als
+  // Doppelscan gewertet wird.
+  startMealScanCooldown();
 
   var p = mcData.find(function(x){ return x.member_id === esid.trim(); });
   if (!p) {
