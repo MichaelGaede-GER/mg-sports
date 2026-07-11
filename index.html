@@ -921,6 +921,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <label>Auswirkung auf Gesamtbetrag</label>
                 <div id="mealFeeInfo" style="margin-top:8px;font-size:13px;color:var(--text2)">– wähle erst ein Package –</div>
               </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>🍽️ Meal-Check-in Historie</label>
+                <div id="mealCheckinInfo" style="margin-top:8px;font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:6px">– kein Teilnehmer geladen –</div>
+              </div>
             </div>
           </div>
         </div>
@@ -4494,6 +4498,31 @@ function getMealCheckinTime(p, sessionKey) {
   } catch(e) { return null; }
 }
 
+// Zeigt im Bearbeiten-Formular (Teilnehmerliste → Kontakt bearbeiten) an, an welchen
+// Tagen/Mahlzeiten die Person sich bereits über den Meal-Check eingecheckt hat.
+function renderMealCheckinInfo(p) {
+  var el = document.getElementById('mealCheckinInfo');
+  if (!el) return;
+  if (!p || p.meal_plus !== 'Ja') {
+    el.innerHTML = '<span style="color:var(--text3)">Kein Meal-Package gebucht</span>';
+    return;
+  }
+  var eligible = MC_SESSIONS.filter(function(s) { return hasMealDay(p, s.meal, s.day); });
+  if (!eligible.length) {
+    el.innerHTML = '<span style="color:var(--text3)">Für keine der Mahlzeiten-Sessions gebucht</span>';
+    return;
+  }
+  el.innerHTML = eligible.map(function(s) {
+    var t = getMealCheckinTime(p, s.key);
+    if (t) {
+      var d = new Date(t);
+      var timeStr = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+      return '<span style="background:var(--green-bg);color:var(--green);border:1px solid var(--green);border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap">✅ '+s.icon+' '+s.label+' · '+timeStr+'</span>';
+    }
+    return '<span style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap">— '+s.icon+' '+s.label+'</span>';
+  }).join('');
+}
+
 function updateMealStats() {
   if (!mcActiveSession) return;
   var s = MC_SESSIONS.find(function(x){ return x.key === mcActiveSession; });
@@ -5493,6 +5522,7 @@ function clearForm() {
   const vl = document.getElementById('visaExpressFeeLabel'); if (vl) vl.style.display='none';
   document.getElementById('f_withdraw').value = 'Nein';
   document.getElementById('withdrawDateGroup').style.display = 'none';
+  { const mci = document.getElementById('mealCheckinInfo'); if (mci) mci.innerHTML = '– kein Teilnehmer geladen –'; }
   ['cl_fullname','cl_dob','cl_place_of_birth','cl_passport','cl_date_of_issue','cl_date_of_expiry','f_confirmation_letter_price'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   var clTypeEl = document.getElementById('f_confirmation_letter_type'); if (clTypeEl) { clTypeEl.value=''; clTypeEl.removeAttribute('data-pending-value'); }
 }
@@ -5601,6 +5631,7 @@ async function editEntry(id) {
   if (p.meal_lunch_days) p.meal_lunch_days.split(',').forEach(d => { const el = document.getElementById('f_meal_lunch_'+d); if (el) el.checked = true; });
   const mdEl = document.getElementById('f_meal_dinner'); if (mdEl) { mdEl.checked = p.meal_dinner === 'Ja'; toggleMealDays('dinner'); }
   if (p.meal_dinner_days) p.meal_dinner_days.split(',').forEach(d => { const el = document.getElementById('f_meal_dinner_'+d); if (el) el.checked = true; });
+  renderMealCheckinInfo(p);
   const transpEl = document.getElementById('f_transport_booked'); if (transpEl) transpEl.checked = p.transport_booked === 'Ja';
   setTimeout(updateVisaFee, 100);
   setTimeout(updateMealFee, 150);
