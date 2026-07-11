@@ -1980,6 +1980,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <div style="font-size:36px;font-weight:900;color:#fff;letter-spacing:4px">⛔ STOP – 2SCAN</div>
               <div style="font-size:16px;color:#fff;margin-top:8px" id="mc_result_stop_name"></div>
               <div style="font-size:12px;color:#ffcccc;margin-top:4px">Diese Person wurde für diese Mahlzeit bereits abgehakt!</div>
+              <div style="font-size:15px;font-weight:800;color:#fff;margin-top:10px" id="mc_result_stop_attempt"></div>
+              <div style="font-size:11px;color:#ffe0e0;margin-top:6px;line-height:1.6" id="mc_result_stop_times"></div>
             </div>
             <div id="mc_result_ineligible" style="display:none;padding:16px;background:#c0392b;border-radius:8px;margin-top:8px;text-align:center">
               <div style="font-size:36px;font-weight:900;color:#fff;letter-spacing:2px">⛔ KEIN MEAL-PACKAGE</div>
@@ -4429,6 +4431,18 @@ var mcLastScan = '';
 var mcLastScanTime = 0;
 var mcScanPaused = false;
 var mcCooldownInterval = null;
+var mcScanAttempts = {}; // { 'sessionKey__memberId': [Date, Date, ...] } – Historie aller Scan-Versuche
+
+function logScanAttempt(memberId, sessionKey) {
+  var key = sessionKey + '__' + memberId;
+  if (!mcScanAttempts[key]) mcScanAttempts[key] = [];
+  mcScanAttempts[key].push(new Date());
+  return mcScanAttempts[key];
+}
+
+function fmtScanTime(d) {
+  return d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
 
 var MC_SESSIONS = [
   { key:'do_lunch',  label:'Thursday Lunch',   day:'do', meal:'lunch',  color:'#2e7d32', icon:'🥗' },
@@ -4761,18 +4775,36 @@ async function handleMealQR(esid) {
   // Check if already scanned for THIS session
   if (getMealChecked(p, mcActiveSession)) {
     // STOP - 2SCAN!
+    // Falls die Seite zwischenzeitlich neu geladen wurde und für diese Person/Session noch
+    // keine lokale Versuchs-Historie existiert, mit dem echten DB-Check-in-Zeitpunkt starten,
+    // damit die Versuchsnummer auch nach einem Reload korrekt weiterzählt.
+    var attemptKey = mcActiveSession + '__' + p.member_id;
+    if (!mcScanAttempts[attemptKey]) {
+      var existingTime = getMealCheckinTime(p, mcActiveSession);
+      mcScanAttempts[attemptKey] = existingTime ? [new Date(existingTime)] : [];
+    }
+    var attempts = logScanAttempt(p.member_id, mcActiveSession);
     if (navigator.vibrate) navigator.vibrate([200,100,200,100,400]);
     hideMealResults();
     var stopEl = document.getElementById('mc_result_stop');
     var stopName = document.getElementById('mc_result_stop_name');
+    var stopAttempt = document.getElementById('mc_result_stop_attempt');
+    var stopTimes = document.getElementById('mc_result_stop_times');
     if (stopEl) stopEl.style.display = 'block';
     if (stopName) stopName.textContent = fullName + ' · ' + (p.country||'') + ' · ' + (s?s.label:'');
-    document.getElementById('mc_scan_status').textContent = '⛔ DOPPELSCAN erkannt!';
+    if (stopAttempt) stopAttempt.textContent = attempts.length + '. Versuch';
+    if (stopTimes) {
+      stopTimes.innerHTML = attempts.map(function(d, idx) {
+        return (idx+1) + '. Versuch: ' + fmtScanTime(d);
+      }).join('<br>');
+    }
+    document.getElementById('mc_scan_status').textContent = '⛔ DOPPELSCAN erkannt! (' + attempts.length + '. Versuch)';
     setTimeout(function() { hideMealResults(); }, 5000);
     return;
   }
 
-  // Not yet scanned - check in now
+  // Not yet scanned - check in now (= 1. Versuch)
+  logScanAttempt(p.member_id, mcActiveSession);
   var nowISO = new Date().toISOString();
   var existing = {};
   try {
