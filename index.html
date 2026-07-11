@@ -1791,7 +1791,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <!-- EVENTS -->
       <!-- BROADCAST -->
       <div class="page" id="page-broadcast">
-        <div class="page-header"><h2>📢 Broadcast – Massen-WhatsApp</h2></div>
+        <div class="page-header"><h2>📢 Broadcast – Massen-Nachricht</h2></div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-header"><h3>Empfänger filtern</h3></div>
           <div class="card-body">
@@ -1800,8 +1800,18 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <label style="font-size:12px">Rolle</label>
                 <select id="bc_role" style="margin-top:4px">
                   <option value="">Alle Rollen</option>
-                  <option>Player</option><option>Coach</option><option>Parent</option>
-                  <option>Referee</option><option>ESF Official</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Alterskategorie</label>
+                <select id="bc_events" style="margin-top:4px">
+                  <option value="">Alle Alterskategorien</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Package</label>
+                <select id="bc_package" style="margin-top:4px">
+                  <option value="">Alle Packages</option>
                 </select>
               </div>
               <div class="form-group" style="margin:0">
@@ -1814,6 +1824,16 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                   <option value="">Alle</option>
                   <option>Ausstehend</option><option>Teilzahlung</option>
                   <option>Bezahlt</option><option>Kostenlos</option><option>Neu</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Mahnstufe</label>
+                <select id="bc_mahnstufe" style="margin-top:4px">
+                  <option value="">Alle</option>
+                  <option value="Keine">Keine</option>
+                  <option value="1. Mahnung">1. Mahnung</option>
+                  <option value="2. Mahnung">2. Mahnung</option>
+                  <option value="3. Mahnung">3. Mahnung</option>
                 </select>
               </div>
               <button class="btn primary" onclick="loadBroadcastRecipients()">🔍 Empfänger laden</button>
@@ -1840,12 +1860,15 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         <div class="card">
           <div class="card-header">
             <h3>Empfänger (<span id="bc_count">0</span>)</h3>
-            <button class="btn primary" onclick="sendBroadcast()">💬 Alle WhatsApp öffnen</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn" onclick="sendBroadcastEmail()">✉️ Alle E-Mails (BCC) öffnen</button>
+              <button class="btn primary" onclick="sendBroadcast()">💬 Alle WhatsApp öffnen</button>
+            </div>
           </div>
           <div class="card-body" style="padding:0">
             <div class="table-wrap"><table>
-              <thead><tr><th><input type="checkbox" id="bc_select_all" onchange="toggleAllBc(this.checked)" /></th><th>Name</th><th>Land</th><th>Mobil</th><th>Package</th><th>Status</th><th>Aktion</th></tr></thead>
-              <tbody id="bcTable"><tr><td colspan="7" class="empty">Empfänger laden um zu beginnen</td></tr></tbody>
+              <thead><tr><th><input type="checkbox" id="bc_select_all" onchange="toggleAllBc(this.checked)" /></th><th>Name</th><th>Land</th><th>Kategorie</th><th>Mobil</th><th>Package</th><th>Status</th><th>Mahnstufe</th><th>Aktion</th></tr></thead>
+              <tbody id="bcTable"><tr><td colspan="9" class="empty">Empfänger laden um zu beginnen</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -4007,31 +4030,67 @@ async function saveEntryFee() {
 // ============================================================
 var bcRecipients = [];
 
+async function populateBcFilterOptions() {
+  var q = db.from('participants').select('role,events,package').neq('withdraw','Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var { data } = await q;
+  var roles = bcUniqueSorted((data||[]).map(function(p){return p.role;}));
+  var eventsCats = bcUniqueSorted((data||[]).map(function(p){return p.events;}));
+  var packages = bcUniqueSorted((data||[]).map(function(p){return p.package;}));
+  bcFillSelect('bc_role', roles, 'Alle Rollen');
+  bcFillSelect('bc_events', eventsCats, 'Alle Alterskategorien');
+  bcFillSelect('bc_package', packages, 'Alle Packages');
+}
+
+function bcUniqueSorted(arr) {
+  var seen = {};
+  arr.forEach(function(v) { if (v) seen[v] = true; });
+  return Object.keys(seen).sort();
+}
+
+function bcFillSelect(id, values, allLabel) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var current = el.value;
+  el.innerHTML = '<option value="">'+allLabel+'</option>' + values.map(function(v) {
+    return '<option value="'+v+'">'+v+'</option>';
+  }).join('');
+  if (values.indexOf(current) !== -1) el.value = current;
+}
+
 async function loadBroadcastRecipients() {
   var role = document.getElementById('bc_role').value;
   var country = document.getElementById('bc_country').value.trim().toUpperCase();
   var payment = document.getElementById('bc_payment').value;
+  var eventsCat = document.getElementById('bc_events').value;
+  var pkg = document.getElementById('bc_package').value;
+  var mahnstufe = document.getElementById('bc_mahnstufe').value;
   var q = db.from('participants').select('*').neq('withdraw','Ja');
   if (currentEventId) q = q.eq('event_id', currentEventId);
   if (role) q = q.eq('role', role);
   if (country) q = q.eq('country', country);
   if (payment) q = q.eq('payment_status', payment);
+  if (eventsCat) q = q.eq('events', eventsCat);
+  if (pkg) q = q.eq('package', pkg);
+  if (mahnstufe === 'Keine') q = q.or('mahnung.is.null,mahnung.eq.Keine');
+  else if (mahnstufe) q = q.eq('mahnung', mahnstufe);
   q = q.order('lastname');
   var { data } = await q;
-  bcRecipients = (data||[]).filter(p => p.mobile);
+  bcRecipients = (data||[]);
   document.getElementById('bc_count').textContent = bcRecipients.length;
   var tb = document.getElementById('bcTable');
-  if (!bcRecipients.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Keine Empfänger mit Mobilnummer gefunden</td></tr>'; return; }
+  if (!bcRecipients.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Keine Empfänger gefunden</td></tr>'; return; }
   tb.innerHTML = bcRecipients.map(function(p, i) {
-    var open = Math.max(0,(parseFloat(p.package_price)||0)-(parseFloat(p.amount_received)||0));
     return '<tr>'
       + '<td><input type="checkbox" class="bc-cb" data-i="'+i+'" checked /></td>'
       + '<td><strong>'+p.lastname+', '+p.firstname+'</strong></td>'
       + '<td>'+( p.country||'–')+'</td>'
-      + '<td style="font-size:12px">'+p.mobile+'</td>'
+      + '<td style="font-size:12px">'+(p.events||'–')+'</td>'
+      + '<td style="font-size:12px">'+(p.mobile||'<span style="color:var(--text3)">–</span>')+'</td>'
       + '<td>'+(p.package?'<span class="badge">'+p.package+'</span>':'–')+'</td>'
       + '<td><span class="status '+statusClass(p.payment_status)+'">'+( p.payment_status||'–')+'</span></td>'
-      + '<td><button class="btn" style="font-size:11px;padding:2px 8px;background:#25D366;color:#fff;border-color:#25D366" onclick="sendSingleWA('+i+')">💬</button></td>'
+      + '<td>'+(p.mahnung && p.mahnung !== 'Keine' ? '<span class="status pending">'+p.mahnung+'</span>' : '–')+'</td>'
+      + '<td><button class="btn" style="font-size:11px;padding:2px 8px;background:#25D366;color:#fff;border-color:#25D366" '+(p.mobile?'':'disabled ')+'onclick="sendSingleWA('+i+')">💬</button></td>'
       + '</tr>';
   }).join('');
   toast(bcRecipients.length + ' Empfänger geladen');
@@ -4078,9 +4137,9 @@ async function sendBroadcast() {
   var selected = [];
   document.querySelectorAll('.bc-cb:checked').forEach(function(cb) {
     var i = parseInt(cb.dataset.i);
-    if (bcRecipients[i]) selected.push(bcRecipients[i]);
+    if (bcRecipients[i] && bcRecipients[i].mobile) selected.push(bcRecipients[i]);
   });
-  if (!selected.length) { toast('Keine Empfänger ausgewählt'); return; }
+  if (!selected.length) { toast('Keine Empfänger mit Mobilnummer ausgewählt'); return; }
   if (!confirm(selected.length + ' WhatsApp-Nachrichten öffnen? Browser muss Pop-ups erlauben.')) return;
   var delay = 0;
   selected.forEach(function(p) {
@@ -4093,6 +4152,34 @@ async function sendBroadcast() {
     delay += 800;
   });
   toast(selected.length + ' WhatsApp-Fenster werden geöffnet…');
+}
+
+function sendBroadcastEmail() {
+  var template = document.getElementById('bc_message').value;
+  if (!template) { toast('Bitte Nachricht eingeben'); return; }
+  var selected = [];
+  document.querySelectorAll('.bc-cb:checked').forEach(function(cb) {
+    var i = parseInt(cb.dataset.i);
+    if (bcRecipients[i] && bcRecipients[i].email) selected.push(bcRecipients[i]);
+  });
+  if (!selected.length) { toast('Keine Empfänger mit E-Mail-Adresse ausgewählt'); return; }
+
+  // Da {name}/{package}/etc. pro Person unterschiedlich sind, per BCC aber nur EIN Text
+  // an alle geht, wird hier eine generische Vorlage ohne Variablen verwendet.
+  var hasVars = /\{name\}|\{country\}|\{package\}|\{total\}|\{received\}|\{open\}/.test(template);
+  if (hasVars && !confirm('Die Nachricht enthält Platzhalter wie {name}. Bei E-Mail per BCC bekommt jeder den gleichen Text (Platzhalter werden NICHT ersetzt). Trotzdem fortfahren?')) return;
+
+  var subject = encodeURIComponent('European Junior Open 2026 – Information');
+  var body = encodeURIComponent(template);
+  var emails = selected.map(function(p){ return p.email; });
+  var chunk = emails.slice(0, 50);
+  var rest = emails.slice(50);
+  window.open('mailto:?bcc=' + encodeURIComponent(chunk.join(',')) + '&subject=' + subject + '&body=' + body, '_blank');
+  if (rest.length > 0) {
+    toast('⚠️ ' + rest.length + ' weitere Adressen — bitte "E-Mails öffnen" nochmals klicken (max. 50 pro Mail-Fenster)');
+  } else {
+    toast(chunk.length + ' Empfänger im E-Mail-Programm geöffnet');
+  }
 }
 
 // ============================================================
@@ -4948,7 +5035,7 @@ function nav(page) {
   else if (page === 'idcard') { loadIdCards(); }
   else if (page === 'waitlist') loadWaitlist();
   else if (page === 'import') initImportPage();
-  else if (page === 'broadcast') loadBroadcastRecipients();
+  else if (page === 'broadcast') { populateBcFilterOptions(); loadBroadcastRecipients(); }
   else if (page === 'checkin') loadCheckin();
   else if (page === 'mealcheck') loadMealCheck();
   else if (page === 'events') loadEvents();
