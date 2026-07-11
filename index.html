@@ -6598,7 +6598,6 @@ async function generateRefereePenaltyPDF() {
   if (currentEventId) q1 = q1.eq('event_id', currentEventId);
   var r1 = await q1;
   var todayRows = r1.data || [];
-  if (!todayRows.length) { toast('⚠️ No one entered for this date'); return; }
 
   // Page 2: country ranking across ALL recorded penalties for this event (cumulative)
   var q2 = db.from('referee_penalties').select('country');
@@ -6622,7 +6621,7 @@ async function generateRefereePenaltyPDF() {
     if (evR.data) evName = evR.data.name;
   }
 
-  var namesRows = todayRows.map(function(row, idx) {
+  var namesRows = todayRows.length ? todayRows.map(function(row, idx) {
     return '<tr>'
       + '<td style="padding:14px 20px;border-bottom:none;font-size:16px;color:#9a9aa2">'+(idx+1)+'</td>'
       + '<td style="padding:14px 20px;border-bottom:none;font-size:21px;font-weight:700;color:#ffffff">'+row.lastname+', '+row.firstname+'</td>'
@@ -6630,7 +6629,7 @@ async function generateRefereePenaltyPDF() {
       + '<td style="padding:14px 20px;border-bottom:none;font-size:17px;color:#e2e2e6">'+(row.country||'–')+'</td>'
       + '<td style="padding:14px 20px;border-bottom:none;font-size:17px;color:#e2e2e6">'+(row.events||'–')+'</td>'
       + '</tr>';
-  }).join('');
+  }).join('') : '<tr><td colspan="5" style="padding:22px 20px;border-bottom:none;font-size:18px;color:#c8c8ce;text-align:center;font-style:italic">No no-shows recorded for this date</td></tr>';
 
   var rankingRows = ranking.map(function(row, idx) {
     return '<tr>'
