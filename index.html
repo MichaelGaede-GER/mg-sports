@@ -1498,6 +1498,12 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="card-body">
             <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
               <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Aus Teilnehmerliste wählen (Rolle: Official)</label>
+                <select id="staff_official_select" style="margin-top:4px;width:230px" onchange="applyOfficialSelection()">
+                  <option value="">– manuell eingeben –</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
                 <label style="font-size:12px">Name</label>
                 <input type="text" id="staff_name" placeholder="Name" style="width:170px;margin-top:4px" />
               </div>
@@ -6534,6 +6540,7 @@ async function loadCosts() {
     return;
   }
   updateCostLabelSuggestions();
+  await loadOfficialsForStaffCosts();
   var r1 = await db.from('event_costs').select('*').eq('event_id', currentEventId).order('category').order('created_at');
   costItemsCache = r1.data || [];
   var r2 = await db.from('event_staff_costs').select('*').eq('event_id', currentEventId).order('created_at');
@@ -6541,6 +6548,31 @@ async function loadCosts() {
   renderCostItemsTable();
   renderStaffCostsTable();
   await renderCostsBalance();
+}
+
+var officialsForStaffCache = [];
+
+// Lädt alle Teilnehmer mit Rolle "Official" im aktiven Event, damit man sie bei den
+// Personalkosten direkt auswählen kann statt Name & Rolle manuell einzutippen.
+async function loadOfficialsForStaffCosts() {
+  var sel = document.getElementById('staff_official_select');
+  if (!sel) return;
+  var r = await db.from('participants').select('id,firstname,lastname,country,role')
+    .eq('event_id', currentEventId).eq('role', 'Official').neq('withdraw','Ja').order('lastname');
+  officialsForStaffCache = r.data || [];
+  sel.innerHTML = '<option value="">– manuell eingeben –</option>' + officialsForStaffCache.map(function(p) {
+    return '<option value="'+p.id+'">'+p.lastname+', '+p.firstname+(p.country?' ('+p.country+')':'')+'</option>';
+  }).join('');
+}
+
+function applyOfficialSelection() {
+  var sel = document.getElementById('staff_official_select');
+  var id = sel.value;
+  if (!id) return;
+  var p = officialsForStaffCache.find(function(x){ return x.id === id; });
+  if (!p) return;
+  document.getElementById('staff_name').value = p.lastname + ', ' + p.firstname;
+  document.getElementById('staff_role').value = p.role || 'Official';
 }
 
 var COST_CATEGORY_ICONS = { hotel:'🏨 Hotel', shuttle:'🚐 Shuttle', meals:'🍽️ Essen', courts:'🎾 Courts', other:'📦 Sonstiges' };
@@ -6630,6 +6662,7 @@ async function addStaffCost() {
   document.getElementById('staff_daily').value = '';
   document.getElementById('staff_days').value = '1';
   document.getElementById('staff_preview').textContent = eur(0);
+  var selEl = document.getElementById('staff_official_select'); if (selEl) selEl.value = '';
   toast('✅ Personalkosten hinzugefügt');
   loadCosts();
 }
