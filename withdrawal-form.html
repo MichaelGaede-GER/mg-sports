@@ -257,6 +257,19 @@
     try { var savedLang = localStorage.getItem('withdrawFormLang'); if (savedLang) LANG = savedLang; } catch (e) {}
     applyStaticTranslations();
 
+    // If no ?event=... is given in the URL, fall back to the currently active tournament
+    // (same mechanism as registration-form.html), so the link auto-follows whichever
+    // event is set as active in the admin tool.
+    if (!eventId) {
+      try {
+        var evR = await db.from('app_settings').select('value').eq('key', 'active_event').limit(1);
+        if (evR.data && evR.data[0]) {
+          var evtData = JSON.parse(evR.data[0].value);
+          eventId = evtData.id;
+        }
+      } catch (e) { /* ignore, handled by the no-event check below */ }
+    }
+
     if (!eventId) {
       document.getElementById('noEventBox').style.display = 'block';
       return;
