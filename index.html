@@ -386,6 +386,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('refereepenaltystats')">
       <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>📊 Schieds-Statistik</span>
     </div>
+    <div class="nav-item" onclick="nav('physio')">
+      <svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg><span>🩹 Physio</span>
+    </div>
     <div class="nav-item" onclick="nav('mahnlog')">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="nav_mahnlog">Mahnungs-Log</span>
       <span class="nav-cnt" id="cntMahnlog" style="display:none">!</span>
@@ -1051,8 +1054,6 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             </div>
           </div>
         </div>
-        
-        </div>
         </div>
         <div id="entryTab-hotel" class="entry-tab-content">
 <div class="card">
@@ -1250,6 +1251,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         <div id="entryTab-nationalfed" class="entry-tab-content">
@@ -1630,6 +1632,35 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <div class="table-wrap"><table>
               <thead><tr><th>Datum</th><th>Name</th><th>Event</th><th>ESID</th><th>Mobil</th><th>E-Mail</th><th>Grund</th><th>Teilnehmer gefunden</th><th>Aktion</th></tr></thead>
               <tbody id="tournamentWithdrawalsTable"><tr><td colspan="9" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHYSIO -->
+      <div class="page" id="page-physio">
+        <div class="page-header"><h2>🩹 Physio</h2>
+          <button class="btn" onclick="loadPhysioPage()">🔄 Aktualisieren</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin:-8px 0 16px">
+          Alle Teilnehmer mit der Rolle "Physio" für das aktive Event. Über "📲 Physio anfordern" kannst du direkt
+          eine WhatsApp-Nachricht mit Ort, Grund, Dringlichkeit und ggf. dem anfragenden Teilnehmer verschicken.
+        </p>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Registrierte Physios</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Name</th><th>Land</th><th>Mobil</th><th>Aktion</th></tr></thead>
+              <tbody id="physioListTable"><tr><td colspan="4" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>📋 Anfragen-Historie</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Zeit</th><th>Physio</th><th>Ort</th><th>Grund</th><th>Dringlichkeit</th><th>Anfragender Teilnehmer</th></tr></thead>
+              <tbody id="physioHistoryTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -2774,6 +2805,32 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
             <div style="display:flex;gap:8px;align-items:center">
               <input type="text" id="newPersonRoleInput" placeholder="z.B. Trainer, Offizielle…" style="width:200px;font-size:13px" onkeydown="if(event.key==='Enter')addPersonRole()" />
               <button class="btn" onclick="addPersonRole()">Hinzufügen</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHYSIO EINSTELLUNGEN -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><h3>🩹 Physio – Orte &amp; Gründe</h3></div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Diese Listen stehen zur Auswahl, wenn ein Physio über die Seite "🩹 Physio" angefordert wird.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Orte / Locations</div>
+                <div id="physioLocationsList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="text" id="newPhysioLocationInput" placeholder="z.B. Court 1, Turnierleitung…" style="font-size:13px" onkeydown="if(event.key==='Enter')addPhysioLocation()" />
+                  <button class="btn" onclick="addPhysioLocation()">+</button>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Gründe</div>
+                <div id="physioReasonsList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="text" id="newPhysioReasonInput" placeholder="z.B. Blood Injury, Taping…" style="font-size:13px" onkeydown="if(event.key==='Enter')addPhysioReason()" />
+                  <button class="btn" onclick="addPhysioReason()">+</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -5346,6 +5403,7 @@ function nav(page) {
   else if (page === 'costs') loadCosts();
   else if (page === 'refereepenaltystats') loadRefereePenaltyStats();
   else if (page === 'tournamentwithdrawals') loadTournamentWithdrawals();
+  else if (page === 'physio') loadPhysioPage();
   else if (page === 'refereepenalty') loadRefereePenalties();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
@@ -6998,6 +7056,141 @@ function copyWithdrawalFormLink() {
   } else {
     prompt('Link zum Kopieren:', url);
   }
+}
+
+// ================= PHYSIO =================
+var physioListCache = [];
+var PHYSIO_URGENCY_LEVELS = [
+  { value: 'Notfall', label: '🔴 Notfall – sofort!' },
+  { value: 'Dringend', label: '🟠 Dringend' },
+  { value: 'Normal', label: '🟢 Kann kurz warten' }
+];
+
+async function loadPhysioPage() {
+  await loadPhysioConfig();
+  var tb = document.getElementById('physioListTable');
+  if (tb) tb.innerHTML = '<tr><td colspan="4" class="loading">Lade…</td></tr>';
+  var q = db.from('participants').select('*').eq('role', 'Physio').neq('withdraw', 'Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q.order('lastname');
+  if (r.error) { if (tb) tb.innerHTML = '<tr><td colspan="4" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
+  physioListCache = r.data || [];
+  if (!physioListCache.length) {
+    if (tb) tb.innerHTML = '<tr><td colspan="4" class="empty">Kein Physio für dieses Event registriert (Rolle "Physio" in der Teilnehmerliste)</td></tr>';
+  } else if (tb) {
+    tb.innerHTML = physioListCache.map(function(p) {
+      return '<tr>'
+        + '<td><strong>' + p.lastname + ', ' + p.firstname + '</strong></td>'
+        + '<td>' + (p.country || '–') + '</td>'
+        + '<td>' + (p.mobile || '<span style="color:var(--text3)">– keine Mobilnummer –</span>') + '</td>'
+        + '<td><button class="btn primary" style="font-size:11px;padding:4px 10px" data-id="' + p.id + '" onclick="openPhysioRequestModal(this.dataset.id)" ' + (p.mobile ? '' : 'disabled') + '>📲 Physio anfordern</button></td>'
+        + '</tr>';
+    }).join('');
+  }
+  loadPhysioHistory();
+}
+
+async function loadPhysioHistory() {
+  var tb = document.getElementById('physioHistoryTable');
+  if (!tb) return;
+  var q = db.from('physio_requests').select('*').order('sent_at', { ascending: false }).limit(50);
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
+  if (r.error) { tb.innerHTML = '<tr><td colspan="6" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
+  var rows = r.data || [];
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Noch keine Anfragen gesendet</td></tr>'; return; }
+  var urgencyLabels = {}; PHYSIO_URGENCY_LEVELS.forEach(function(u){ urgencyLabels[u.value] = u.label; });
+  tb.innerHTML = rows.map(function(row) {
+    return '<tr>'
+      + '<td style="font-size:12px">' + new Date(row.sent_at).toLocaleString('de-DE') + '</td>'
+      + '<td>' + (row.physio_name || '–') + '</td>'
+      + '<td>' + (row.location || '–') + '</td>'
+      + '<td>' + (row.reason || '–') + '</td>'
+      + '<td>' + (urgencyLabels[row.urgency] || row.urgency || '–') + '</td>'
+      + '<td>' + (row.requesting_participant_name || '–') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function openPhysioRequestModal(physioId) {
+  var physio = physioListCache.find(function(p) { return p.id === physioId; });
+  if (!physio) return;
+
+  // Aktuelle Teilnehmer des Events für die Auswahl "Wer fragt nach dem Physio?"
+  var pq = db.from('participants').select('id,lastname,firstname').neq('withdraw', 'Ja');
+  if (currentEventId) pq = pq.eq('event_id', currentEventId);
+  var pr = await pq.order('lastname');
+  var participantsForSelect = pr.data || [];
+
+  var existing = document.getElementById('physioRequestModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'physioRequestModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+
+  var locationOpts = '<option value="">– Ort wählen –</option>' + physioLocationsCache.map(function(l) { return '<option value="' + l + '">' + l + '</option>'; }).join('');
+  var reasonOpts = '<option value="">– Grund wählen –</option>' + physioReasonsCache.map(function(r) { return '<option value="' + r + '">' + r + '</option>'; }).join('');
+  var urgencyOpts = PHYSIO_URGENCY_LEVELS.map(function(u) { return '<option value="' + u.value + '">' + u.label + '</option>'; }).join('');
+  var participantOpts = '<option value="">– optional: Teilnehmer wählen –</option>' + participantsForSelect.map(function(p) {
+    return '<option value="' + p.lastname + ', ' + p.firstname + '">' + p.lastname + ', ' + p.firstname + '</option>';
+  }).join('');
+
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:440px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:4px;font-size:15px;color:var(--text)">📲 Physio anfordern</h3>'
+    + '<div style="font-size:12px;color:var(--text3);margin-bottom:14px">' + physio.lastname + ', ' + physio.firstname + ' · ' + (physio.mobile || '') + '</div>'
+    + '<label style="font-size:12px;font-weight:600;color:var(--text2)">Ort</label>'
+    + '<select id="physioReqLocation" style="width:100%;margin:4px 0 12px">' + locationOpts + '</select>'
+    + '<label style="font-size:12px;font-weight:600;color:var(--text2)">Grund</label>'
+    + '<select id="physioReqReason" style="width:100%;margin:4px 0 12px">' + reasonOpts + '</select>'
+    + '<label style="font-size:12px;font-weight:600;color:var(--text2)">Dringlichkeit</label>'
+    + '<select id="physioReqUrgency" style="width:100%;margin:4px 0 12px">' + urgencyOpts + '</select>'
+    + '<label style="font-size:12px;font-weight:600;color:var(--text2)">Anfragender Teilnehmer (optional)</label>'
+    + '<select id="physioReqParticipant" style="width:100%;margin:4px 0 12px">' + participantOpts + '</select>'
+    + '<div style="display:flex;gap:8px;margin-top:14px">'
+    + '<button class="btn primary" style="flex:1;background:#25D366;border-color:#25D366" data-id="' + physio.id + '" onclick="sendPhysioWhatsApp(this.dataset.id)">💬 Per WhatsApp senden</button>'
+    + '<button class="btn" style="flex:1" onclick="document.getElementById(\'physioRequestModal\').remove()">Abbrechen</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function sendPhysioWhatsApp(physioId) {
+  var physio = physioListCache.find(function(p) { return p.id === physioId; });
+  if (!physio || !physio.mobile) { toast('⚠️ Keine Mobilnummer für diesen Physio hinterlegt'); return; }
+
+  var location = document.getElementById('physioReqLocation').value;
+  var reason = document.getElementById('physioReqReason').value;
+  var urgency = document.getElementById('physioReqUrgency').value;
+  var requestingName = document.getElementById('physioReqParticipant').value;
+
+  if (!location) { toast('Bitte einen Ort wählen'); return; }
+  if (!reason) { toast('Bitte einen Grund wählen'); return; }
+
+  var urgencyObj = PHYSIO_URGENCY_LEVELS.find(function(u) { return u.value === urgency; });
+  var message = '🩹 Physio benötigt!\n'
+    + 'Ort: ' + location + '\n'
+    + 'Grund: ' + reason + '\n'
+    + 'Dringlichkeit: ' + (urgencyObj ? urgencyObj.label : urgency)
+    + (requestingName ? '\nAnfrage von: ' + requestingName : '')
+    + '\n\nBitte so schnell wie möglich kommen.';
+
+  var phone = physio.mobile.replace(/[^0-9+]/g, '');
+  if (phone.startsWith('00')) phone = '+' + phone.slice(2);
+  window.open('https://wa.me/' + phone.replace('+', '') + '?text=' + encodeURIComponent(message), '_blank');
+
+  await db.from('physio_requests').insert({
+    event_id: currentEventId || null,
+    physio_participant_id: physio.id,
+    physio_name: physio.lastname + ', ' + physio.firstname,
+    location: location,
+    reason: reason,
+    urgency: urgency,
+    requesting_participant_name: requestingName || null
+  });
+
+  var m = document.getElementById('physioRequestModal'); if (m) m.remove();
+  toast('✅ WhatsApp geöffnet, Anfrage protokolliert');
+  loadPhysioHistory();
 }
 
 async function loadRefereePenalties() {
@@ -9104,6 +9297,7 @@ async function exportWaitlistPDF() {
 // SETTINGS
 async function loadSettings() {
   setTimeout(loadRolePermissionsSettings, 300);
+  try { await loadPhysioConfig(); } catch(e) { console.error('loadPhysioConfig error:', e); }
   try { await loadWithdrawPolicy(); } catch(e) { console.error('loadWithdrawPolicy error:', e); }
   try { await loadMealOptionsSettings(); } catch(e) { console.error('loadMealOptionsSettings error:', e); }
   try { await loadAgeClasses(); } catch(e) { console.error('loadAgeClasses error:', e); }
@@ -12958,6 +13152,82 @@ async function deleteUserRole(idx) {
 // PERSON ROLES
 var personRolesCache = ['Player','Coach','Parent','ESF Official','Referee','Official'];
 
+// PHYSIO – konfigurierbare Orte & Gründe (global, in Einstellungen gepflegt)
+var physioLocationsCache = ['Court 1', 'Court 2', 'Turnierleitung'];
+var physioReasonsCache = ['Blood Injury', 'Taping', 'Cramps', 'Sonstiges'];
+
+async function loadPhysioConfig() {
+  var r1 = await db.from('app_settings').select('value').eq('key','physio_locations').limit(1);
+  if (r1.data && r1.data[0]) { try { physioLocationsCache = JSON.parse(r1.data[0].value); } catch(e) {} }
+  var r2 = await db.from('app_settings').select('value').eq('key','physio_reasons').limit(1);
+  if (r2.data && r2.data[0]) { try { physioReasonsCache = JSON.parse(r2.data[0].value); } catch(e) {} }
+  renderPhysioLocationsList();
+  renderPhysioReasonsList();
+}
+
+async function savePhysioLocations() {
+  await db.from('app_settings').delete().eq('key','physio_locations');
+  await db.from('app_settings').insert({key:'physio_locations', value: JSON.stringify(physioLocationsCache)});
+}
+async function savePhysioReasons() {
+  await db.from('app_settings').delete().eq('key','physio_reasons');
+  await db.from('app_settings').insert({key:'physio_reasons', value: JSON.stringify(physioReasonsCache)});
+}
+
+function renderPhysioLocationsList() {
+  var el = document.getElementById('physioLocationsList'); if (!el) return;
+  el.innerHTML = physioLocationsCache.map(function(loc, i) {
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:13px">'
+      + loc
+      + '<button onclick="deletePhysioLocation('+i+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1" title="Löschen">×</button>'
+      + '</div>';
+  }).join('');
+}
+function renderPhysioReasonsList() {
+  var el = document.getElementById('physioReasonsList'); if (!el) return;
+  el.innerHTML = physioReasonsCache.map(function(rs, i) {
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:13px">'
+      + rs
+      + '<button onclick="deletePhysioReason('+i+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1" title="Löschen">×</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function addPhysioLocation() {
+  var input = document.getElementById('newPhysioLocationInput');
+  var val = input ? input.value.trim() : '';
+  if (!val) { toast('Bitte einen Ort eingeben'); return; }
+  if (physioLocationsCache.indexOf(val) >= 0) { toast(val + ' ist bereits vorhanden'); return; }
+  physioLocationsCache.push(val);
+  await savePhysioLocations();
+  renderPhysioLocationsList();
+  if (input) input.value = '';
+  toast(val + ' hinzugefügt');
+}
+async function deletePhysioLocation(idx) {
+  if (!confirm('"' + physioLocationsCache[idx] + '" wirklich löschen?')) return;
+  physioLocationsCache.splice(idx, 1);
+  await savePhysioLocations();
+  renderPhysioLocationsList();
+}
+async function addPhysioReason() {
+  var input = document.getElementById('newPhysioReasonInput');
+  var val = input ? input.value.trim() : '';
+  if (!val) { toast('Bitte einen Grund eingeben'); return; }
+  if (physioReasonsCache.indexOf(val) >= 0) { toast(val + ' ist bereits vorhanden'); return; }
+  physioReasonsCache.push(val);
+  await savePhysioReasons();
+  renderPhysioReasonsList();
+  if (input) input.value = '';
+  toast(val + ' hinzugefügt');
+}
+async function deletePhysioReason(idx) {
+  if (!confirm('"' + physioReasonsCache[idx] + '" wirklich löschen?')) return;
+  physioReasonsCache.splice(idx, 1);
+  await savePhysioReasons();
+  renderPhysioReasonsList();
+}
+
 async function loadPersonRoles() {
   var r = await db.from('app_settings').select('value').eq('key','person_roles').limit(1);
   if (r.error) { console.error('loadPersonRoles error:', r.error); }
@@ -15033,7 +15303,7 @@ var rolePermissions = {};
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
-  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats','tournamentwithdrawals'];
+  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats','tournamentwithdrawals','physio'];
 
 async function loadRolePermissions() {
   // Load permissions from DB
