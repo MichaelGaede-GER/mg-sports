@@ -394,6 +394,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg><span data-i18n="nav_withdrawals">Absagen</span>
       <span class="nav-cnt" id="cntWithdrawals" style="display:none">!</span>
     </div>
+    <div class="nav-item" onclick="nav('tournamentwithdrawals')">
+      <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>🏳️ Turnier-Abmeldungen</span>
+      <span class="nav-cnt" id="cntTournamentWithdrawals" style="display:none">!</span>
+    </div>
     <div class="nav-item" onclick="nav('waitlist')">
       <span id="cntPending" style="display:none;background:var(--amber,#ef9f27);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;margin-right:4px;float:right">!</span>
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11l-4 4-2-2"/></svg><span data-i18n="nav_waitlist">Warteliste</span>
@@ -1215,6 +1219,35 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                   </div>
                 </div>
               </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Tournament Withdraw (Rückzug während des Turniers)</label>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2)" id="tournamentWithdrawBox">
+                  <input type="checkbox" id="f_tournament_withdraw" style="width:18px;height:18px;accent-color:var(--red);cursor:pointer" onchange="onTournamentWithdrawCheck()" />
+                  <label for="f_tournament_withdraw" style="font-size:13px;cursor:pointer;font-weight:500;color:var(--text)">Tournament withdraw</label>
+                  <span id="tournamentWithdrawSourceBadge" style="display:none;background:var(--amber-bg);color:var(--amber);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--amber)">📋 Über Abmeldeformular eingegangen</span>
+                </div>
+                <div id="tournamentWithdrawGroup" style="display:none;margin-top:10px">
+                  <div class="form-grid">
+                    <div class="form-group" style="grid-column:1/-1"><label>Grund</label>
+                      <select id="f_tournament_withdraw_reason">
+                        <option value="">– bitte wählen –</option>
+                        <option value="An acute injury, such as a muscle strain, bruising, or back or knee problems">An acute injury, such as a muscle strain, bruising, or back or knee problems</option>
+                        <option value="Illness, fever, gastrointestinal problems, or circulatory issues">Illness, fever, gastrointestinal problems, or circulatory issues</option>
+                        <option value="Aggravation of a pre-existing injury">Aggravation of a pre-existing injury</option>
+                        <option value="Medical advice or instructions not to continue playing">Medical advice or instructions not to continue playing</option>
+                        <option value="Health problems occurring during the tournament">Health problems occurring during the tournament</option>
+                        <option value="Other">Sonstiges (Freitext)</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1"><label>Freitext / Details</label>
+                      <textarea id="f_tournament_withdraw_reason_other" placeholder="Details zum Rückzug…" style="height:60px"></textarea>
+                    </div>
+                    <div class="form-group"><label>Datum/Zeit der Meldung</label>
+                      <input type="text" id="f_tournament_withdraw_at" readonly style="color:var(--text3)" />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1577,6 +1610,27 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <tbody id="rpStatsCountryTable"><tr><td colspan="3" class="loading">Lade…</td></tr></tbody>
               </table></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TURNIER-ABMELDUNGEN (aus dem öffentlichen Abmeldeformular) -->
+      <div class="page" id="page-tournamentwithdrawals">
+        <div class="page-header"><h2>🏳️ Turnier-Abmeldungen</h2>
+          <button class="btn" onclick="loadTournamentWithdrawals()">🔄 Aktualisieren</button>
+          <button class="btn" onclick="copyWithdrawalFormLink()">🔗 Link zum Abmeldeformular kopieren</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin:-8px 0 16px">
+          Hier laufen alle Meldungen ein, die Spieler über das öffentliche Abmeldeformular während des Turniers
+          abgeschickt haben (z.B. wegen Verletzung/Krankheit). Ein gefundener Teilnehmer wird automatisch mit
+          "Tournament withdraw" markiert.
+        </p>
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Datum</th><th>Name</th><th>ESID</th><th>Mobil</th><th>E-Mail</th><th>Grund</th><th>Teilnehmer gefunden</th><th>Aktion</th></tr></thead>
+              <tbody id="tournamentWithdrawalsTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
+            </table></div>
           </div>
         </div>
       </div>
@@ -5289,6 +5343,7 @@ function nav(page) {
   else if (page === 'invoices') loadInvoices();
   else if (page === 'costs') loadCosts();
   else if (page === 'refereepenaltystats') loadRefereePenaltyStats();
+  else if (page === 'tournamentwithdrawals') loadTournamentWithdrawals();
   else if (page === 'refereepenalty') loadRefereePenalties();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
@@ -5718,6 +5773,12 @@ function toggleWithdrawDate() {
   if (grp) grp.style.display = wd ? 'flex' : 'none';
 }
 
+function onTournamentWithdrawCheck() {
+  var cb = document.getElementById('f_tournament_withdraw');
+  var grp = document.getElementById('tournamentWithdrawGroup');
+  if (grp) grp.style.display = (cb && cb.checked) ? 'block' : 'none';
+}
+
 function cancelEdit() {
   document.getElementById('editingId').value = '';
   document.getElementById('entryFormTitle').textContent = 'Neuen Teilnehmer erfassen';
@@ -5754,6 +5815,12 @@ function clearForm() {
   const vl = document.getElementById('visaExpressFeeLabel'); if (vl) vl.style.display='none';
   document.getElementById('f_withdraw').value = 'Nein';
   document.getElementById('withdrawDateGroup').style.display = 'none';
+  const twCb = document.getElementById('f_tournament_withdraw'); if (twCb) twCb.checked = false;
+  const twBox = document.getElementById('tournamentWithdrawGroup'); if (twBox) twBox.style.display = 'none';
+  const twReason = document.getElementById('f_tournament_withdraw_reason'); if (twReason) twReason.value = '';
+  const twReasonOther = document.getElementById('f_tournament_withdraw_reason_other'); if (twReasonOther) twReasonOther.value = '';
+  const twAt = document.getElementById('f_tournament_withdraw_at'); if (twAt) twAt.value = '';
+  const twBadge = document.getElementById('tournamentWithdrawSourceBadge'); if (twBadge) twBadge.style.display = 'none';
   { const mci = document.getElementById('mealCheckinInfo'); if (mci) mci.innerHTML = '– kein Teilnehmer geladen –'; }
   ['cl_fullname','cl_dob','cl_place_of_birth','cl_passport','cl_date_of_issue','cl_date_of_expiry','f_confirmation_letter_price'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   var clTypeEl = document.getElementById('f_confirmation_letter_type'); if (clTypeEl) { clTypeEl.value=''; clTypeEl.removeAttribute('data-pending-value'); }
@@ -5850,6 +5917,16 @@ async function editEntry(id) {
   var wdCb = document.getElementById('f_withdraw');
   if (wdCb) wdCb.checked = p.withdraw === 'Ja';
   toggleWithdrawDate();
+  const twCb = document.getElementById('f_tournament_withdraw');
+  if (twCb) {
+    twCb.checked = p.tournament_withdraw === 'Ja';
+    document.getElementById('f_tournament_withdraw_reason').value = p.tournament_withdraw_reason_code || '';
+    document.getElementById('f_tournament_withdraw_reason_other').value = p.tournament_withdraw_reason || '';
+    document.getElementById('f_tournament_withdraw_at').value = p.tournament_withdraw_at ? new Date(p.tournament_withdraw_at).toLocaleString('de-DE') : '';
+    var srcBadge = document.getElementById('tournamentWithdrawSourceBadge');
+    if (srcBadge) srcBadge.style.display = p.tournament_withdraw_source === 'form' ? 'inline-block' : 'none';
+    onTournamentWithdrawCheck();
+  }
   const exprEl = document.getElementById('f_express'); if (exprEl) { exprEl.checked = p.express === 'Ja'; }
   const mealEl = document.getElementById('f_meal_plus'); if (mealEl) mealEl.checked = p.meal_plus === 'Ja';
   const travelEl = document.getElementById('f_travel_amount'); if (travelEl) travelEl.checked = (p.travel_amount||0) > 0;
@@ -5999,6 +6076,9 @@ async function saveEntry() {
     withdraw_date: v('withdraw_date')||null,
     withdraw_refund: parseFloat(document.getElementById('f_withdraw_refund')?.value)||0,
     withdraw_refund_due: parseFloat(document.getElementById('f_withdraw_refund_due')?.value)||0,
+    tournament_withdraw: document.getElementById('f_tournament_withdraw')?.checked ? 'Ja' : 'Nein',
+    tournament_withdraw_reason_code: document.getElementById('f_tournament_withdraw_reason')?.value || null,
+    tournament_withdraw_reason: document.getElementById('f_tournament_withdraw_reason_other')?.value.trim() || null,
     nf_federation: v('nf_federation'),
     nf_trainer_name: v('nf_trainer_name'), nf_trainer_phone: v('nf_trainer_phone'), nf_trainer_mobile: v('nf_trainer_mobile'), nf_trainer_email: v('nf_trainer_email'),
     nf_office_phone: v('nf_office_phone'), nf_office_mobile: v('nf_office_mobile'), nf_office_email: v('nf_office_email'),
@@ -6796,6 +6876,58 @@ async function loadRefereePenaltyStats() {
   countryTb.innerHTML = countryList.map(function(c, idx) {
     return '<tr><td>'+(idx+1)+'</td><td><strong>'+c.country+'</strong></td><td>'+c.count+'</td></tr>';
   }).join('');
+}
+
+// TURNIER-ABMELDUNGEN (aus dem öffentlichen withdrawal-form.html)
+async function loadTournamentWithdrawals() {
+  var tb = document.getElementById('tournamentWithdrawalsTable');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="8" class="loading">Lade…</td></tr>';
+  var q = db.from('tournament_withdrawals').select('*').order('created_at', { ascending: false });
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
+  if (r.error) { tb.innerHTML = '<tr><td colspan="8" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
+  var rows = r.data || [];
+  var cnt = document.getElementById('cntTournamentWithdrawals');
+  if (cnt) {
+    var unresolved = rows.filter(function(row) { return !row.participant_id; }).length;
+    if (unresolved) { cnt.style.display = 'inline-block'; cnt.textContent = unresolved; } else cnt.style.display = 'none';
+  }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Noch keine Abmeldungen eingegangen</td></tr>'; return; }
+  tb.innerHTML = rows.map(function(row) {
+    var reasonText = row.reason === 'Other' ? (row.reason_other || 'Sonstiges') : row.reason;
+    return '<tr>'
+      + '<td style="font-size:12px">' + new Date(row.created_at).toLocaleString('de-DE') + '</td>'
+      + '<td><strong>' + row.lastname + ', ' + row.firstname + '</strong></td>'
+      + '<td>' + (row.esid || '–') + '</td>'
+      + '<td>' + (row.mobile || '–') + '</td>'
+      + '<td style="font-size:12px">' + (row.email || '–') + '</td>'
+      + '<td style="font-size:12px;max-width:280px">' + reasonText + '</td>'
+      + '<td>' + (row.participant_id ? '<span style="color:var(--green)">✅ Ja</span>' : '<span style="color:var(--red)">⚠ Nicht gefunden</span>') + '</td>'
+      + '<td style="display:flex;gap:6px">'
+      + (row.participant_id ? '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="' + row.participant_id + '" onclick="editEntry(this.dataset.id)">Teilnehmer öffnen</button>' : '')
+      + '<button class="btn danger" style="font-size:11px;padding:3px 8px" data-id="' + row.id + '" onclick="deleteTournamentWithdrawal(this.dataset.id)">Löschen</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function deleteTournamentWithdrawal(id) {
+  if (!confirm('Diesen Eintrag wirklich löschen?')) return;
+  await db.from('tournament_withdrawals').delete().eq('id', id);
+  toast('Gelöscht');
+  loadTournamentWithdrawals();
+}
+
+function copyWithdrawalFormLink() {
+  if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
+  var base = window.location.href.replace(/[^\/]*$/, '');
+  var url = base + 'withdrawal-form.html?event=' + currentEventId;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() { toast('✅ Link kopiert'); }).catch(function() { prompt('Link zum Kopieren:', url); });
+  } else {
+    prompt('Link zum Kopieren:', url);
+  }
 }
 
 async function loadRefereePenalties() {
@@ -14830,7 +14962,7 @@ var rolePermissions = {};
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
-  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats'];
+  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats','tournamentwithdrawals'];
 
 async function loadRolePermissions() {
   // Load permissions from DB
