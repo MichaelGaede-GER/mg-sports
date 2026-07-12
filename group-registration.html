@@ -335,6 +335,7 @@ en: {
 
   err_fix_following: "⚠️ Please fix the following:",
   err_esid_format: "ESID must be ES + 9 digits",
+  err_mobile_format: "Mobile number must start with the country code (e.g. +49 151 23456789)",
   err_duplicate_esid_group: "duplicate ESID within this group",
   err_room_capacity_changed: "⛔ Room availability changed, please adjust:",
   err_only_free: "only",
@@ -478,6 +479,7 @@ de: {
 
   err_fix_following: "⚠️ Bitte folgende Punkte korrigieren:",
   err_esid_format: "ESID muss ES + 9 Ziffern sein",
+  err_mobile_format: "Handynummer muss mit der Ländervorwahl beginnen (z. B. +49 151 23456789)",
   err_duplicate_esid_group: "doppelte ESID innerhalb dieser Gruppe",
   err_room_capacity_changed: "⛔ Zimmerverfügbarkeit hat sich geändert, bitte anpassen:",
   err_only_free: "nur",
@@ -1446,11 +1448,21 @@ function onSameTravelToggle() {
 async function submitGroupRegistration() {
   var errors = [];
 
+  function normalizeMobile(val) { return (val||'').trim().replace(/^00/, '+').replace(/[\s()-]/g, ''); }
+  function isValidMobile(val) { return /^\+[1-9][0-9]{6,14}$/.test(val); }
+
   var leaderRequired = [['g_lastname', t('err_group_leader_lastname')], ['g_firstname', t('err_group_leader_firstname')], ['g_mobile', t('err_group_leader_mobile')], ['g_email', t('err_group_leader_email')]];
   leaderRequired.forEach(function(f) {
     var el = document.getElementById(f[0]);
     if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
   });
+
+  var gMobileEl = document.getElementById('g_mobile');
+  var gMobileNormalized = normalizeMobile(gMobileEl.value);
+  if (gMobileEl.value.trim() && !isValidMobile(gMobileNormalized)) {
+    errors.push(t('err_mobile_format'));
+    gMobileEl.classList.add('error');
+  }
 
   if (!participantIds.length) errors.push(t('err_at_least_one_participant'));
   if (!document.getElementById('g_consent').checked) errors.push(t('err_declaration'));
@@ -1488,6 +1500,15 @@ async function submitGroupRegistration() {
       errors.push(label + ': ' + t('err_esid_format'));
       esidEl.classList.add('error');
     } else { esidEl.classList.remove('error'); }
+
+    var pMobileEl = document.getElementById('p_mobile_' + id);
+    if (pMobileEl && pMobileEl.value.trim()) {
+      var pMobileNormalized = normalizeMobile(pMobileEl.value);
+      if (!isValidMobile(pMobileNormalized)) {
+        errors.push(label + ': ' + t('err_mobile_format'));
+        pMobileEl.classList.add('error');
+      } else { pMobileEl.classList.remove('error'); }
+    } else if (pMobileEl) { pMobileEl.classList.remove('error'); }
 
     var reqFieldLabels = {
       lastname: t('f_lastname').replace(/<[^>]+>/g, '').replace('*', '').trim(),
@@ -1601,7 +1622,7 @@ async function submitGroupRegistration() {
       lastname: pLast, firstname: pFirst, country: pCountry,
       dob: pDob || null, gender: pGender, member_id: pEsid,
       passport_id: (needsLetter ? v('p_visa_passport_number_' + id) : null) || v('p_passport_id_' + id) || null,
-      mobile: v('p_mobile_' + id) || v('g_mobile') || null,
+      mobile: normalizeMobile(v('p_mobile_' + id)) || gMobileNormalized || null,
       email: v('p_email_' + id) || v('g_email') || null,
       role: pRole, events: v('p_events_' + id) || null,
       shirt: v('p_shirt_' + id) || null,

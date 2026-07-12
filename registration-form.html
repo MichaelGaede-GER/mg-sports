@@ -449,6 +449,7 @@ en: {
 
   err_fix_following: "⚠️ Please fill in the following required fields:",
   err_esid_format: "Member ID / ESID must start with ES followed by exactly 9 digits (e.g. ES473686007)",
+  err_mobile_format: "Mobile number must start with the country code (e.g. +49 151 23456789)",
   err_package: "Package",
   err_declaration: "Declaration (please accept the terms)",
   err_access_code: "Invalid access code for the Tournament Team package (T)",
@@ -572,6 +573,7 @@ de: {
 
   err_fix_following: "⚠️ Bitte folgende Pflichtfelder ausfüllen:",
   err_esid_format: "Mitglieds-ID / ESID muss mit ES gefolgt von genau 9 Ziffern beginnen (z. B. ES473686007)",
+  err_mobile_format: "Handynummer muss mit der Ländervorwahl beginnen (z. B. +49 151 23456789)",
   err_package: "Package",
   err_declaration: "Erklärung (bitte den Bedingungen zustimmen)",
   err_access_code: "Ungültiger Zugangscode für das Package \"Tournament Team\" (T)",
@@ -1232,6 +1234,14 @@ async function submitRegistration() {
     esidEl.classList.add('error');
   } else { esidEl.classList.remove('error'); }
 
+  var mobileVal = v('r_mobile');
+  var mobileEl = document.getElementById('r_mobile');
+  var mobileNormalized = mobileVal.replace(/^00/, '+').replace(/[\s()-]/g, '');
+  if (mobileVal && !/^\+[1-9][0-9]{6,14}$/.test(mobileNormalized)) {
+    errors.push(t('err_mobile_format'));
+    mobileEl.classList.add('error');
+  } else { mobileEl.classList.remove('error'); }
+
   required.forEach(function(f) {
     var el = document.getElementById(f[0]);
     if (!el || !el.value.trim()) { errors.push(plain(f[1])); if (el) el.classList.add('error'); }
@@ -1343,7 +1353,7 @@ async function submitRegistration() {
     country: v('r_country'), dob: v('r_dob') || null,
     gender: v('r_gender'), member_id: v('r_member_id'),
     passport_id: (needsLetter ? v('r_visa_passport_number') : null) || v('r_passport_id') || null,
-    mobile: v('r_mobile'), email: v('r_email'),
+    mobile: mobileNormalized, email: v('r_email'),
     role: v('r_role'), events: v('r_events') || null,
     coach_name: v('r_coach_name') || null, coach_esid: v('r_coach_esid') || null,
     shirt: v('r_shirt') || null,
