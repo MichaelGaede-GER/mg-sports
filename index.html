@@ -383,6 +383,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('refereepenalty')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Schieds-Pflicht</span>
     </div>
+    <div class="nav-item" onclick="nav('refereepenaltystats')">
+      <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>📊 Schieds-Statistik</span>
+    </div>
     <div class="nav-item" onclick="nav('mahnlog')">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="nav_mahnlog">Mahnungs-Log</span>
       <span class="nav-cnt" id="cntMahnlog" style="display:none">!</span>
@@ -1542,6 +1545,37 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="card-body">
             <div id="costsBalanceSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
               <div class="loading">Lade Bilanz…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCHIEDS-PFLICHT STATISTIK (über alle Events) -->
+      <div class="page" id="page-refereepenaltystats">
+        <div class="page-header"><h2>📊 Schieds-Pflicht – Statistik</h2>
+          <button class="btn" onclick="loadRefereePenaltyStats()">🔄 Aktualisieren</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin:-8px 0 16px">
+          Auswertung über <strong>alle Events</strong> hinweg: wie oft und wann eine Person nicht zu ihrem
+          Schiedsrichter-Einsatz erschienen ist, sowie ein Ranking nach Land.
+        </p>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+          <div class="card">
+            <div class="card-header"><h3>Nach Person</h3></div>
+            <div class="card-body" style="padding:0">
+              <div class="table-wrap" style="max-height:560px;overflow:auto"><table>
+                <thead><tr><th>Name</th><th>Land</th><th>Anzahl</th><th>Termine</th></tr></thead>
+                <tbody id="rpStatsPersonTable"><tr><td colspan="4" class="loading">Lade…</td></tr></tbody>
+              </table></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>🏆 Ranking nach Land</h3></div>
+            <div class="card-body" style="padding:0">
+              <div class="table-wrap" style="max-height:560px;overflow:auto"><table>
+                <thead><tr><th>#</th><th>Land</th><th>No-Shows</th></tr></thead>
+                <tbody id="rpStatsCountryTable"><tr><td colspan="3" class="loading">Lade…</td></tr></tbody>
+              </table></div>
             </div>
           </div>
         </div>
@@ -5254,6 +5288,7 @@ function nav(page) {
   else if (page === 'payments') loadPayments();
   else if (page === 'invoices') loadInvoices();
   else if (page === 'costs') loadCosts();
+  else if (page === 'refereepenaltystats') loadRefereePenaltyStats();
   else if (page === 'refereepenalty') loadRefereePenalties();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
@@ -6705,6 +6740,62 @@ async function renderCostsBalance() {
   + '<div style="background:var(--bg3);border-radius:10px;padding:14px;border:2px solid var(--border2)"><div style="font-size:12px;color:var(--text3)">Gesamtkosten</div><div style="font-size:22px;font-weight:800;margin-top:4px">'+eur(grandTotal)+'</div></div>'
   + '<div style="background:var(--green-bg);border-radius:10px;padding:14px"><div style="font-size:12px;color:var(--green)">Einnahmen (erhaltene Zahlungen)</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:var(--green)">'+eur(revenue)+'</div></div>'
   + '<div style="background:'+(result>=0?'var(--green-bg)':'#4a1f24')+';border-radius:10px;padding:14px"><div style="font-size:12px;color:'+(result>=0?'var(--green)':'#ff6b6b')+'">Ergebnis (Einnahmen − Kosten)</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:'+(result>=0?'var(--green)':'#ff6b6b')+'">'+eur(result)+'</div></div>';
+}
+
+// Statistik über ALLE Events hinweg: wie oft/wann eine Person nicht zum Schiedsen erschienen
+// ist, plus Ranking nach Land. Nutzt direkt die strukturierten Daten aus referee_penalties
+// (statt Freitext), damit sich das sauber auswerten und sortieren lässt.
+async function loadRefereePenaltyStats() {
+  var personTb = document.getElementById('rpStatsPersonTable');
+  var countryTb = document.getElementById('rpStatsCountryTable');
+  if (!personTb || !countryTb) return;
+  personTb.innerHTML = '<tr><td colspan="4" class="loading">Lade…</td></tr>';
+  countryTb.innerHTML = '<tr><td colspan="3" class="loading">Lade…</td></tr>';
+
+  await loadEventsCache();
+  var r = await db.from('referee_penalties').select('*').order('penalty_date');
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  var rows = r.data || [];
+
+  if (!rows.length) {
+    personTb.innerHTML = '<tr><td colspan="4" class="empty">Noch keine Einträge vorhanden</td></tr>';
+    countryTb.innerHTML = '<tr><td colspan="3" class="empty">Noch keine Einträge vorhanden</td></tr>';
+    return;
+  }
+
+  // Gruppieren nach Person: über member_id, sonst Vor-/Nachname als Fallback
+  var byPerson = {};
+  rows.forEach(function(row) {
+    var key = row.member_id ? ('m_' + row.member_id) : ('n_' + (row.lastname||'') + '_' + (row.firstname||''));
+    if (!byPerson[key]) byPerson[key] = { lastname: row.lastname, firstname: row.firstname, country: row.country, member_id: row.member_id, entries: [] };
+    var ev = (eventsCache || []).find(function(e) { return e.id === row.event_id; });
+    byPerson[key].entries.push({ date: row.penalty_date, eventName: ev ? ev.name : '–' });
+  });
+  var personList = Object.keys(byPerson).map(function(k) { return byPerson[k]; })
+    .sort(function(a, b) { return b.entries.length - a.entries.length; });
+
+  personTb.innerHTML = personList.map(function(p) {
+    var datesStr = p.entries.map(function(e) { return fmtDate(e.date) + ' (' + e.eventName + ')'; }).join('<br>');
+    return '<tr>'
+      + '<td><strong>'+p.lastname+', '+p.firstname+'</strong>'+(p.member_id ? ' <span style="font-size:11px;color:var(--text3)">('+p.member_id+')</span>' : '')+'</td>'
+      + '<td>'+(p.country||'–')+'</td>'
+      + '<td><span style="background:var(--red-bg);color:var(--red);font-weight:700;padding:2px 8px;border-radius:10px;font-size:12px">'+p.entries.length+'×</span></td>'
+      + '<td style="font-size:12px;color:var(--text2)">'+datesStr+'</td>'
+      + '</tr>';
+  }).join('');
+
+  // Ranking nach Land
+  var byCountry = {};
+  rows.forEach(function(row) {
+    var c = row.country || 'Unbekannt';
+    byCountry[c] = (byCountry[c]||0) + 1;
+  });
+  var countryList = Object.keys(byCountry).map(function(c) { return { country: c, count: byCountry[c] }; })
+    .sort(function(a, b) { return b.count - a.count; });
+
+  countryTb.innerHTML = countryList.map(function(c, idx) {
+    return '<tr><td>'+(idx+1)+'</td><td><strong>'+c.country+'</strong></td><td>'+c.count+'</td></tr>';
+  }).join('');
 }
 
 async function loadRefereePenalties() {
@@ -14739,7 +14830,7 @@ var rolePermissions = {};
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
-  'idcard','waitlist','users','backup','mealcheck','costs'];
+  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats'];
 
 async function loadRolePermissions() {
   // Load permissions from DB
