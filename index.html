@@ -1628,8 +1628,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         <div class="card">
           <div class="card-body" style="padding:0">
             <div class="table-wrap"><table>
-              <thead><tr><th>Datum</th><th>Name</th><th>ESID</th><th>Mobil</th><th>E-Mail</th><th>Grund</th><th>Teilnehmer gefunden</th><th>Aktion</th></tr></thead>
-              <tbody id="tournamentWithdrawalsTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
+              <thead><tr><th>Datum</th><th>Name</th><th>Event</th><th>ESID</th><th>Mobil</th><th>E-Mail</th><th>Grund</th><th>Teilnehmer gefunden</th><th>Aktion</th></tr></thead>
+              <tbody id="tournamentWithdrawalsTable"><tr><td colspan="9" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -6882,34 +6882,49 @@ async function loadRefereePenaltyStats() {
 async function loadTournamentWithdrawals() {
   var tb = document.getElementById('tournamentWithdrawalsTable');
   if (!tb) return;
-  tb.innerHTML = '<tr><td colspan="8" class="loading">Lade…</td></tr>';
+  tb.innerHTML = '<tr><td colspan="9" class="loading">Lade…</td></tr>';
+  await loadEventsCache();
+  // Zeigt Einträge des aktiven Events UND Einträge ohne Event-Zuordnung (z.B. wenn der Link
+  // ohne ?event=... geöffnet wurde) — damit nie eingegangene Meldungen "verschwinden".
   var q = db.from('tournament_withdrawals').select('*').order('created_at', { ascending: false });
-  if (currentEventId) q = q.eq('event_id', currentEventId);
+  if (currentEventId) q = q.or('event_id.eq.' + currentEventId + ',event_id.is.null');
   var r = await q;
-  if (r.error) { tb.innerHTML = '<tr><td colspan="8" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
+  if (r.error) { tb.innerHTML = '<tr><td colspan="9" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
   var rows = r.data || [];
   var cnt = document.getElementById('cntTournamentWithdrawals');
   if (cnt) {
     var unresolved = rows.filter(function(row) { return !row.participant_id; }).length;
     if (unresolved) { cnt.style.display = 'inline-block'; cnt.textContent = unresolved; } else cnt.style.display = 'none';
   }
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Noch keine Abmeldungen eingegangen</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Noch keine Abmeldungen eingegangen</td></tr>'; return; }
   tb.innerHTML = rows.map(function(row) {
     var reasonText = row.reason === 'Other' ? (row.reason_other || 'Sonstiges') : row.reason;
+    var ev = row.event_id ? (eventsCache || []).find(function(e) { return e.id === row.event_id; }) : null;
+    var eventLabel = row.event_id ? (ev ? ev.name : '–') : '<span style="color:var(--amber)">⚠ Kein Event (Link ohne ?event=…)</span>';
     return '<tr>'
       + '<td style="font-size:12px">' + new Date(row.created_at).toLocaleString('de-DE') + '</td>'
       + '<td><strong>' + row.lastname + ', ' + row.firstname + '</strong></td>'
+      + '<td style="font-size:12px">' + eventLabel + '</td>'
       + '<td>' + (row.esid || '–') + '</td>'
       + '<td>' + (row.mobile || '–') + '</td>'
       + '<td style="font-size:12px">' + (row.email || '–') + '</td>'
-      + '<td style="font-size:12px;max-width:280px">' + reasonText + '</td>'
+      + '<td style="font-size:12px;max-width:260px">' + reasonText + '</td>'
       + '<td>' + (row.participant_id ? '<span style="color:var(--green)">✅ Ja</span>' : '<span style="color:var(--red)">⚠ Nicht gefunden</span>') + '</td>'
-      + '<td style="display:flex;gap:6px">'
+      + '<td style="display:flex;gap:6px;flex-wrap:wrap">'
       + (row.participant_id ? '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="' + row.participant_id + '" onclick="editEntry(this.dataset.id)">Teilnehmer öffnen</button>' : '')
+      + (!row.event_id && currentEventId ? '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="' + row.id + '" onclick="assignTournamentWithdrawalToCurrentEvent(this.dataset.id)">Diesem Event zuordnen</button>' : '')
       + '<button class="btn danger" style="font-size:11px;padding:3px 8px" data-id="' + row.id + '" onclick="deleteTournamentWithdrawal(this.dataset.id)">Löschen</button>'
       + '</td>'
       + '</tr>';
   }).join('');
+}
+
+async function assignTournamentWithdrawalToCurrentEvent(id) {
+  if (!currentEventId) return;
+  var r = await db.from('tournament_withdrawals').update({ event_id: currentEventId }).eq('id', id);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ Event zugeordnet');
+  loadTournamentWithdrawals();
 }
 
 async function deleteTournamentWithdrawal(id) {
