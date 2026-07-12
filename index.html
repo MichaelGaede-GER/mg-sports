@@ -4197,6 +4197,8 @@ async function initApp() {
   loadPersonRoles().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
   updateMealOptionSelects();
+  refreshTournamentWithdrawalBadge().catch(function(){});
+  subscribeTournamentWithdrawalNotifications();
 }
 
 async function checkTables() {
@@ -6879,6 +6881,59 @@ async function loadRefereePenaltyStats() {
 }
 
 // TURNIER-ABMELDUNGEN (aus dem öffentlichen withdrawal-form.html)
+
+// Aktualisiert den Zähler im Nav-Menü sofort beim App-Start bzw. nach jedem Ereignis —
+// nicht erst, wenn die Seite "Turnier-Abmeldungen" tatsächlich geöffnet wird.
+async function refreshTournamentWithdrawalBadge() {
+  var cnt = document.getElementById('cntTournamentWithdrawals');
+  if (!cnt) return;
+  var q = db.from('tournament_withdrawals').select('id', { count: 'exact', head: true }).is('participant_id', null);
+  if (currentEventId) q = q.or('event_id.eq.' + currentEventId + ',event_id.is.null');
+  var r = await q;
+  var unresolved = r.count || 0;
+  if (unresolved) { cnt.style.display = 'inline-block'; cnt.textContent = unresolved; } else { cnt.style.display = 'none'; }
+}
+
+var _twNotifyChannel = null;
+var _twAudioCtx = null;
+
+function playNotifySound() {
+  try {
+    if (!_twAudioCtx) _twAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var ctx = _twAudioCtx;
+    [880, 1180].forEach(function(freq, i) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.16 + 0.25);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.16);
+      osc.stop(ctx.currentTime + i * 0.16 + 0.25);
+    });
+  } catch (e) { /* audio not available, ignore */ }
+}
+
+// Live-Benachrichtigung: sobald jemand das öffentliche Abmeldeformular abschickt, kommt der
+// neue Eintrag per Supabase Realtime sofort hier an — ohne dass die Seite neu geladen oder
+// "Turnier-Abmeldungen" extra geöffnet werden muss. Funktioniert, solange die App offen ist.
+function subscribeTournamentWithdrawalNotifications() {
+  if (_twNotifyChannel) return; // schon abonniert
+  try {
+    _twNotifyChannel = db.channel('tournament_withdrawals_live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tournament_withdrawals' }, function(payload) {
+        var row = payload.new;
+        if (currentEventId && row.event_id && row.event_id !== currentEventId) return; // anderes Event, nicht relevant
+        playNotifySound();
+        toast('🏳️ Neue Turnier-Abmeldung: ' + row.firstname + ' ' + row.lastname);
+        refreshTournamentWithdrawalBadge().catch(function(){});
+        if (currentPage === 'tournamentwithdrawals') loadTournamentWithdrawals().catch(function(){});
+      })
+      .subscribe();
+  } catch (e) { console.error('Realtime-Abo für Turnier-Abmeldungen fehlgeschlagen:', e); }
+}
+
 async function loadTournamentWithdrawals() {
   var tb = document.getElementById('tournamentWithdrawalsTable');
   if (!tb) return;
@@ -8873,6 +8928,7 @@ async function setActiveEvent(id, name) {
   updateActiveEventDisplay(); updateSidebarEventLogo();
   recomputeEventRole(); applyPermissions();
   if (currentPage === 'refereepenalty') restoreRefereePenaltyFolder().catch(function(){});
+  refreshTournamentWithdrawalBadge().catch(function(){});
   toast('Aktives Event: '+name);
 }
 function updateActiveEventDisplay() {
