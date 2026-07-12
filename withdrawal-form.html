@@ -1,111 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tournament Withdrawal Form</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tournament Withdrawal</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(160deg, #185FA5, #0f1115 65%); min-height: 100vh;
-    display: flex; align-items: flex-start; justify-content: center; padding: 24px 14px;
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #185FA5; --blue-bg: #e8f0fb; --green: #2E7D32; --green-bg: #e8f5e9;
+    --red: #c62828; --red-bg: #fdecea; --amber:#b26a00; --amber-bg:#fff3cd; --border: #dde2ec; --radius: 8px;
+    --bg: #fff; --bg2: #f7f9fc; --text: #1a1d23; --text2: #5a6272; --text3: #9aa3b2;
   }
-  .card {
-    background: #fff; border-radius: 18px; max-width: 520px; width: 100%;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.35); overflow: hidden;
-  }
-  .card-header { background: #185FA5; color: #fff; padding: 22px 24px; }
-  .card-header h1 { margin: 0 0 4px; font-size: 19px; }
-  .card-header p { margin: 0; font-size: 12px; color: #cfe0f5; }
-  .card-body { padding: 22px 24px 28px; }
-  label { display: block; font-size: 12px; font-weight: 600; color: #333; margin: 14px 0 5px; }
-  label.req::after { content: ' *'; color: #d32f2f; }
-  input[type=text], input[type=tel], input[type=email], select, textarea {
-    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #d5d9e0;
-    font-size: 14px; font-family: inherit; background: #fafbfc;
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg2); color: var(--text); min-height: 100vh; }
+  .header { background: var(--blue); color: #fff; padding: 24px 32px; text-align: center; position:relative; }
+  .header h1 { font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .racket-icon { width: 34px; height: 34px; flex-shrink: 0; }
+  .event-logo-img { height: 80px; max-width: 180px; object-fit: contain; flex-shrink: 0; display: none; border-radius: 4px; background: #fff; padding: 4px; }
+  .lang-switch { position: absolute; top: 14px; right: 16px; display: flex; gap: 4px; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px; }
+  .lang-btn { border: none; background: transparent; color: #fff; opacity: 0.7; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 16px; cursor: pointer; }
+  .lang-btn.active { background: #fff; color: var(--blue); opacity: 1; }
+  .container { max-width: 620px; margin: 32px auto; padding: 0 16px 60px; }
+  .card { background: var(--bg); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; overflow: hidden; }
+  .card-header { padding: 14px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-body { padding: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: var(--text2); }
+  label .req { color: var(--red); margin-left: 2px; }
+  input, select, textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color .15s; font-family: inherit; }
   textarea { resize: vertical; min-height: 70px; }
+  input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+  input.error, select.error, textarea.error { border-color: var(--red); background: var(--red-bg); }
+  .submit-btn { width: 100%; padding: 14px; background: var(--red); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+  .submit-btn:hover { opacity: 0.9; }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .success-box { display: none; background: var(--green-bg); border: 1.5px solid var(--green); border-radius: 12px; padding: 32px; text-align: center; }
+  .success-box h2 { color: var(--green); font-size: 22px; margin-bottom: 8px; }
+  .success-box p { color: var(--text2); font-size: 14px; line-height: 1.6; }
+  .error-box { display: none; background: var(--red-bg); border: 1px solid var(--red); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: var(--red); white-space: pre-line; }
   .confirm-box {
-    margin-top: 20px; padding: 14px; border-radius: 10px; background: #fff4e5;
-    border: 1px solid #ffcc80; display: flex; gap: 10px; align-items: flex-start;
+    grid-column: 1 / -1; margin-top: 8px; padding: 14px; border-radius: var(--radius); background: var(--amber-bg);
+    border: 1px solid #ffe08a; display: flex; gap: 10px; align-items: flex-start;
   }
-  .confirm-box input { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; accent-color: #d32f2f; }
-  .confirm-box span { font-size: 13px; color: #5a3d00; line-height: 1.4; }
-  button.submit {
-    margin-top: 20px; width: 100%; padding: 14px; border: none; border-radius: 10px;
-    background: #d32f2f; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
-  }
-  button.submit:disabled { background: #ccc; cursor: not-allowed; }
-  .error-msg { color: #d32f2f; font-size: 12px; margin-top: 6px; display: none; }
-  .success-screen { text-align: center; padding: 40px 24px; }
-  .success-screen .icon { font-size: 48px; margin-bottom: 12px; }
-  .success-screen h2 { margin: 0 0 8px; color: #185FA5; }
-  .success-screen p { color: #555; font-size: 14px; line-height: 1.5; }
+  .confirm-box input { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; accent-color: var(--red); }
+  .confirm-box span { font-size: 13px; color: #7a5c00; line-height: 1.4; }
   .other-reason-wrap { display: none; }
   .event-name { font-weight: 700; }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
-<div class="card" id="formCard">
-  <div class="card-header">
-    <h1>🏳️ Tournament Withdrawal</h1>
-    <p id="eventLabel">Please fill in this form if you need to withdraw from the tournament.</p>
+<div class="header">
+  <div class="lang-switch">
+    <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" id="langBtnDe" onclick="setLang('de')">DE</button>
   </div>
-  <div class="card-body">
-    <form id="withdrawForm" onsubmit="return false;">
-      <label class="req">Last Name</label>
-      <input type="text" id="lastname" autocomplete="family-name" />
-
-      <label class="req">First Name</label>
-      <input type="text" id="firstname" autocomplete="given-name" />
-
-      <label>ESID (Member ID)</label>
-      <input type="text" id="esid" placeholder="e.g. GER12345" />
-
-      <label class="req">Mobile Phone (for confirmation)</label>
-      <input type="tel" id="mobile" placeholder="+49 ..." />
-
-      <label class="req">Email</label>
-      <input type="email" id="email" />
-
-      <label class="req">Reason for Retirement</label>
-      <select id="reason" onchange="onReasonChange()">
-        <option value="">– please select –</option>
-        <option value="An acute injury, such as a muscle strain, bruising, or back or knee problems">An acute injury, such as a muscle strain, bruising, or back or knee problems</option>
-        <option value="Illness, fever, gastrointestinal problems, or circulatory issues">Illness, fever, gastrointestinal problems, or circulatory issues</option>
-        <option value="Aggravation of a pre-existing injury">Aggravation of a pre-existing injury</option>
-        <option value="Medical advice or instructions not to continue playing">Medical advice or instructions not to continue playing</option>
-        <option value="Health problems occurring during the tournament">Health problems occurring during the tournament</option>
-        <option value="Other">Other (please specify)</option>
-      </select>
-
-      <div class="other-reason-wrap" id="otherReasonWrap">
-        <label>Please specify</label>
-        <textarea id="reasonOther" placeholder="Please describe the reason for your withdrawal…"></textarea>
-      </div>
-
-      <label>Additional details (optional)</label>
-      <textarea id="reasonFreetext" placeholder="Anything else you'd like to add…"></textarea>
-
-      <div class="confirm-box">
-        <input type="checkbox" id="confirmCheck" />
-        <span>I hereby confirm my withdrawal from the tournament. I understand this decision is final and will be forwarded to the tournament organizers.</span>
-      </div>
-
-      <div class="error-msg" id="errorMsg"></div>
-      <button type="button" class="submit" id="submitBtn" onclick="submitWithdrawal()">Submit Withdrawal</button>
-    </form>
-  </div>
+  <h1>
+    <svg class="racket-icon" id="racketIcon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="26" cy="22" rx="16" ry="19" stroke="#fff" stroke-width="3.2" transform="rotate(-18 26 22)"/>
+      <path d="M18 12 L34 32 M34 12 L18 32 M14 22 L38 22" stroke="#fff" stroke-width="1.6" opacity="0.75" transform="rotate(-18 26 22)"/>
+      <path d="M35 38 L52 56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M49 53 L56 60" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/>
+    </svg>
+    <img id="eventLogoImg" class="event-logo-img" alt="Event logo" />
+    <span id="pageTitleText">🏳️ Tournament Withdrawal</span>
+  </h1>
+  <p id="headerSubtitle" data-i18n="header_subtitle">Please fill in this form if you need to withdraw from the tournament.</p>
 </div>
 
-<div class="card" id="successCard" style="display:none">
-  <div class="success-screen">
-    <div class="icon">✅</div>
-    <h2>Withdrawal Received</h2>
-    <p>Thank you, <strong id="successName"></strong>. Your withdrawal has been recorded and the tournament organizers have been notified.<br><br>We wish you a speedy recovery.</p>
+<div class="container">
+  <div id="successBox" class="success-box">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <h2 data-i18n="success_title">Withdrawal Received</h2>
+    <p data-i18n-html="success_text">Thank you. Your withdrawal has been recorded and the tournament organizers have been notified.<br><br>We wish you a speedy recovery.</p>
+  </div>
+
+  <div id="formContainer">
+    <div id="errorBox" class="error-box"></div>
+    <div id="noEventBox" class="error-box" style="display:none;background:var(--amber-bg);border-color:#ffe08a;color:#7a5c00" data-i18n="no_event">⚠️ No tournament reference found in this link. Your withdrawal will still be recorded, but please also contact the tournament office directly.</div>
+
+    <form id="withdrawForm" onsubmit="return false;">
+      <div class="card">
+        <div class="card-header" data-i18n="personal_header">👤 Personal Data</div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group"><label data-i18n="f_lastname">Last Name <span class="req">*</span></label><input type="text" id="w_lastname" autocomplete="family-name" /></div>
+            <div class="form-group"><label data-i18n="f_firstname">First Name <span class="req">*</span></label><input type="text" id="w_firstname" autocomplete="given-name" /></div>
+            <div class="form-group"><label data-i18n="f_esid">ESID (Member ID)</label><input type="text" id="w_esid" placeholder="e.g. ES473686007" /></div>
+            <div class="form-group"><label data-i18n="f_mobile">Mobile (with country code) <span class="req">*</span></label><input type="tel" id="w_mobile" placeholder="+49 151 23456789" /></div>
+            <div class="form-group full"><label data-i18n="f_email">E-Mail <span class="req">*</span></label><input type="email" id="w_email" placeholder="your@email.com" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" data-i18n="reason_header">🩺 Reason for Retirement</div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label data-i18n="f_reason">Reason <span class="req">*</span></label>
+              <select id="w_reason" onchange="onReasonChange()"></select>
+            </div>
+            <div class="form-group full other-reason-wrap" id="otherReasonWrap">
+              <label data-i18n="f_reason_other">Please specify</label>
+              <textarea id="w_reason_other" data-i18n-ph="f_reason_other_ph"></textarea>
+            </div>
+            <div class="form-group full">
+              <label data-i18n="f_details">Additional details (optional)</label>
+              <textarea id="w_details" data-i18n-ph="f_details_ph"></textarea>
+            </div>
+            <div class="confirm-box">
+              <input type="checkbox" id="w_confirm" />
+              <span data-i18n="confirm_text">I hereby confirm my withdrawal from the tournament. I understand this decision is final and will be forwarded to the tournament organizers.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="submit-btn" id="submitBtn" onclick="submitWithdrawal()" data-i18n="submit_btn">Submit Withdrawal</button>
+    </form>
   </div>
 </div>
 
@@ -117,54 +134,183 @@
 
   var urlParams = new URLSearchParams(window.location.search);
   var eventId = urlParams.get('event') || null;
-  var eventName = '';
+  var LANG = 'en';
 
-  async function init() {
-    if (eventId) {
-      try {
-        var r = await db.from('events').select('name').eq('id', eventId).single();
-        if (r.data) {
-          eventName = r.data.name;
-          document.getElementById('eventLabel').innerHTML = 'Withdrawal form for <span class="event-name">' + eventName + '</span>. Please fill in this form if you need to withdraw from the tournament.';
-        }
-      } catch (e) { /* ignore */ }
+  var REASONS = [
+    "An acute injury, such as a muscle strain, bruising, or back or knee problems",
+    "Illness, fever, gastrointestinal problems, or circulatory issues",
+    "Aggravation of a pre-existing injury",
+    "Medical advice or instructions not to continue playing",
+    "Health problems occurring during the tournament"
+  ];
+
+  var I18N = {
+    en: {
+      header_subtitle: "Please fill in this form if you need to withdraw from the tournament.",
+      header_subtitle_event: 'Withdrawal form for <span class="event-name">{event}</span>. Please fill in this form if you need to withdraw from the tournament.',
+      no_event: "⚠️ No tournament reference found in this link. Your withdrawal will still be recorded, but please also contact the tournament office directly.",
+      personal_header: "👤 Personal Data",
+      f_lastname: 'Last Name <span class="req">*</span>',
+      f_firstname: 'First Name <span class="req">*</span>',
+      f_esid: "ESID (Member ID)",
+      f_mobile: 'Mobile (with country code) <span class="req">*</span>',
+      f_email: 'E-Mail <span class="req">*</span>',
+      reason_header: "🩺 Reason for Retirement",
+      f_reason: 'Reason <span class="req">*</span>',
+      f_reason_other: "Please specify",
+      f_reason_other_ph: "Please describe the reason for your withdrawal…",
+      f_details: "Additional details (optional)",
+      f_details_ph: "Anything else you'd like to add…",
+      confirm_text: "I hereby confirm my withdrawal from the tournament. I understand this decision is final and will be forwarded to the tournament organizers.",
+      submit_btn: "Submit Withdrawal",
+      submitting: "Submitting…",
+      success_title: "Withdrawal Received",
+      success_text: "Thank you, <strong>{name}</strong>. Your withdrawal has been recorded and the tournament organizers have been notified.<br><br>We wish you a speedy recovery.",
+      ph_select: "– please select –",
+      reason_other_option: "Other (please specify)",
+      err_lastname_firstname: "Please enter your last and first name.",
+      err_mobile_required: "Please enter your mobile phone number.",
+      err_mobile_format: "Please enter your mobile number with country code, e.g. +49 151 23456789.",
+      err_email: "Please enter a valid email address.",
+      err_reason: "Please select a reason for retirement.",
+      err_reason_other: "Please specify your reason.",
+      err_confirm: "Please confirm your withdrawal from the tournament.",
+      err_generic: "Something went wrong: {msg}. Please try again or contact the tournament office directly."
+    },
+    de: {
+      header_subtitle: "Bitte fülle dieses Formular aus, wenn du dich vom Turnier abmelden musst.",
+      header_subtitle_event: 'Abmeldeformular für <span class="event-name">{event}</span>. Bitte fülle dieses Formular aus, wenn du dich vom Turnier abmelden musst.',
+      no_event: "⚠️ Kein Turnierbezug in diesem Link gefunden. Deine Abmeldung wird trotzdem gespeichert, bitte kontaktiere zusätzlich das Turnierbüro direkt.",
+      personal_header: "👤 Persönliche Daten",
+      f_lastname: 'Nachname <span class="req">*</span>',
+      f_firstname: 'Vorname <span class="req">*</span>',
+      f_esid: "ESID (Mitglieds-ID)",
+      f_mobile: 'Handynummer (mit Ländercode) <span class="req">*</span>',
+      f_email: 'E-Mail <span class="req">*</span>',
+      reason_header: "🩺 Grund für den Rückzug",
+      f_reason: 'Grund <span class="req">*</span>',
+      f_reason_other: "Bitte spezifizieren",
+      f_reason_other_ph: "Bitte beschreibe den Grund für deine Abmeldung…",
+      f_details: "Weitere Details (optional)",
+      f_details_ph: "Alles Weitere, das du hinzufügen möchtest…",
+      confirm_text: "Ich bestätige hiermit meine Abmeldung vom Turnier. Mir ist bewusst, dass diese Entscheidung endgültig ist und an die Turnierleitung weitergeleitet wird.",
+      submit_btn: "Abmeldung absenden",
+      submitting: "Wird gesendet…",
+      success_title: "Abmeldung erhalten",
+      success_text: "Danke, <strong>{name}</strong>. Deine Abmeldung wurde gespeichert und die Turnierleitung wurde benachrichtigt.<br><br>Wir wünschen dir gute Besserung.",
+      ph_select: "– bitte wählen –",
+      reason_other_option: "Sonstiges (bitte angeben)",
+      err_lastname_firstname: "Bitte Vor- und Nachname eingeben.",
+      err_mobile_required: "Bitte gib deine Handynummer ein.",
+      err_mobile_format: "Bitte gib deine Handynummer mit Ländercode ein, z. B. +49 151 23456789.",
+      err_email: "Bitte gib eine gültige E-Mail-Adresse ein.",
+      err_reason: "Bitte wähle einen Grund für den Rückzug.",
+      err_reason_other: "Bitte gib deinen Grund an.",
+      err_confirm: "Bitte bestätige deine Abmeldung vom Turnier.",
+      err_generic: "Etwas ist schiefgelaufen: {msg}. Bitte versuche es erneut oder kontaktiere das Turnierbüro direkt."
+    }
+  };
+
+  function t(key) { return (I18N[LANG] && I18N[LANG][key] !== undefined) ? I18N[LANG][key] : (I18N.en[key] || key); }
+
+  function applyStaticTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(function(el) { el.innerHTML = t(el.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el) { el.innerHTML = t(el.getAttribute('data-i18n-html')); });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function(el) { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
+    document.getElementById('langBtnEn').classList.toggle('active', LANG === 'en');
+    document.getElementById('langBtnDe').classList.toggle('active', LANG === 'de');
+    document.documentElement.lang = LANG;
+    populateReasonSelect();
+    if (window._eventName) {
+      document.getElementById('headerSubtitle').innerHTML = t('header_subtitle_event').replace('{event}', window._eventName);
     }
   }
 
+  function setLang(lang) {
+    LANG = lang === 'de' ? 'de' : 'en';
+    try { localStorage.setItem('withdrawFormLang', LANG); } catch (e) {}
+    applyStaticTranslations();
+  }
+
+  function populateReasonSelect() {
+    var sel = document.getElementById('w_reason');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">' + t('ph_select') + '</option>'
+      + REASONS.map(function(r) { return '<option value="' + r.replace(/"/g,'&quot;') + '">' + r + '</option>'; }).join('')
+      + '<option value="Other">' + t('reason_other_option') + '</option>';
+    if (cur) sel.value = cur;
+  }
+
   function onReasonChange() {
-    var val = document.getElementById('reason').value;
+    var val = document.getElementById('w_reason').value;
     document.getElementById('otherReasonWrap').style.display = (val === 'Other') ? 'block' : 'none';
   }
 
   function showError(msg) {
-    var el = document.getElementById('errorMsg');
+    var el = document.getElementById('errorBox');
     el.textContent = msg;
     el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function init() {
+    try { var savedLang = localStorage.getItem('withdrawFormLang'); if (savedLang) LANG = savedLang; } catch (e) {}
+    applyStaticTranslations();
+
+    if (!eventId) {
+      document.getElementById('noEventBox').style.display = 'block';
+      return;
+    }
+    try {
+      var r = await db.from('events').select('name,logo_url').eq('id', eventId).single();
+      if (r.data) {
+        window._eventName = r.data.name;
+        document.getElementById('pageTitleText').textContent = r.data.name;
+        document.title = 'Withdrawal – ' + r.data.name;
+        document.getElementById('headerSubtitle').innerHTML = t('header_subtitle_event').replace('{event}', r.data.name);
+        if (r.data.logo_url) {
+          var logoImg = document.getElementById('eventLogoImg');
+          logoImg.src = 'data:image/png;base64,' + r.data.logo_url;
+          logoImg.style.display = 'inline-block';
+          document.getElementById('racketIcon').style.display = 'none';
+        }
+      }
+    } catch (e) { /* ignore, form still works without event details */ }
   }
 
   async function submitWithdrawal() {
-    var lastname = document.getElementById('lastname').value.trim();
-    var firstname = document.getElementById('firstname').value.trim();
-    var esid = document.getElementById('esid').value.trim();
-    var mobile = document.getElementById('mobile').value.trim();
-    var email = document.getElementById('email').value.trim();
-    var reason = document.getElementById('reason').value;
-    var reasonOther = document.getElementById('reasonOther').value.trim();
-    var reasonFreetext = document.getElementById('reasonFreetext').value.trim();
-    var confirmed = document.getElementById('confirmCheck').checked;
+    var lastname = document.getElementById('w_lastname').value.trim();
+    var firstname = document.getElementById('w_firstname').value.trim();
+    var esid = document.getElementById('w_esid').value.trim();
+    var mobile = document.getElementById('w_mobile').value.trim();
+    var email = document.getElementById('w_email').value.trim();
+    var reason = document.getElementById('w_reason').value;
+    var reasonOther = document.getElementById('w_reason_other').value.trim();
+    var details = document.getElementById('w_details').value.trim();
+    var confirmed = document.getElementById('w_confirm').checked;
 
-    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('errorBox').style.display = 'none';
+    ['w_lastname','w_firstname','w_mobile','w_email','w_reason','w_reason_other'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.classList.remove('error');
+    });
 
-    if (!lastname || !firstname) { showError('Please enter your last and first name.'); return; }
-    if (!mobile) { showError('Please enter your mobile phone number.'); return; }
-    if (!email || email.indexOf('@') === -1) { showError('Please enter a valid email address.'); return; }
-    if (!reason) { showError('Please select a reason for retirement.'); return; }
-    if (reason === 'Other' && !reasonOther) { showError('Please specify your reason.'); return; }
-    if (!confirmed) { showError('Please confirm your withdrawal from the tournament.'); return; }
+    if (!lastname || !firstname) {
+      showError(t('err_lastname_firstname'));
+      if (!lastname) document.getElementById('w_lastname').classList.add('error');
+      if (!firstname) document.getElementById('w_firstname').classList.add('error');
+      return;
+    }
+    if (!mobile) { showError(t('err_mobile_required')); document.getElementById('w_mobile').classList.add('error'); return; }
+    var normalizedMobile = mobile.replace(/^00/, '+').replace(/[\s()-]/g, '');
+    if (!/^\+[1-9][0-9]{6,14}$/.test(normalizedMobile)) { showError(t('err_mobile_format')); document.getElementById('w_mobile').classList.add('error'); return; }
+    if (!email || email.indexOf('@') === -1) { showError(t('err_email')); document.getElementById('w_email').classList.add('error'); return; }
+    if (!reason) { showError(t('err_reason')); document.getElementById('w_reason').classList.add('error'); return; }
+    if (reason === 'Other' && !reasonOther) { showError(t('err_reason_other')); document.getElementById('w_reason_other').classList.add('error'); return; }
+    if (!confirmed) { showError(t('err_confirm')); return; }
 
     var btn = document.getElementById('submitBtn');
     btn.disabled = true;
-    btn.textContent = 'Submitting…';
+    btn.textContent = t('submitting');
 
     // Try to find a matching participant to link + auto-flag as tournament withdraw
     var participantId = null;
@@ -180,17 +326,17 @@
       event_id: eventId || null,
       participant_id: participantId,
       lastname: lastname, firstname: firstname, esid: esid || null,
-      mobile: mobile, email: email,
+      mobile: normalizedMobile, email: email,
       reason: reason,
-      reason_other: reason === 'Other' ? reasonOther : (reasonFreetext || null),
+      reason_other: reason === 'Other' ? reasonOther : (details || null),
       confirmed: true
     };
 
     var ins = await db.from('tournament_withdrawals').insert(row);
     if (ins.error) {
       btn.disabled = false;
-      btn.textContent = 'Submit Withdrawal';
-      showError('Something went wrong: ' + ins.error.message + '. Please try again or contact the tournament office directly.');
+      btn.textContent = t('submit_btn');
+      showError(t('err_generic').replace('{msg}', ins.error.message));
       return;
     }
 
@@ -198,15 +344,18 @@
       await db.from('participants').update({
         tournament_withdraw: 'Ja',
         tournament_withdraw_reason_code: reason,
-        tournament_withdraw_reason: reason === 'Other' ? reasonOther : (reasonFreetext || reason),
+        tournament_withdraw_reason: reason === 'Other' ? reasonOther : (details || reason),
         tournament_withdraw_at: new Date().toISOString(),
         tournament_withdraw_source: 'form'
       }).eq('id', participantId);
     }
 
-    document.getElementById('successName').textContent = firstname + ' ' + lastname;
-    document.getElementById('formCard').style.display = 'none';
-    document.getElementById('successCard').style.display = 'block';
+    document.getElementById('successBox').innerHTML =
+      '<div style="font-size:48px;margin-bottom:12px">✅</div>'
+      + '<h2 style="color:var(--green);font-size:22px;margin-bottom:8px">' + t('success_title') + '</h2>'
+      + '<p style="color:var(--text2);font-size:14px;line-height:1.6">' + t('success_text').replace('{name}', firstname + ' ' + lastname) + '</p>';
+    document.getElementById('successBox').style.display = 'block';
+    document.getElementById('formContainer').style.display = 'none';
   }
 
   init();
