@@ -377,6 +377,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('invoices')">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span>Rechnungen</span>
     </div>
+    <div class="nav-item" onclick="nav('costs')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="18"/><path d="M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 1.1-3 2.5 1.3 2.5 3 2.5 3 1.1 3 2.5-1.3 2.5-3 2.5-3-1.1-3-2.5"/></svg><span>💰 Kosten &amp; Bilanz</span>
+    </div>
     <div class="nav-item" onclick="nav('refereepenalty')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Schieds-Pflicht</span>
     </div>
@@ -1416,6 +1419,125 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <thead><tr><th>Datum</th><th>Stufe</th><th>Name</th><th>E-Mail</th><th>Betreff</th><th>Gesendet von</th><th>Notiz</th></tr></thead>
             <tbody id="mahnlogTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
           </table></div>
+        </div>
+      </div>
+
+      <!-- KOSTEN & BILANZ -->
+      <div class="page" id="page-costs">
+        <div class="page-header"><h2>💰 Kosten &amp; Bilanz</h2></div>
+        <p style="font-size:13px;color:var(--text2);margin:-8px 0 16px">
+          Erfasse hier die Einkaufskosten des Events (Hotel, Shuttle, Essen, Courts, Personal) und sieh am Ende die
+          Gesamtbilanz im Vergleich zu den Einnahmen.
+        </p>
+
+        <!-- NEUE POSITION: Hotel / Shuttle / Essen / Courts / Sonstiges -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>➕ Kostenposition hinzufügen</h3></div>
+          <div class="card-body">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Kategorie</label>
+                <select id="cost_category" style="margin-top:4px;width:160px" onchange="updateCostLabelSuggestions()">
+                  <option value="hotel">🏨 Hotel</option>
+                  <option value="shuttle">🚐 Shuttle</option>
+                  <option value="meals">🍽️ Essen</option>
+                  <option value="courts">🎾 Courts</option>
+                  <option value="other">📦 Sonstiges</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Bezeichnung</label>
+                <input type="text" id="cost_label" list="cost_label_suggestions" placeholder="z.B. Einzelzimmer" style="width:190px;margin-top:4px" />
+                <datalist id="cost_label_suggestions"></datalist>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Tag (optional)</label>
+                <select id="cost_day" style="margin-top:4px;width:110px">
+                  <option value="">–</option>
+                  <option value="do">Donnerstag</option>
+                  <option value="fr">Freitag</option>
+                  <option value="sa">Samstag</option>
+                  <option value="so">Sonntag</option>
+                  <option value="mo">Montag</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Einzelpreis (€)</label>
+                <input type="number" id="cost_unit" step="0.01" placeholder="0.00" style="width:110px;margin-top:4px" oninput="updateCostPreview()" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Menge</label>
+                <input type="number" id="cost_qty" step="0.01" value="1" style="width:90px;margin-top:4px" oninput="updateCostPreview()" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Einheit</label>
+                <input type="text" id="cost_unit_label" placeholder="z.B. pro Nacht, pro Court" style="width:150px;margin-top:4px" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Summe</label>
+                <div id="cost_preview" style="margin-top:8px;font-weight:700;font-size:14px">0,00 €</div>
+              </div>
+              <button class="btn primary" onclick="addCostItem()">Hinzufügen</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>Kostenpositionen</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Kategorie</th><th>Bezeichnung</th><th>Tag</th><th>Einzelpreis</th><th>Menge</th><th>Einheit</th><th>Summe</th><th>Aktion</th></tr></thead>
+              <tbody id="costItemsTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- PERSONALKOSTEN -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>👥 Personalkosten (Tournament Team)</h3></div>
+          <div class="card-body">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Name</label>
+                <input type="text" id="staff_name" placeholder="Name" style="width:170px;margin-top:4px" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Rolle/Funktion</label>
+                <input type="text" id="staff_role" placeholder="z.B. Tournament Team" style="width:160px;margin-top:4px" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Flugkosten (€)</label>
+                <input type="number" id="staff_flight" step="0.01" placeholder="0.00" style="width:110px;margin-top:4px" onchange="updateStaffPreview()" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Tagespauschale (€)</label>
+                <input type="number" id="staff_daily" step="0.01" placeholder="0.00" style="width:120px;margin-top:4px" onchange="updateStaffPreview()" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Anzahl Tage</label>
+                <input type="number" id="staff_days" step="1" value="1" style="width:90px;margin-top:4px" onchange="updateStaffPreview()" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Summe</label>
+                <div id="staff_preview" style="margin-top:8px;font-weight:700;font-size:14px">0,00 €</div>
+              </div>
+              <button class="btn primary" onclick="addStaffCost()">Hinzufügen</button>
+            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Name</th><th>Rolle</th><th>Flug</th><th>Tagespauschale</th><th>Tage</th><th>Summe</th><th>Aktion</th></tr></thead>
+              <tbody id="staffCostsTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- BILANZ -->
+        <div class="card">
+          <div class="card-header"><h3>📊 Bilanz</h3></div>
+          <div class="card-body">
+            <div id="costsBalanceSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+              <div class="loading">Lade Bilanz…</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -5124,6 +5246,7 @@ function nav(page) {
   else if (page === 'shuttle') loadShuttle();
   else if (page === 'payments') loadPayments();
   else if (page === 'invoices') loadInvoices();
+  else if (page === 'costs') loadCosts();
   else if (page === 'refereepenalty') loadRefereePenalties();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
@@ -6368,6 +6491,188 @@ function invoiceStatusBadgeClass(status) {
 }
 
 // ============ SCHIEDS-PFLICHT / PENALTY-LISTE ============
+// ================= KOSTEN & BILANZ =================
+var costItemsCache = [];
+var staffCostsCache = [];
+
+function eur(n) {
+  return (parseFloat(n)||0).toFixed(2).replace('.', ',') + ' €';
+}
+
+var COST_LABEL_SUGGESTIONS = {
+  hotel: ['Einzelzimmer', 'Doppelzimmer', 'Dreibettzimmer'],
+  shuttle: ['Shuttle-Service'],
+  meals: ['Frühstück', 'Lunch', 'Dinner'],
+  courts: ['Squash Court'],
+  other: []
+};
+
+function updateCostLabelSuggestions() {
+  var cat = document.getElementById('cost_category').value;
+  var dl = document.getElementById('cost_label_suggestions');
+  dl.innerHTML = (COST_LABEL_SUGGESTIONS[cat]||[]).map(function(l){ return '<option value="'+l+'">'; }).join('');
+}
+
+function updateCostPreview() {
+  var unit = parseFloat(document.getElementById('cost_unit').value) || 0;
+  var qty = parseFloat(document.getElementById('cost_qty').value) || 0;
+  document.getElementById('cost_preview').textContent = eur(unit * qty);
+}
+
+function updateStaffPreview() {
+  var flight = parseFloat(document.getElementById('staff_flight').value) || 0;
+  var daily = parseFloat(document.getElementById('staff_daily').value) || 0;
+  var days = parseFloat(document.getElementById('staff_days').value) || 0;
+  document.getElementById('staff_preview').textContent = eur(flight + daily * days);
+}
+
+async function loadCosts() {
+  if (!currentEventId) {
+    document.getElementById('costItemsTable').innerHTML = '<tr><td colspan="8" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
+    document.getElementById('staffCostsTable').innerHTML = '<tr><td colspan="7" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
+    document.getElementById('costsBalanceSummary').innerHTML = '<div class="empty">Bitte zuerst ein Event aktivieren</div>';
+    return;
+  }
+  updateCostLabelSuggestions();
+  var r1 = await db.from('event_costs').select('*').eq('event_id', currentEventId).order('category').order('created_at');
+  costItemsCache = r1.data || [];
+  var r2 = await db.from('event_staff_costs').select('*').eq('event_id', currentEventId).order('created_at');
+  staffCostsCache = r2.data || [];
+  renderCostItemsTable();
+  renderStaffCostsTable();
+  await renderCostsBalance();
+}
+
+var COST_CATEGORY_ICONS = { hotel:'🏨 Hotel', shuttle:'🚐 Shuttle', meals:'🍽️ Essen', courts:'🎾 Courts', other:'📦 Sonstiges' };
+var COST_DAY_LABELS = { do:'Donnerstag', fr:'Freitag', sa:'Samstag', so:'Sonntag', mo:'Montag' };
+
+function renderCostItemsTable() {
+  var tb = document.getElementById('costItemsTable');
+  if (!costItemsCache.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Noch keine Kostenpositionen erfasst</td></tr>'; return; }
+  tb.innerHTML = costItemsCache.map(function(c) {
+    var total = (parseFloat(c.unit_cost)||0) * (parseFloat(c.quantity)||0);
+    return '<tr>'
+      + '<td>'+(COST_CATEGORY_ICONS[c.category]||c.category)+'</td>'
+      + '<td><strong>'+c.label+'</strong></td>'
+      + '<td>'+(c.day?(COST_DAY_LABELS[c.day]||c.day):'–')+'</td>'
+      + '<td>'+eur(c.unit_cost)+'</td>'
+      + '<td>'+(c.quantity)+'</td>'
+      + '<td style="font-size:12px;color:var(--text2)">'+(c.unit_label||'–')+'</td>'
+      + '<td><strong>'+eur(total)+'</strong></td>'
+      + '<td><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteCostItem(\''+c.id+'\')">Löschen</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function renderStaffCostsTable() {
+  var tb = document.getElementById('staffCostsTable');
+  if (!staffCostsCache.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Noch kein Personal erfasst</td></tr>'; return; }
+  tb.innerHTML = staffCostsCache.map(function(s) {
+    var total = (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0);
+    return '<tr>'
+      + '<td><strong>'+s.name+'</strong></td>'
+      + '<td>'+(s.role||'–')+'</td>'
+      + '<td>'+eur(s.flight_cost)+'</td>'
+      + '<td>'+eur(s.daily_allowance)+' × '+s.days+'</td>'
+      + '<td>'+s.days+'</td>'
+      + '<td><strong>'+eur(total)+'</strong></td>'
+      + '<td><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteStaffCost(\''+s.id+'\')">Löschen</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function addCostItem() {
+  var category = document.getElementById('cost_category').value;
+  var label = document.getElementById('cost_label').value.trim();
+  var day = document.getElementById('cost_day').value;
+  var unit_cost = parseFloat(document.getElementById('cost_unit').value) || 0;
+  var quantity = parseFloat(document.getElementById('cost_qty').value) || 1;
+  var unit_label = document.getElementById('cost_unit_label').value.trim();
+  if (!label) { toast('Bitte eine Bezeichnung eingeben'); return; }
+  if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
+  var r = await db.from('event_costs').insert({
+    event_id: currentEventId, category: category, label: label, day: day || null,
+    unit_cost: unit_cost, quantity: quantity, unit_label: unit_label || null
+  });
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  document.getElementById('cost_label').value = '';
+  document.getElementById('cost_unit').value = '';
+  document.getElementById('cost_qty').value = '1';
+  document.getElementById('cost_unit_label').value = '';
+  document.getElementById('cost_preview').textContent = eur(0);
+  toast('✅ Kostenposition hinzugefügt');
+  loadCosts();
+}
+
+async function deleteCostItem(id) {
+  if (!confirm('Diese Kostenposition wirklich löschen?')) return;
+  await db.from('event_costs').delete().eq('id', id);
+  toast('Gelöscht');
+  loadCosts();
+}
+
+async function addStaffCost() {
+  var name = document.getElementById('staff_name').value.trim();
+  var role = document.getElementById('staff_role').value.trim();
+  var flight = parseFloat(document.getElementById('staff_flight').value) || 0;
+  var daily = parseFloat(document.getElementById('staff_daily').value) || 0;
+  var days = parseFloat(document.getElementById('staff_days').value) || 1;
+  if (!name) { toast('Bitte einen Namen eingeben'); return; }
+  if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
+  var r = await db.from('event_staff_costs').insert({
+    event_id: currentEventId, name: name, role: role || null,
+    flight_cost: flight, daily_allowance: daily, days: days
+  });
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  document.getElementById('staff_name').value = '';
+  document.getElementById('staff_role').value = '';
+  document.getElementById('staff_flight').value = '';
+  document.getElementById('staff_daily').value = '';
+  document.getElementById('staff_days').value = '1';
+  document.getElementById('staff_preview').textContent = eur(0);
+  toast('✅ Personalkosten hinzugefügt');
+  loadCosts();
+}
+
+async function deleteStaffCost(id) {
+  if (!confirm('Diesen Eintrag wirklich löschen?')) return;
+  await db.from('event_staff_costs').delete().eq('id', id);
+  toast('Gelöscht');
+  loadCosts();
+}
+
+async function renderCostsBalance() {
+  var el = document.getElementById('costsBalanceSummary');
+  var byCategory = {};
+  costItemsCache.forEach(function(c) {
+    var total = (parseFloat(c.unit_cost)||0) * (parseFloat(c.quantity)||0);
+    byCategory[c.category] = (byCategory[c.category]||0) + total;
+  });
+  var staffTotal = staffCostsCache.reduce(function(sum, s) {
+    return sum + (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0);
+  }, 0);
+  var itemsTotal = Object.keys(byCategory).reduce(function(sum, k){ return sum + byCategory[k]; }, 0);
+  var grandTotal = itemsTotal + staffTotal;
+
+  // Einnahmen aus den bereits erfassten Zahlungen dieses Events
+  var pr = await db.from('participants').select('amount_received').eq('event_id', currentEventId).neq('withdraw','Ja');
+  var revenue = (pr.data||[]).reduce(function(sum, p){ return sum + (parseFloat(p.amount_received)||0); }, 0);
+  var result = revenue - grandTotal;
+
+  var cards = [];
+  Object.keys(COST_CATEGORY_ICONS).forEach(function(k) {
+    if (byCategory[k]) cards.push({ label: COST_CATEGORY_ICONS[k], value: byCategory[k] });
+  });
+  if (staffTotal) cards.push({ label: '👥 Personalkosten', value: staffTotal });
+
+  el.innerHTML = cards.map(function(c) {
+    return '<div style="background:var(--bg3);border-radius:10px;padding:14px"><div style="font-size:12px;color:var(--text3)">'+c.label+'</div><div style="font-size:20px;font-weight:700;margin-top:4px">'+eur(c.value)+'</div></div>';
+  }).join('')
+  + '<div style="background:var(--bg3);border-radius:10px;padding:14px;border:2px solid var(--border2)"><div style="font-size:12px;color:var(--text3)">Gesamtkosten</div><div style="font-size:22px;font-weight:800;margin-top:4px">'+eur(grandTotal)+'</div></div>'
+  + '<div style="background:var(--green-bg);border-radius:10px;padding:14px"><div style="font-size:12px;color:var(--green)">Einnahmen (erhaltene Zahlungen)</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:var(--green)">'+eur(revenue)+'</div></div>'
+  + '<div style="background:'+(result>=0?'var(--green-bg)':'#4a1f24')+';border-radius:10px;padding:14px"><div style="font-size:12px;color:'+(result>=0?'var(--green)':'#ff6b6b')+'">Ergebnis (Einnahmen − Kosten)</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:'+(result>=0?'var(--green)':'#ff6b6b')+'">'+eur(result)+'</div></div>';
+}
+
 async function loadRefereePenalties() {
   restoreRefereePenaltyFolder().catch(function(){});
   var dateEl = document.getElementById('rp_date');
@@ -14349,7 +14654,7 @@ var rolePermissions = {};
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
-  'idcard','waitlist','users','backup','mealcheck'];
+  'idcard','waitlist','users','backup','mealcheck','costs'];
 
 async function loadRolePermissions() {
   // Load permissions from DB
