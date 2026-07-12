@@ -767,14 +767,31 @@ var roomAvailabilityPromise = null;
 async function loadRoomAvailability() {
   if (roomAvailabilityPromise) return roomAvailabilityPromise;
   roomAvailabilityPromise = (async function() {
+    // roomCapacity/roomUsed are counted in PHYSICAL ROOMS (not person-slots), matching
+    // exactly how the admin tool calculates free rooms: total rooms of that type in
+    // hotel_rooms, minus distinct occupied room_numbers, minus (unassigned participants
+    // of that type, grouped by how many people fit per room).
     roomCapacity = {}; roomUsed = {};
-    ROOM_TYPES.forEach(function(rt) { roomCapacity[rt] = 0; roomUsed[rt] = 0; });
+    var assignedRoomNumbers = {}, unassignedCount = {};
+    ROOM_TYPES.forEach(function(rt) { roomCapacity[rt] = 0; roomUsed[rt] = 0; assignedRoomNumbers[rt] = new Set(); unassignedCount[rt] = 0; });
+
     var rr = await db.from('hotel_rooms').select('room_type').eq('event_id', eventId);
     (rr.data || []).forEach(function(room) {
-      if (ROOM_MAX[room.room_type]) roomCapacity[room.room_type] = (roomCapacity[room.room_type] || 0) + ROOM_MAX[room.room_type];
+      if (roomCapacity[room.room_type] !== undefined) roomCapacity[room.room_type]++;
     });
-    var pr = await db.from('participants').select('room_type').eq('event_id', eventId).neq('withdraw', 'Ja').not('room_type', 'is', null);
-    (pr.data || []).forEach(function(p) { if (p.room_type) roomUsed[p.room_type] = (roomUsed[p.room_type] || 0) + 1; });
+
+    var pr = await db.from('participants').select('room_type,room_number').eq('event_id', eventId).neq('withdraw', 'Ja').not('room_type', 'is', null).neq('room_type', 'Warteliste');
+    (pr.data || []).forEach(function(p) {
+      if (assignedRoomNumbers[p.room_type] === undefined) return;
+      if (p.room_number) assignedRoomNumbers[p.room_type].add(p.room_number);
+      else unassignedCount[p.room_type] = (unassignedCount[p.room_type] || 0) + 1;
+    });
+
+    ROOM_TYPES.forEach(function(rt) {
+      var perRoom = ROOM_MAX[rt] || 1;
+      roomUsed[rt] = assignedRoomNumbers[rt].size + Math.ceil((unassignedCount[rt] || 0) / perRoom);
+    });
+
     renderRoomBadges();
   })();
   try {
@@ -790,9 +807,8 @@ function renderRoomBadges() {
   var el = document.getElementById('roomBadges');
   if (!el) return;
   el.innerHTML = ROOM_TYPES.map(function(rt) {
-    var perRoom = ROOM_MAX[rt] || 1;
-    var totalRooms = Math.round((roomCapacity[rt] || 0) / perRoom);
-    var usedRooms = Math.ceil((roomUsed[rt] || 0) / perRoom);
+    var totalRooms = roomCapacity[rt] || 0;
+    var usedRooms = roomUsed[rt] || 0;
     var freeRooms = Math.max(0, totalRooms - usedRooms);
     var cls = freeRooms <= 0 ? 'full' : freeRooms <= 2 ? 'low' : 'ok';
     var label = freeRooms <= 0 ? t('ra_full') : freeRooms + ' / ' + totalRooms + ' ' + t('ra_free_suffix');
@@ -1073,11 +1089,10 @@ function populateRoomTypeSelect() {
   var cur = sel.value;
   var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
   sel.innerHTML = '<option value="">' + t('ph_select_roomtype') + '</option>' + ROOM_TYPES.map(function(rt) {
-    var free = roomFree(rt); // slot-based: still governs whether this person can select the type
+    var free = roomFree(rt);
     var disabled = free <= 0 && rt !== cur;
-    var perRoom = ROOM_MAX[rt] || 1;
-    var totalRooms = Math.round((roomCapacity[rt] || 0) / perRoom);
-    var usedRooms = Math.ceil((roomUsed[rt] || 0) / perRoom);
+    var totalRooms = roomCapacity[rt] || 0;
+    var usedRooms = roomUsed[rt] || 0;
     var freeRooms = Math.max(0, totalRooms - usedRooms);
     return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + freeRooms + ' ' + t('ra_free_suffix') + ')') + '</option>';
   }).join('');
