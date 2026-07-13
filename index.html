@@ -1594,14 +1594,25 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <div id="staff_hotel_preview" style="margin-top:8px;font-size:13px;color:var(--text2)">0,00 €</div>
               </div>
               <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Meal Package</label>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+                  <input type="checkbox" id="staff_meal_package" style="width:18px;height:18px;accent-color:var(--blue);cursor:pointer" onchange="updateStaffPreview()" />
+                  <label for="staff_meal_package" style="font-size:12px;cursor:pointer">Verpflegung</label>
+                </div>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Meal-Kosten</label>
+                <div id="staff_meal_preview" style="margin-top:8px;font-size:13px;color:var(--text2)">0,00 €</div>
+              </div>
+              <div class="form-group" style="margin:0">
                 <label style="font-size:12px">Summe</label>
                 <div id="staff_preview" style="margin-top:8px;font-weight:700;font-size:14px">0,00 €</div>
               </div>
               <button class="btn primary" onclick="addStaffCost()">Hinzufügen</button>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>Name</th><th>Rolle</th><th>Reise</th><th>Tagespauschale</th><th>Tage</th><th>Zimmer</th><th>Hotelkosten</th><th>Summe</th><th>Aktion</th></tr></thead>
-              <tbody id="staffCostsTable"><tr><td colspan="9" class="loading">Lade…</td></tr></tbody>
+              <thead><tr><th>Name</th><th>Rolle</th><th>Reise</th><th>Tagespauschale</th><th>Tage</th><th>Zimmer</th><th>Hotelkosten</th><th>Meal</th><th>Summe</th><th>Aktion</th></tr></thead>
+              <tbody id="staffCostsTable"><tr><td colspan="10" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -6798,6 +6809,27 @@ function calcStaffHotelCost(roomType, nights) {
   return rate * factor * nights;
 }
 
+// Tagesrate für Verpflegung: Summe der Einzelpreise aller erfassten Essen-Kostenpositionen
+// (Frühstück/Lunch/Dinner), pro eindeutiger Bezeichnung nur einmal gezählt — ergibt die
+// Gesamtkosten pro Person und vollem Tag Verpflegung.
+function getDailyMealRate() {
+  var seen = {};
+  var total = 0;
+  (costItemsCache || []).forEach(function(c) {
+    if (c.category !== 'meals') return;
+    var key = (c.label || '').toLowerCase();
+    if (seen[key]) return;
+    seen[key] = true;
+    total += parseFloat(c.unit_cost) || 0;
+  });
+  return total;
+}
+
+function calcStaffMealCost(hasMealPackage, days) {
+  if (!hasMealPackage || !days) return 0;
+  return getDailyMealRate() * days;
+}
+
 function updateCostPreview() {
   var unit = parseFloat(document.getElementById('cost_unit').value) || 0;
   var qty = parseFloat(document.getElementById('cost_qty').value) || 0;
@@ -6818,13 +6850,22 @@ function updateStaffPreview() {
   } else {
     hotelPreviewEl.textContent = eur(hotelCost);
   }
-  document.getElementById('staff_preview').textContent = eur(flight + daily * days + hotelCost);
+  var hasMealPackage = document.getElementById('staff_meal_package').checked;
+  var mealCost = calcStaffMealCost(hasMealPackage, days);
+  var mealRate = getDailyMealRate();
+  var mealPreviewEl = document.getElementById('staff_meal_preview');
+  if (hasMealPackage && mealRate === 0) {
+    mealPreviewEl.innerHTML = '<span style="color:var(--amber)">⚠ keine Essen-Kosten hinterlegt</span>';
+  } else {
+    mealPreviewEl.textContent = eur(mealCost);
+  }
+  document.getElementById('staff_preview').textContent = eur(flight + daily * days + hotelCost + mealCost);
 }
 
 async function loadCosts() {
   if (!currentEventId) {
     document.getElementById('costItemsTable').innerHTML = '<tr><td colspan="8" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
-    document.getElementById('staffCostsTable').innerHTML = '<tr><td colspan="9" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
+    document.getElementById('staffCostsTable').innerHTML = '<tr><td colspan="10" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
     document.getElementById('costsBalanceSummary').innerHTML = '<div class="empty">Bitte zuerst ein Event aktivieren</div>';
     return;
   }
@@ -6891,10 +6932,11 @@ var TRAVEL_MODE_ICONS = { 'Flug': '✈️', 'Bahn': '🚆', 'Auto': '🚗' };
 
 function renderStaffCostsTable() {
   var tb = document.getElementById('staffCostsTable');
-  if (!staffCostsCache.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Noch kein Personal erfasst</td></tr>'; return; }
+  if (!staffCostsCache.length) { tb.innerHTML = '<tr><td colspan="10" class="empty">Noch kein Personal erfasst</td></tr>'; return; }
   tb.innerHTML = staffCostsCache.map(function(s) {
     var hotelCost = parseFloat(s.hotel_cost) || 0;
-    var total = (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0) + hotelCost;
+    var mealCost = parseFloat(s.meal_cost) || 0;
+    var total = (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0) + hotelCost + mealCost;
     var roomInfo = s.room_type ? s.room_type + ' × ' + (s.nights||0) + ' Nächte' : '–';
     return '<tr>'
       + '<td><strong>'+s.name+'</strong></td>'
@@ -6904,6 +6946,7 @@ function renderStaffCostsTable() {
       + '<td>'+s.days+'</td>'
       + '<td style="font-size:12px">'+roomInfo+'</td>'
       + '<td>'+eur(hotelCost)+'</td>'
+      + '<td>'+(s.meal_package ? '🍽️ '+eur(mealCost) : '–')+'</td>'
       + '<td><strong>'+eur(total)+'</strong></td>'
       + '<td><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteStaffCost(\''+s.id+'\')">Löschen</button></td>'
       + '</tr>';
@@ -6950,12 +6993,15 @@ async function addStaffCost() {
   var roomType = document.getElementById('staff_room_type').value;
   var nights = parseFloat(document.getElementById('staff_nights').value) || 0;
   var hotelCost = calcStaffHotelCost(roomType, nights);
+  var hasMealPackage = document.getElementById('staff_meal_package').checked;
+  var mealCost = calcStaffMealCost(hasMealPackage, days);
   if (!name) { toast('Bitte einen Namen eingeben'); return; }
   if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
   var r = await db.from('event_staff_costs').insert({
     event_id: currentEventId, name: name, role: role || null,
     travel_mode: travelMode, flight_cost: flight, daily_allowance: daily, days: days,
-    room_type: roomType || null, nights: nights, hotel_cost: hotelCost
+    room_type: roomType || null, nights: nights, hotel_cost: hotelCost,
+    meal_package: hasMealPackage, meal_cost: mealCost
   });
   if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
   document.getElementById('staff_name').value = '';
@@ -6965,7 +7011,9 @@ async function addStaffCost() {
   document.getElementById('staff_days').value = '1';
   document.getElementById('staff_room_type').value = '';
   document.getElementById('staff_nights').value = '1';
+  document.getElementById('staff_meal_package').checked = false;
   document.getElementById('staff_hotel_preview').textContent = eur(0);
+  document.getElementById('staff_meal_preview').textContent = eur(0);
   document.getElementById('staff_preview').textContent = eur(0);
   var selEl = document.getElementById('staff_official_select'); if (selEl) selEl.value = '';
   toast('✅ Personalkosten hinzugefügt');
@@ -6987,7 +7035,7 @@ async function renderCostsBalance() {
     byCategory[c.category] = (byCategory[c.category]||0) + total;
   });
   var staffTotal = staffCostsCache.reduce(function(sum, s) {
-    return sum + (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0) + (parseFloat(s.hotel_cost)||0);
+    return sum + (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0) + (parseFloat(s.hotel_cost)||0) + (parseFloat(s.meal_cost)||0);
   }, 0);
   var itemsTotal = Object.keys(byCategory).reduce(function(sum, k){ return sum + byCategory[k]; }, 0);
   var grandTotal = itemsTotal + staffTotal;
