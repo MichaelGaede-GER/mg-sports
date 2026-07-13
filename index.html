@@ -1557,7 +1557,15 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <input type="text" id="staff_role" placeholder="z.B. Tournament Team" style="width:160px;margin-top:4px" />
               </div>
               <div class="form-group" style="margin:0">
-                <label style="font-size:12px">Flugkosten (€)</label>
+                <label style="font-size:12px">Reiseart</label>
+                <select id="staff_travel_mode" style="margin-top:4px;width:110px">
+                  <option value="Flug">✈️ Flug</option>
+                  <option value="Bahn">🚆 Bahn</option>
+                  <option value="Auto">🚗 Auto</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Reisekosten (€)</label>
                 <input type="number" id="staff_flight" step="0.01" placeholder="0.00" style="width:110px;margin-top:4px" onchange="updateStaffPreview()" />
               </div>
               <div class="form-group" style="margin:0">
@@ -1569,14 +1577,31 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <input type="number" id="staff_days" step="1" value="1" style="width:90px;margin-top:4px" onchange="updateStaffPreview()" />
               </div>
               <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Zimmertyp</label>
+                <select id="staff_room_type" style="margin-top:4px;width:150px" onchange="updateStaffPreview()">
+                  <option value="">– kein Zimmer –</option>
+                  <option value="Einzelzimmer">Einzelzimmer (100%)</option>
+                  <option value="Doppelzimmer">Doppelzimmer (50%)</option>
+                  <option value="Dreibettzimmer">Dreibettzimmer (33,33%)</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Nächte</label>
+                <input type="number" id="staff_nights" step="1" value="1" style="width:80px;margin-top:4px" onchange="updateStaffPreview()" />
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:12px">Hotelkosten</label>
+                <div id="staff_hotel_preview" style="margin-top:8px;font-size:13px;color:var(--text2)">0,00 €</div>
+              </div>
+              <div class="form-group" style="margin:0">
                 <label style="font-size:12px">Summe</label>
                 <div id="staff_preview" style="margin-top:8px;font-weight:700;font-size:14px">0,00 €</div>
               </div>
               <button class="btn primary" onclick="addStaffCost()">Hinzufügen</button>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>Name</th><th>Rolle</th><th>Flug</th><th>Tagespauschale</th><th>Tage</th><th>Summe</th><th>Aktion</th></tr></thead>
-              <tbody id="staffCostsTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
+              <thead><tr><th>Name</th><th>Rolle</th><th>Reise</th><th>Tagespauschale</th><th>Tage</th><th>Zimmer</th><th>Hotelkosten</th><th>Summe</th><th>Aktion</th></tr></thead>
+              <tbody id="staffCostsTable"><tr><td colspan="9" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -6750,6 +6775,29 @@ function updateCostLabelSuggestions() {
   dl.innerHTML = (COST_LABEL_SUGGESTIONS[cat]||[]).map(function(l){ return '<option value="'+l+'">'; }).join('');
 }
 
+// Faktor je Zimmertyp: Einzelzimmer trägt den vollen Preis, Doppel-/Dreibettzimmer werden
+// zwischen den Personen im Zimmer aufgeteilt.
+var ROOM_TYPE_COST_FACTOR = { 'Einzelzimmer': 1, 'Doppelzimmer': 0.5, 'Dreibettzimmer': 1/3 };
+
+// Sucht den hinterlegten Einkaufspreis pro Nacht für einen Zimmertyp aus den bereits
+// erfassten Kostenpositionen (Kategorie "hotel"). Nimmt den ersten passenden Eintrag,
+// dessen Bezeichnung den Zimmertyp enthält.
+function getHotelNightlyRate(roomType) {
+  if (!roomType) return null;
+  var match = (costItemsCache || []).find(function(c) {
+    return c.category === 'hotel' && c.label && c.label.toLowerCase().indexOf(roomType.toLowerCase()) !== -1;
+  });
+  return match ? (parseFloat(match.unit_cost) || 0) : null;
+}
+
+function calcStaffHotelCost(roomType, nights) {
+  if (!roomType || !nights) return 0;
+  var rate = getHotelNightlyRate(roomType);
+  if (rate === null) return 0;
+  var factor = ROOM_TYPE_COST_FACTOR[roomType] || 1;
+  return rate * factor * nights;
+}
+
 function updateCostPreview() {
   var unit = parseFloat(document.getElementById('cost_unit').value) || 0;
   var qty = parseFloat(document.getElementById('cost_qty').value) || 0;
@@ -6760,13 +6808,23 @@ function updateStaffPreview() {
   var flight = parseFloat(document.getElementById('staff_flight').value) || 0;
   var daily = parseFloat(document.getElementById('staff_daily').value) || 0;
   var days = parseFloat(document.getElementById('staff_days').value) || 0;
-  document.getElementById('staff_preview').textContent = eur(flight + daily * days);
+  var roomType = document.getElementById('staff_room_type').value;
+  var nights = parseFloat(document.getElementById('staff_nights').value) || 0;
+  var hotelCost = calcStaffHotelCost(roomType, nights);
+  var rate = getHotelNightlyRate(roomType);
+  var hotelPreviewEl = document.getElementById('staff_hotel_preview');
+  if (roomType && rate === null) {
+    hotelPreviewEl.innerHTML = '<span style="color:var(--amber)">⚠ kein Preis für "' + roomType + '" hinterlegt</span>';
+  } else {
+    hotelPreviewEl.textContent = eur(hotelCost);
+  }
+  document.getElementById('staff_preview').textContent = eur(flight + daily * days + hotelCost);
 }
 
 async function loadCosts() {
   if (!currentEventId) {
     document.getElementById('costItemsTable').innerHTML = '<tr><td colspan="8" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
-    document.getElementById('staffCostsTable').innerHTML = '<tr><td colspan="7" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
+    document.getElementById('staffCostsTable').innerHTML = '<tr><td colspan="9" class="empty">Bitte zuerst ein Event aktivieren</td></tr>';
     document.getElementById('costsBalanceSummary').innerHTML = '<div class="empty">Bitte zuerst ein Event aktivieren</div>';
     return;
   }
@@ -6829,17 +6887,23 @@ function renderCostItemsTable() {
   }).join('');
 }
 
+var TRAVEL_MODE_ICONS = { 'Flug': '✈️', 'Bahn': '🚆', 'Auto': '🚗' };
+
 function renderStaffCostsTable() {
   var tb = document.getElementById('staffCostsTable');
-  if (!staffCostsCache.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Noch kein Personal erfasst</td></tr>'; return; }
+  if (!staffCostsCache.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Noch kein Personal erfasst</td></tr>'; return; }
   tb.innerHTML = staffCostsCache.map(function(s) {
-    var total = (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0);
+    var hotelCost = parseFloat(s.hotel_cost) || 0;
+    var total = (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0) + hotelCost;
+    var roomInfo = s.room_type ? s.room_type + ' × ' + (s.nights||0) + ' Nächte' : '–';
     return '<tr>'
       + '<td><strong>'+s.name+'</strong></td>'
       + '<td>'+(s.role||'–')+'</td>'
-      + '<td>'+eur(s.flight_cost)+'</td>'
+      + '<td>'+(TRAVEL_MODE_ICONS[s.travel_mode]||'')+' '+eur(s.flight_cost)+'</td>'
       + '<td>'+eur(s.daily_allowance)+' × '+s.days+'</td>'
       + '<td>'+s.days+'</td>'
+      + '<td style="font-size:12px">'+roomInfo+'</td>'
+      + '<td>'+eur(hotelCost)+'</td>'
       + '<td><strong>'+eur(total)+'</strong></td>'
       + '<td><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteStaffCost(\''+s.id+'\')">Löschen</button></td>'
       + '</tr>';
@@ -6879,14 +6943,19 @@ async function deleteCostItem(id) {
 async function addStaffCost() {
   var name = document.getElementById('staff_name').value.trim();
   var role = document.getElementById('staff_role').value.trim();
+  var travelMode = document.getElementById('staff_travel_mode').value;
   var flight = parseFloat(document.getElementById('staff_flight').value) || 0;
   var daily = parseFloat(document.getElementById('staff_daily').value) || 0;
   var days = parseFloat(document.getElementById('staff_days').value) || 1;
+  var roomType = document.getElementById('staff_room_type').value;
+  var nights = parseFloat(document.getElementById('staff_nights').value) || 0;
+  var hotelCost = calcStaffHotelCost(roomType, nights);
   if (!name) { toast('Bitte einen Namen eingeben'); return; }
   if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
   var r = await db.from('event_staff_costs').insert({
     event_id: currentEventId, name: name, role: role || null,
-    flight_cost: flight, daily_allowance: daily, days: days
+    travel_mode: travelMode, flight_cost: flight, daily_allowance: daily, days: days,
+    room_type: roomType || null, nights: nights, hotel_cost: hotelCost
   });
   if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
   document.getElementById('staff_name').value = '';
@@ -6894,6 +6963,9 @@ async function addStaffCost() {
   document.getElementById('staff_flight').value = '';
   document.getElementById('staff_daily').value = '';
   document.getElementById('staff_days').value = '1';
+  document.getElementById('staff_room_type').value = '';
+  document.getElementById('staff_nights').value = '1';
+  document.getElementById('staff_hotel_preview').textContent = eur(0);
   document.getElementById('staff_preview').textContent = eur(0);
   var selEl = document.getElementById('staff_official_select'); if (selEl) selEl.value = '';
   toast('✅ Personalkosten hinzugefügt');
@@ -6915,7 +6987,7 @@ async function renderCostsBalance() {
     byCategory[c.category] = (byCategory[c.category]||0) + total;
   });
   var staffTotal = staffCostsCache.reduce(function(sum, s) {
-    return sum + (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0);
+    return sum + (parseFloat(s.flight_cost)||0) + (parseFloat(s.daily_allowance)||0) * (parseFloat(s.days)||0) + (parseFloat(s.hotel_cost)||0);
   }, 0);
   var itemsTotal = Object.keys(byCategory).reduce(function(sum, k){ return sum + byCategory[k]; }, 0);
   var grandTotal = itemsTotal + staffTotal;
