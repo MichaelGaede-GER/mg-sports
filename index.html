@@ -362,6 +362,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('persons')">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-i18n="nav_persons">Personendatenbank</span>
     </div>
+    <div class="nav-item" onclick="nav('nationalfeds')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span>🌍 Nationale Verbände</span>
+    </div>
     <div class="nav-item" onclick="nav('import')">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span data-i18n="nav_import">Import</span>
     </div>
@@ -610,7 +613,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <div class="form-group"><label>Gruppe / TP No.</label><input type="text" id="f_group_tp" placeholder="z.B. DE-001" /></div>
                 <div class="form-group"><label>Nachname *</label><input type="text" id="f_lastname" placeholder="Nachname" /></div>
                 <div class="form-group"><label>Vorname *</label><input type="text" id="f_firstname" placeholder="Vorname" /></div>
-                <div class="form-group"><label>Land *</label><select id="f_country" style="width:100%"><option value="">– Land wählen –</option>
+                <div class="form-group"><label>Land *</label><select id="f_country" style="width:100%" onchange="renderFederationLookup(this.value,'entryFederationLookup').catch(function(){})"><option value="">– Land wählen –</option>
 <option value="AFG">Afghanistan (AFG)</option>
 <option value="ALB">Albania (ALB)</option>
 <option value="ALG">Algeria (ALG)</option>
@@ -1258,6 +1261,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 <div class="card">
           <div class="card-header"><h3>National Federation</h3></div>
           <div class="card-body">
+            <div class="form-group" style="grid-column:1/-1;margin-bottom:16px">
+              <label>📋 Verband-Kontakte (automatisch anhand des Landes)</label>
+              <div id="entryFederationLookup" style="margin-top:8px;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2)">–</div>
+            </div>
             <div class="form-grid">
               <div class="form-group" style="grid-column:1/-1"><label>Nationaler Verband</label>
                 <input type="text" id="f_nf_federation" placeholder="z.B. Egyptian Squash Federation" />
@@ -1661,6 +1668,25 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <div class="table-wrap"><table>
               <thead><tr><th>Zeit</th><th>Physio</th><th>Ort</th><th>Grund</th><th>Dringlichkeit</th><th>Anfragender Teilnehmer</th><th>Aktion</th></tr></thead>
               <tbody id="physioHistoryTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NATIONALE VERBÄNDE -->
+      <div class="page" id="page-nationalfeds">
+        <div class="page-header"><h2>🌍 Nationale Verbände</h2>
+          <button class="btn primary" onclick="openNationalFedModal()">+ Verband hinzufügen</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin:-8px 0 16px">
+          Zentrale Kontakt-Datenbank pro Land: Büro, National Trainer und Präsident. Diese Kontakte werden
+          automatisch anhand der Nationalität bei Teilnehmern und in der Personendatenbank angezeigt.
+        </p>
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Land</th><th>Verband</th><th>Büro</th><th>National Trainer</th><th>Präsident</th><th>Aktion</th></tr></thead>
+              <tbody id="nationalFedsTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -2902,7 +2928,7 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         <div class="form-group"><label>Nachname *</label><input type="text" id="personLastname" placeholder="Nachname" /></div>
         <div class="form-group"><label>Vorname *</label><input type="text" id="personFirstname" placeholder="Vorname" /></div>
         <div class="form-group"><label>Land</label>
-          <select id="personCountry" style="width:100%"><option value="">– Land wählen –</option>
+          <select id="personCountry" style="width:100%" onchange="renderFederationLookup(this.value,'personFederationLookup').catch(function(){})"><option value="">– Land wählen –</option>
 <option value="AFG">Afghanistan (AFG)</option>
 <option value="ALB">Albania (ALB)</option>
 <option value="ALG">Algeria (ALG)</option>
@@ -3316,8 +3342,6 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         2. Profil öffnen → aktuelles Level ablesen<br>
         3. Rating eintragen → Person speichern
       </div>
-    </div>
-    
     </div><!-- /personTab-squash -->
 
     <!-- TAB: VISA -->
@@ -3354,6 +3378,10 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
 
     <div id="personTab-nationalfed" class="person-tab-content" style="display:none;background:var(--bg);min-height:200px">
       <div style="padding:16px 0">
+      <div class="form-group" style="margin-bottom:16px">
+        <label>📋 Verband-Kontakte (automatisch anhand des Landes)</label>
+        <div id="personFederationLookup" style="margin-top:8px;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2)">–</div>
+      </div>
       <div class="form-grid two" style="gap:12px">
         <div class="form-group" style="grid-column:1/-1">
           <label>Nationaler Verband</label>
@@ -5429,6 +5457,7 @@ function nav(page) {
   else if (page === 'refereepenaltystats') loadRefereePenaltyStats();
   else if (page === 'tournamentwithdrawals') loadTournamentWithdrawals();
   else if (page === 'physio') loadPhysioPage();
+  else if (page === 'nationalfeds') loadNationalFederationsPage();
   else if (page === 'refereepenalty') loadRefereePenalties();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
@@ -6026,6 +6055,7 @@ async function editEntry(id) {
   const mdEl = document.getElementById('f_meal_dinner'); if (mdEl) { mdEl.checked = p.meal_dinner === 'Ja'; toggleMealDays('dinner'); }
   if (p.meal_dinner_days) p.meal_dinner_days.split(',').forEach(d => { const el = document.getElementById('f_meal_dinner_'+d); if (el) el.checked = true; });
   renderMealCheckinInfo(p);
+  renderFederationLookup(p.country, 'entryFederationLookup').catch(function(){});
   const transpEl = document.getElementById('f_transport_booked'); if (transpEl) transpEl.checked = p.transport_booked === 'Ja';
   setTimeout(updateVisaFee, 100);
   setTimeout(updateMealFee, 150);
@@ -7092,6 +7122,129 @@ var PHYSIO_URGENCY_LEVELS = [
   { value: 'Dringend', label: '🟠 Dringend' },
   { value: 'Normal', label: '🟢 Kann kurz warten' }
 ];
+
+// ================= NATIONALE VERBÄNDE (zentrale Kontakt-Datenbank pro Land) =================
+var nationalFedsCache = [];
+
+async function loadNationalFederationsPage() {
+  var tb = document.getElementById('nationalFedsTable');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="6" class="loading">Lade…</td></tr>';
+  var r = await db.from('national_federations').select('*').order('country');
+  if (r.error) { tb.innerHTML = '<tr><td colspan="6" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
+  nationalFedsCache = r.data || [];
+  if (!nationalFedsCache.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Noch keine Verbände erfasst</td></tr>'; return; }
+  tb.innerHTML = nationalFedsCache.map(function(f) {
+    return '<tr>'
+      + '<td><strong>' + f.country + '</strong></td>'
+      + '<td>' + (f.federation_name || '–') + '</td>'
+      + '<td style="font-size:12px">' + (f.office_contact_name ? f.office_contact_name + '<br>' : '') + (f.office_mobile || '') + (f.office_email ? ' · ' + f.office_email : '') + '</td>'
+      + '<td style="font-size:12px">' + (f.trainer_name ? f.trainer_name + '<br>' : '') + (f.trainer_mobile || '') + (f.trainer_email ? ' · ' + f.trainer_email : '') + '</td>'
+      + '<td style="font-size:12px">' + (f.president_name ? f.president_name + '<br>' : '') + (f.president_mobile || '') + (f.president_email ? ' · ' + f.president_email : '') + '</td>'
+      + '<td style="display:flex;gap:6px">'
+      + '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="' + f.id + '" onclick="openNationalFedModal(this.dataset.id)">Bearbeiten</button>'
+      + '<button class="btn danger" style="font-size:11px;padding:3px 8px" data-id="' + f.id + '" onclick="deleteNationalFed(this.dataset.id)">Löschen</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function openNationalFedModal(id) {
+  var f = id ? nationalFedsCache.find(function(x) { return x.id === id; }) : null;
+  var sourceSelect = document.getElementById('f_country');
+  var countries = sourceSelect ? Array.from(sourceSelect.options).map(function(o){ return o.value; }).filter(Boolean) : [];
+  var countryOpts = '<option value="">– Land wählen –</option>' + countries.map(function(c) {
+    return '<option value="' + c + '"' + (f && f.country === c ? ' selected' : '') + '>' + c + '</option>';
+  }).join('');
+
+  var existing = document.getElementById('nationalFedModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'nationalFedModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:520px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">🌍 ' + (f ? 'Verband bearbeiten' : 'Verband hinzufügen') + '</h3>'
+    + '<input type="hidden" id="nf_edit_id" value="' + (f ? f.id : '') + '" />'
+    + '<div class="form-grid" style="gap:10px">'
+    + '<div class="form-group" style="grid-column:1/-1"><label>Land</label><select id="nf_country">' + countryOpts + '</select></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label>Name des Verbands</label><input type="text" id="nf_name" placeholder="z.B. Egyptian Squash Federation" value="' + (f && f.federation_name || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label style="color:var(--blue);font-weight:600">Büro</label></div>'
+    + '<div class="form-group"><label>Ansprechpartner</label><input type="text" id="nf_office_name" value="' + (f && f.office_contact_name || '') + '" /></div>'
+    + '<div class="form-group"><label>Mobil</label><input type="text" id="nf_office_mobile" value="' + (f && f.office_mobile || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label>E-Mail</label><input type="email" id="nf_office_email" value="' + (f && f.office_email || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label style="color:var(--blue);font-weight:600">National Trainer</label></div>'
+    + '<div class="form-group"><label>Name</label><input type="text" id="nf_trainer_name" value="' + (f && f.trainer_name || '') + '" /></div>'
+    + '<div class="form-group"><label>Mobil</label><input type="text" id="nf_trainer_mobile" value="' + (f && f.trainer_mobile || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label>E-Mail</label><input type="email" id="nf_trainer_email" value="' + (f && f.trainer_email || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label style="color:var(--blue);font-weight:600">Präsident</label></div>'
+    + '<div class="form-group"><label>Name</label><input type="text" id="nf_president_name" value="' + (f && f.president_name || '') + '" /></div>'
+    + '<div class="form-group"><label>Mobil</label><input type="text" id="nf_president_mobile" value="' + (f && f.president_mobile || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label>E-Mail</label><input type="email" id="nf_president_email" value="' + (f && f.president_email || '') + '" /></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:16px">'
+    + '<button class="btn primary" style="flex:1" onclick="saveNationalFed()">Speichern</button>'
+    + '<button class="btn" style="flex:1" onclick="document.getElementById(\'nationalFedModal\').remove()">Abbrechen</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function saveNationalFed() {
+  var id = document.getElementById('nf_edit_id').value;
+  var country = document.getElementById('nf_country').value;
+  if (!country) { toast('Bitte ein Land wählen'); return; }
+  var row = {
+    country: country,
+    federation_name: document.getElementById('nf_name').value.trim() || null,
+    office_contact_name: document.getElementById('nf_office_name').value.trim() || null,
+    office_mobile: document.getElementById('nf_office_mobile').value.trim() || null,
+    office_email: document.getElementById('nf_office_email').value.trim() || null,
+    trainer_name: document.getElementById('nf_trainer_name').value.trim() || null,
+    trainer_mobile: document.getElementById('nf_trainer_mobile').value.trim() || null,
+    trainer_email: document.getElementById('nf_trainer_email').value.trim() || null,
+    president_name: document.getElementById('nf_president_name').value.trim() || null,
+    president_mobile: document.getElementById('nf_president_mobile').value.trim() || null,
+    president_email: document.getElementById('nf_president_email').value.trim() || null
+  };
+  var r = id ? await db.from('national_federations').update(row).eq('id', id)
+             : await db.from('national_federations').upsert(row, { onConflict: 'country' });
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ Gespeichert');
+  var m = document.getElementById('nationalFedModal'); if (m) m.remove();
+  loadNationalFederationsPage();
+}
+
+async function deleteNationalFed(id) {
+  if (!confirm('Diesen Verband wirklich löschen?')) return;
+  await db.from('national_federations').delete().eq('id', id);
+  toast('Gelöscht');
+  loadNationalFederationsPage();
+}
+
+// Zeigt die Verbandskontakte automatisch anhand des Landes an (read-only Info-Box),
+// aufgerufen im Teilnehmer-Formular (National Federation Tab) und in der Personendatenbank.
+async function renderFederationLookup(country, containerId) {
+  var box = document.getElementById(containerId);
+  if (!box) return;
+  if (!country) { box.innerHTML = '<span style="color:var(--text3);font-size:12px">Kein Land ausgewählt</span>'; return; }
+  var r = await db.from('national_federations').select('*').eq('country', country).maybeSingle();
+  var f = r.data;
+  if (!f) {
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px">Für "' + country + '" noch kein Verband hinterlegt — <a href="#" onclick="nav(\'nationalfeds\');return false;" style="color:var(--blue)">jetzt anlegen</a></span>';
+    return;
+  }
+  function row(label, name, mobile, email) {
+    if (!name && !mobile && !email) return '';
+    return '<div style="margin-bottom:6px"><strong>' + label + ':</strong> ' + (name || '–') + (mobile ? ' · 📱 ' + mobile : '') + (email ? ' · ✉️ ' + email : '') + '</div>';
+  }
+  box.innerHTML = '<div style="font-size:12px;line-height:1.5">'
+    + (f.federation_name ? '<div style="font-weight:600;margin-bottom:6px">' + f.federation_name + '</div>' : '')
+    + row('Büro', f.office_contact_name, f.office_mobile, f.office_email)
+    + row('Trainer', f.trainer_name, f.trainer_mobile, f.trainer_email)
+    + row('Präsident', f.president_name, f.president_mobile, f.president_email)
+    + '<a href="#" onclick="nav(\'nationalfeds\');return false;" style="color:var(--blue);font-size:11px">✏️ Verband-Datenbank bearbeiten</a>'
+    + '</div>';
+}
 
 async function loadPhysioPage() {
   await loadPhysioConfig();
@@ -9923,6 +10076,7 @@ async function openPersonModal(person) {
   var pSel2=document.getElementById('personCountry');
   if(pSel2&&pSel2.options.length<=1){var fSel2=document.getElementById('f_country');if(fSel2)Array.from(fSel2.options).forEach(function(o){if(o.value){var no=document.createElement('option');no.value=o.value;no.textContent=o.textContent;pSel2.appendChild(no);}});}
   if(document.getElementById('personCountry')) document.getElementById('personCountry').value=person&&person.country||'';
+  renderFederationLookup(person&&person.country||'', 'personFederationLookup').catch(function(){});
   if(document.getElementById('personGender')) {
     var pg = person&&person.gender||'';
     if (pg === 'Maennlich') pg = 'Männlich';
@@ -15405,7 +15559,7 @@ var rolePermissions = {};
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
-  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats','tournamentwithdrawals','physio'];
+  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats','tournamentwithdrawals','physio','nationalfeds'];
 
 async function loadRolePermissions() {
   // Load permissions from DB
