@@ -1659,8 +1659,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="card-header"><h3>📋 Anfragen-Historie</h3></div>
           <div class="card-body" style="padding:0">
             <div class="table-wrap"><table>
-              <thead><tr><th>Zeit</th><th>Physio</th><th>Ort</th><th>Grund</th><th>Dringlichkeit</th><th>Anfragender Teilnehmer</th></tr></thead>
-              <tbody id="physioHistoryTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
+              <thead><tr><th>Zeit</th><th>Physio</th><th>Ort</th><th>Grund</th><th>Dringlichkeit</th><th>Anfragender Teilnehmer</th><th>Aktion</th></tr></thead>
+              <tbody id="physioHistoryTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -7123,9 +7123,9 @@ async function loadPhysioHistory() {
   var q = db.from('physio_requests').select('*').order('sent_at', { ascending: false }).limit(50);
   if (currentEventId) q = q.eq('event_id', currentEventId);
   var r = await q;
-  if (r.error) { tb.innerHTML = '<tr><td colspan="6" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
+  if (r.error) { tb.innerHTML = '<tr><td colspan="7" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
   var rows = r.data || [];
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Noch keine Anfragen gesendet</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Noch keine Anfragen gesendet</td></tr>'; return; }
   var urgencyLabels = {}; PHYSIO_URGENCY_LEVELS.forEach(function(u){ urgencyLabels[u.value] = u.label; });
   tb.innerHTML = rows.map(function(row) {
     return '<tr>'
@@ -7135,8 +7135,17 @@ async function loadPhysioHistory() {
       + '<td>' + (row.reason || '–') + '</td>'
       + '<td>' + (urgencyLabels[row.urgency] || row.urgency || '–') + '</td>'
       + '<td>' + (row.requesting_participant_name || '–') + '</td>'
+      + '<td><button class="btn danger" style="font-size:11px;padding:3px 8px" data-id="' + row.id + '" onclick="deletePhysioRequest(this.dataset.id)">Löschen</button></td>'
       + '</tr>';
   }).join('');
+}
+
+async function deletePhysioRequest(id) {
+  if (!confirm('Diesen Anfrage-Eintrag wirklich löschen?')) return;
+  var r = await db.from('physio_requests').delete().eq('id', id);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('Gelöscht');
+  loadPhysioHistory();
 }
 
 async function openPhysioRequestModal(physioId) {
