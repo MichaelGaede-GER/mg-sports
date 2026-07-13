@@ -396,7 +396,28 @@ async function init() {
   }
 
   // QR code (encodes the ESID, scanned the same way as the printed pass)
-  var qrData = encodeURIComponent(p.member_id || p.id);
+  // QR code (encodes a random, non-guessable per-person token instead of the ESID, which
+  // follows a predictable pattern and could otherwise be faked by someone else)
+  var qrToken = p.qr_token;
+  if (!qrToken) {
+    // Diese Person hat noch keinen sicheren Token — jetzt einen erzeugen und speichern,
+    // damit ab sofort nicht mehr die erratbare ESID im QR-Code landet.
+    try {
+      var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*-_';
+      var bytes = new Uint8Array(18);
+      (window.crypto || window.msCrypto).getRandomValues(bytes);
+      qrToken = '';
+      for (var qi = 0; qi < bytes.length; qi++) qrToken += chars[bytes[qi] % chars.length];
+      await db.from('participants').update({ qr_token: qrToken }).eq('id', p.id);
+      if (p.member_id) {
+        var personR = await db.from('persons').select('id,qr_token').eq('member_id', p.member_id).maybeSingle();
+        if (personR.data && !personR.data.qr_token) {
+          await db.from('persons').update({ qr_token: qrToken }).eq('id', personR.data.id);
+        }
+      }
+    } catch (e) { qrToken = p.member_id || p.id; }
+  }
+  var qrData = encodeURIComponent(qrToken);
   document.getElementById('qrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=' + qrData;
 
   // Meal times (breakfast/lunch/dinner location & hours, set by the organizer)
