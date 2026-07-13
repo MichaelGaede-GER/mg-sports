@@ -1547,6 +1547,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <select id="staff_official_select" style="margin-top:4px;width:230px" onchange="applyOfficialSelection()">
                   <option value="">– manuell eingeben –</option>
                 </select>
+                <span id="staff_official_progress" style="font-size:11px;color:var(--text3);margin-top:4px;display:block"></span>
               </div>
               <div class="form-group" style="margin:0">
                 <label style="font-size:12px">Name</label>
@@ -6870,11 +6871,11 @@ async function loadCosts() {
     return;
   }
   updateCostLabelSuggestions();
-  await loadOfficialsForStaffCosts();
   var r1 = await db.from('event_costs').select('*').eq('event_id', currentEventId).order('category').order('created_at');
   costItemsCache = r1.data || [];
   var r2 = await db.from('event_staff_costs').select('*').eq('event_id', currentEventId).order('created_at');
   staffCostsCache = r2.data || [];
+  await loadOfficialsForStaffCosts();
   renderCostItemsTable();
   renderStaffCostsTable();
   await renderCostsBalance();
@@ -6892,9 +6893,22 @@ async function loadOfficialsForStaffCosts() {
   var r = await db.from('participants').select('id,firstname,lastname,country,role,events')
     .eq('event_id', currentEventId).ilike('events', 'OFFICIAL').neq('withdraw','Ja').order('lastname');
   officialsForStaffCache = r.data || [];
+  // Bereits erfasste Personen markieren, damit man auf einen Blick sieht, wer schon eine
+  // Kostenposition hat und wer noch fehlt (Abgleich über Name, da event_staff_costs keine
+  // feste Verknüpfung zur participant_id hat).
+  var recordedNames = {};
+  (staffCostsCache || []).forEach(function(s) { recordedNames[(s.name || '').trim().toLowerCase()] = true; });
   sel.innerHTML = '<option value="">– manuell eingeben –</option>' + officialsForStaffCache.map(function(p) {
-    return '<option value="'+p.id+'">'+p.lastname+', '+p.firstname+(p.country?' ('+p.country+')':'')+(p.role?' – '+p.role:'')+'</option>';
+    var fullName = p.lastname + ', ' + p.firstname;
+    var isRecorded = recordedNames[fullName.trim().toLowerCase()];
+    var prefix = isRecorded ? '✅ ' : '◻️ ';
+    return '<option value="'+p.id+'">'+prefix+fullName+(p.country?' ('+p.country+')':'')+(p.role?' – '+p.role:'')+(isRecorded?' — bereits erfasst':'')+'</option>';
   }).join('');
+  var progressEl = document.getElementById('staff_official_progress');
+  if (progressEl) {
+    var recordedCount = officialsForStaffCache.filter(function(p) { return recordedNames[(p.lastname+', '+p.firstname).trim().toLowerCase()]; }).length;
+    progressEl.textContent = '✅ ' + recordedCount + ' von ' + officialsForStaffCache.length + ' bereits erfasst';
+  }
 }
 
 function applyOfficialSelection() {
