@@ -2419,7 +2419,22 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <!-- EINSTELLUNGEN -->
       <div class="page" id="page-settings">
         <div class="page-header"><h2>Einstellungen</h2></div>
+
+        <div style="margin:4px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>🏨 Hotel</span><div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
         <div class="card">
+          <div class="card-header"><h3>Hotel-Verwaltung</h3>
+            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openHotelModal()">+ Hotel hinzufügen</button>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Hotelname</th><th>Ansprechpartner</th><th>E-Mail</th><th>Telefon</th><th>Adresse</th><th>Notiz</th><th></th></tr></thead>
+            <tbody id="hotelsSettingsTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
+          </table></div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
           <div class="card-header"><h3>Zimmerkontingent Hotel</h3></div>
           <div class="card-body">
             <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Trage hier die verfügbaren Zimmeranzahlen ein. Das Dashboard zeigt dann die aktuelle Belegung und warnt wenn Zimmer voll sind.</p>
@@ -2442,7 +2457,27 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <div id="autoRoomInfo" style="display:none;margin-top:10px;padding:10px 14px;background:var(--green-bg);border:1px solid var(--green);border-radius:6px;font-size:12px;color:var(--green)"></div>
           </div>
         </div>
+
         <div class="card" style="margin-top:16px">
+          <div class="card-header"><h3>Hotel-Zimmer verwalten</h3>
+            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openRoomModal(null)">+ Zimmer hinzufügen</button>
+            <select id="hotelFilterForRooms" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);margin-left:8px" onchange="loadRoomsSettings()">
+              <option value="">Alle Hotels</option>
+            </select>
+          </div>
+          <div class="card-body">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Hotel</th><th>Zimmer-Nr.</th><th>Kategorie</th><th>Belegung</th><th>Notiz</th><th>Aktionen</th></tr></thead>
+              <tbody id="roomsSettingsTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>🍽️ Essen</span><div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
+        <div class="card">
           <div class="card-header"><h3>Essenszeiten / Meal Times</h3></div>
           <div class="card-body">
             <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Ort und Uhrzeiten für die Mahlzeiten. Diese Angaben erscheinen z.B. im digitalen Pass der Teilnehmer.</p>
@@ -2476,6 +2511,24 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
         <div class="card" style="margin-top:16px">
           <div class="card-header">
+            <h3>Meal Package Optionen</h3>
+            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openMealOptionModal(null)">+ Option hinzufügen</button>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Diese Optionen erscheinen im Erfassungsformular unter „Meal Package" als Dropdown.</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Bezeichnung</th><th>Preis (€)</th><th>Aktionen</th></tr></thead>
+              <tbody id="mealOptionsTable"><tr><td colspan="3" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>🏆 Events</span><div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
             <h3>Altersklassen / Events</h3>
             <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="addAgeClass()">+ Altersklasse hinzufügen</button>
           </div>
@@ -2489,21 +2542,11 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           </div>
         </div>
 
-        <div class="card" style="margin-top:16px">
-          <div class="card-header">
-            <h3>Meal Package Optionen</h3>
-            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openMealOptionModal(null)">+ Option hinzufügen</button>
-          </div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Diese Optionen erscheinen im Erfassungsformular unter „Meal Package" als Dropdown.</p>
-            <div class="table-wrap"><table>
-              <thead><tr><th>Bezeichnung</th><th>Preis (€)</th><th>Aktionen</th></tr></thead>
-              <tbody id="mealOptionsTable"><tr><td colspan="3" class="loading">Lade…</td></tr></tbody>
-            </table></div>
-          </div>
+        <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>📋 Policy</span><div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
 
-        <div class="card" style="margin-top:16px">
+        <div class="card">
           <div class="card-header">
             <h3>Withdrawal Policy</h3>
           </div>
@@ -2530,31 +2573,6 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             </div>
             <div id="wp_preview" style="background:var(--bg2);border-radius:var(--radius);padding:12px 14px"></div>
           </div>
-        </div>
-
-        <div class="card" style="margin-top:16px">
-          <div class="card-header"><h3>Hotel-Zimmer verwalten</h3>
-            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openRoomModal(null)">+ Zimmer hinzufügen</button>
-            <select id="hotelFilterForRooms" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);margin-left:8px" onchange="loadRoomsSettings()">
-              <option value="">Alle Hotels</option>
-            </select>
-          </div>
-          <div class="card-body">
-            <div class="table-wrap"><table>
-              <thead><tr><th>Hotel</th><th>Zimmer-Nr.</th><th>Kategorie</th><th>Belegung</th><th>Notiz</th><th>Aktionen</th></tr></thead>
-              <tbody id="roomsSettingsTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
-            </table></div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:16px">
-          <div class="card-header"><h3>Hotel-Verwaltung</h3>
-            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openHotelModal()">+ Hotel hinzufügen</button>
-          </div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>Hotelname</th><th>Ansprechpartner</th><th>E-Mail</th><th>Telefon</th><th>Adresse</th><th>Notiz</th><th></th></tr></thead>
-            <tbody id="hotelsSettingsTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
-          </table></div>
         </div>
 
         <div class="card" style="margin-top:16px">
@@ -2590,7 +2608,11 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           </div>
         </div>
 
-        <div class="card" style="margin-top:16px">
+        <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>🎗️ Sponsoren</span><div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
+        <div class="card">
           <div class="card-header"><h3>Sponsor-Logos (Eventpass)</h3></div>
           <div class="card-body">
             <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Diese 4 Logos erscheinen unten auf dem Eventpass. Klicke auf ein Logo um es zu ändern.</p>
@@ -2631,20 +2653,11 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           </div>
         </div>
 
-        <div class="card" style="margin-top:16px;border-color:var(--red)">
-          <div class="card-header" style="border-color:var(--red)">
-            <h3 style="color:var(--red)">⚠ Gefahrenzone</h3>
-          </div>
-          <div class="card-body">
-            <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Diese Aktionen können nicht rückgängig gemacht werden. Bitte vorher ein Backup erstellen!</p>
-            <div style="display:flex;gap:12px;flex-wrap:wrap">
-              <button class="btn danger" onclick="deleteAllParticipants()">🗑 Alle Teilnehmer löschen</button>
-              <button class="btn danger" onclick="deleteAllData()">🗑 ALLE Daten löschen (Teilnehmer + Log)</button>
-            </div>
-          </div>
+        <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>💶 Meldegebühr</span><div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
 
-        <div class="card" style="margin-top:16px">
+        <div class="card">
           <div class="card-header"><h3>Meldegebühr & VISA</h3></div>
           <div class="card-body">
             <div class="form-grid" style="max-width:500px">
@@ -2669,6 +2682,23 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
             </p>
             <div id="roleAccessGrid" style="overflow-x:auto">
               <p style="color:var(--text3);font-size:13px">Lade Rollen…</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>⚠ Gefahrenzone</span><div style="flex:1;height:1px;background:var(--red)"></div>
+        </div>
+
+        <div class="card" style="border-color:var(--red)">
+          <div class="card-header" style="border-color:var(--red)">
+            <h3 style="color:var(--red)">⚠ Gefahrenzone</h3>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Diese Aktionen können nicht rückgängig gemacht werden. Bitte vorher ein Backup erstellen!</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <button class="btn danger" onclick="deleteAllParticipants()">🗑 Alle Teilnehmer löschen</button>
+              <button class="btn danger" onclick="deleteAllData()">🗑 ALLE Daten löschen (Teilnehmer + Log)</button>
             </div>
           </div>
         </div>
