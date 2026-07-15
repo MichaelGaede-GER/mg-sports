@@ -6844,6 +6844,7 @@ async function loadHotel() {
   const selectedHotel = hotelSel ? hotelSel.value : '';
   const filter = document.getElementById('hotelFilter') ? document.getElementById('hotelFilter').value : '';
   let q = db.from('participants').select('*').not('checkin', 'is', null).order(hotelSortField, {ascending: hotelSortDir === 'asc'});
+  if (currentEventId) q = q.eq('event_id', currentEventId);
   if (filter) q = q.eq('room_type', filter);
   const { data } = await q;
   const all = data || [];
