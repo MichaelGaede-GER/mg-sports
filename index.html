@@ -6236,6 +6236,14 @@ async function saveEntry() {
   var isWithdrawnSave = document.getElementById('f_withdraw')?.checked;
   var withdrawDateValSave = v('withdraw_date');
   var computedPaymentStatus = ['U','T'].includes(v('package')) ? 'Kostenlos' : v('payment_status');
+  // Teilnehmer im Event "OFFICIAL" (Alterskategorie-Feld) sind kostenlos gemeldet — Zahlungsstatus
+  // wird automatisch auf "Kostenlos" gesetzt, und falls noch kein Zahlungsdatum eingetragen ist,
+  // wird das heutige Datum (Datum des Eintrags) automatisch übernommen.
+  var computedPaymentDate = v('payment_date') || null;
+  if (v('events') === 'OFFICIAL') {
+    computedPaymentStatus = 'Kostenlos';
+    if (!computedPaymentDate) computedPaymentDate = new Date().toISOString().slice(0,10);
+  }
   if (isWithdrawnSave && withdrawDateValSave) {
     var wdStatus = computeWithdrawPaymentStatus(new Date(withdrawDateValSave), n('amount_received'));
     if (wdStatus) computedPaymentStatus = wdStatus;
@@ -6254,7 +6262,7 @@ async function saveEntry() {
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
     shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'),
     payment_status: computedPaymentStatus, amount_received: n('amount_received'),
-    payment_date: v('payment_date')||null, total: n('total'),
+    payment_date: computedPaymentDate, total: n('total'),
     payment_link: v('payment_link'), penalty: n('penalty'),
     visa: v('visa'), express: document.getElementById('f_express').checked ? 'Ja' : 'Nein', mahnung: v('mahnung'), mahnung_date: v('mahnung_date')||null, memo: v('memo'),
     checkin: v('checkin')||null, checkout: v('checkout')||null,
