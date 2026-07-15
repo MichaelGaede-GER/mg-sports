@@ -1310,8 +1310,14 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
       <div class="page" id="page-packages">
         <div class="page-header"><h2>Package-Verwaltung</h2>
+          <button class="btn" onclick="openLoadTemplateModal()">📥 Aus Vorlage laden</button>
+          <button class="btn" onclick="openPackageTemplatesModal()">📦 Vorlagen verwalten</button>
           <button class="btn primary" onclick="openPackageModal()">+ Neues Package</button>
         </div>
+        <p style="font-size:13px;color:var(--text2);margin:-8px 0 16px">
+          Packages gelten nur für das aktuell aktive Event — Änderungen wirken sich nicht auf andere Events aus.
+          Über "Aus Vorlage laden" kannst du ein zuvor gespeichertes Package-Muster in dieses Event übernehmen.
+        </p>
         <div class="card">
           <div class="table-wrap"><table>
             <thead><tr><th>Code</th><th>Kürzel</th><th>Kategorie</th><th>Nächte</th><th>Zimmer</th><th>Mahlzeiten</th><th>Meal inkl.</th><th>Transfer inkl.</th><th>Startgeld</th><th>Preis (€)</th><th></th></tr></thead>
@@ -5857,7 +5863,12 @@ async function loadParticipants() {
 
 // ENTRY FORM
 async function loadPackagesData() {
-  const { data } = await db.from('packages').select('*').order('code');
+  // Packages gelten pro Event. Bereits bestehende Packages ohne event_id (aus der Zeit vor
+  // dieser Umstellung) werden zusätzlich mitgeladen, damit nichts plötzlich verschwindet —
+  // sie sollten aber über "Aus Vorlage laden" bzw. manuelles Neuanlegen einem Event zugeordnet werden.
+  var q = db.from('packages').select('*').order('code');
+  if (currentEventId) q = q.or('event_id.eq.' + currentEventId + ',event_id.is.null');
+  const { data } = await q;
   packagesData = data || [];
 }
 
@@ -6385,9 +6396,107 @@ async function loadPackages() {
       <td style="display:flex;gap:6px">
         <button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPackage('${p.id}')">Bearbeiten</button>
         <button class="btn" style="font-size:11px;padding:3px 8px" title="Mahlzeiten-Vorlage auf alle Teilnehmer mit diesem Package anwenden" onclick="bulkApplyPackageMealDays('${p.code}')">🍽 Vorlage anwenden</button>
+        <button class="btn" style="font-size:11px;padding:3px 8px" title="Als wiederverwendbare Vorlage für andere Events speichern" onclick="saveAsTemplate('${p.id}')">💾 Als Vorlage</button>
         <button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePackage('${p.id}')">Löschen</button>
       </td>
     </tr>`).join('') : '<tr><td colspan="12" class="empty">Keine Packages gefunden. SQL-Setup ausführen.</td></tr>';
+}
+
+// ================= PACKAGE-VORLAGEN (global, event-unabhängig) =================
+// Eine Bibliothek wiederverwendbarer Package-Muster. Packages selbst gelten pro Event;
+// über diese Vorlagen kann ein zuvor gespeichertes Muster mit einem Klick in ein neues
+// (oder bestehendes) Event kopiert werden, ohne andere Events zu beeinflussen.
+var packageTemplatesCache = [];
+
+async function loadPackageTemplates() {
+  var r = await db.from('package_templates').select('*').order('code');
+  packageTemplatesCache = r.data || [];
+  return packageTemplatesCache;
+}
+
+async function saveAsTemplate(packageId) {
+  var p = packagesData.find(function(x) { return x.id === packageId; });
+  if (!p) { toast('Package nicht gefunden'); return; }
+  var row = {
+    code: p.code, short_code: p.short_code, category: p.category, nights: p.nights,
+    room_type: p.room_type, meals: p.meals, pkg_breakfast_days: p.pkg_breakfast_days,
+    pkg_lunch_days: p.pkg_lunch_days, pkg_dinner_days: p.pkg_dinner_days,
+    transport: p.transport, meal_included: p.meal_included, entry_included: p.entry_included, price: p.price
+  };
+  var r = await db.from('package_templates').insert(row);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ "' + p.code + '" als Vorlage gespeichert');
+}
+
+async function openLoadTemplateModal() {
+  await loadPackageTemplates();
+  var existing = document.getElementById('loadTemplateModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'loadTemplateModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  var rows = packageTemplatesCache.length ? packageTemplatesCache.map(function(t) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1"><strong>' + t.code + '</strong> <span style="font-size:12px;color:var(--text3)">' + (t.category||'') + ' · ' + (t.nights||0) + ' Nächte · ' + fmt(t.price) + '</span></div>'
+      + '<button class="btn primary" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="loadTemplateIntoEvent(this.dataset.id)">Laden</button>'
+      + '<button class="btn danger" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="deletePackageTemplate(this.dataset.id)">Löschen</button>'
+      + '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--text3)">Noch keine Vorlagen gespeichert. Speichere ein bestehendes Package über "💾 Als Vorlage".</p>';
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:480px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">📥 Aus Vorlage laden</h3>'
+    + rows
+    + '<button class="btn" style="width:100%;margin-top:16px" onclick="document.getElementById(\'loadTemplateModal\').remove()">Schließen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function loadTemplateIntoEvent(templateId) {
+  if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
+  var t = packageTemplatesCache.find(function(x) { return x.id === templateId; });
+  if (!t) return;
+  var existingCode = packagesData.find(function(p) { return p.code === t.code; });
+  if (existingCode && !confirm('Es existiert bereits ein Package mit Code "' + t.code + '" in diesem Event. Trotzdem als neues Package hinzufügen?')) return;
+  var row = {
+    event_id: currentEventId,
+    code: t.code, short_code: t.short_code, category: t.category, nights: t.nights,
+    room_type: t.room_type, meals: t.meals, pkg_breakfast_days: t.pkg_breakfast_days,
+    pkg_lunch_days: t.pkg_lunch_days, pkg_dinner_days: t.pkg_dinner_days,
+    transport: t.transport, meal_included: t.meal_included, entry_included: t.entry_included, price: t.price
+  };
+  var r = await db.from('packages').insert(row);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ "' + t.code + '" in dieses Event geladen');
+  var m = document.getElementById('loadTemplateModal'); if (m) m.remove();
+  loadPackages();
+}
+
+async function deletePackageTemplate(id) {
+  if (!confirm('Diese Vorlage wirklich löschen?')) return;
+  await db.from('package_templates').delete().eq('id', id);
+  toast('Vorlage gelöscht');
+  openLoadTemplateModal();
+}
+
+async function openPackageTemplatesModal() {
+  await loadPackageTemplates();
+  var existing = document.getElementById('manageTemplatesModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'manageTemplatesModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  var rows = packageTemplatesCache.length ? packageTemplatesCache.map(function(t) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1"><strong>' + t.code + '</strong> <span style="font-size:12px;color:var(--text3)">' + (t.category||'') + ' · ' + (t.nights||0) + ' Nächte · ' + fmt(t.price) + '</span></div>'
+      + '<button class="btn danger" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="deletePackageTemplate(this.dataset.id); document.getElementById(\'manageTemplatesModal\').remove();">Löschen</button>'
+      + '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--text3)">Noch keine Vorlagen. Nutze bei einem bestehenden Package den Button "💾 Als Vorlage", um es hier hinzuzufügen.</p>';
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:480px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:4px;font-size:15px;color:var(--text)">📦 Package-Vorlagen verwalten</h3>'
+    + '<p style="font-size:12px;color:var(--text3);margin-bottom:14px">Diese Vorlagen sind event-unabhängig und stehen für alle Events zur Auswahl unter "Aus Vorlage laden" bereit.</p>'
+    + rows
+    + '<button class="btn" style="width:100%;margin-top:16px" onclick="document.getElementById(\'manageTemplatesModal\').remove()">Schließen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
 }
 
 function highlightPkgCheckbox(labelId, cbId) {
@@ -6483,7 +6592,7 @@ async function savePackage() {
   };
   let error;
   if (id) { ({ error } = await db.from('packages').update(row).eq('id', id)); }
-  else { ({ error } = await db.from('packages').insert(row)); }
+  else { ({ error } = await db.from('packages').insert(Object.assign({event_id: currentEventId || null}, row))); }
   if (error) { toast('Fehler: ' + error.message); return; }
   closeModal('packageModal'); toast('Package gespeichert'); loadPackages();
 }
