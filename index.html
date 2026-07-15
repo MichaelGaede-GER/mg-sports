@@ -5921,11 +5921,10 @@ function calcTotal() {
 }
 
 function updateRoleFields() {
-  const role = document.getElementById('f_role').value;
-  const exemptEvents = ['Coach/Parent','Referee','Officials','Team'];
-  const events = document.getElementById('f_events').value;
-  if (['Turnierstab','ESF Repräsentant','Director','DSQV'].includes(role) || exemptEvents.includes(events)) ef.value = 0;
-  else ef.value = entryFee;
+  // Hinweis: das frühere Eingabefeld f_entry_fee wurde entfernt; die dazugehörige
+  // Zuweisung ("ef.value = ...") referenzierte eine nicht mehr existierende Variable
+  // und warf bei jedem Rollenwechsel einen Fehler, der die Ausführung danach abbrach
+  // (u.a. wurde dadurch z.B. beim Übernehmen einer Person das Land nie gesetzt).
   calcTotal();
 }
 
