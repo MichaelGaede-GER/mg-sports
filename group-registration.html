@@ -686,7 +686,7 @@ async function init() {
 }
 
 async function loadPackages() {
-  var r = await db.from('packages').select('*').order('code');
+  var r = await db.from('packages').select('*').order('sort_order').order('code');
   packagesCache = r.data || [];
 }
 

@@ -1320,8 +1320,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         </p>
         <div class="card">
           <div class="table-wrap"><table>
-            <thead><tr><th>Code</th><th>Kürzel</th><th>Kategorie</th><th>Nächte</th><th>Zimmer</th><th>Mahlzeiten</th><th>Meal inkl.</th><th>Transfer inkl.</th><th>Startgeld</th><th>Preis (€)</th><th></th></tr></thead>
-            <tbody id="packagesTable"><tr><td colspan="12" class="loading">Lade…</td></tr></tbody>
+            <thead><tr><th>Reihenfolge</th><th>Code</th><th>Kürzel</th><th>Kategorie</th><th>Nächte</th><th>Zimmer</th><th>Mahlzeiten</th><th>Meal inkl.</th><th>Transfer inkl.</th><th>Startgeld</th><th>Preis (€)</th><th></th></tr></thead>
+            <tbody id="packagesTable"><tr><td colspan="13" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
       </div>
@@ -5866,7 +5866,7 @@ async function loadPackagesData() {
   // Packages gelten pro Event. Bereits bestehende Packages ohne event_id (aus der Zeit vor
   // dieser Umstellung) werden zusätzlich mitgeladen, damit nichts plötzlich verschwindet —
   // sie sollten aber über "Aus Vorlage laden" bzw. manuelles Neuanlegen einem Event zugeordnet werden.
-  var q = db.from('packages').select('*').order('code');
+  var q = db.from('packages').select('*').order('sort_order').order('code');
   if (currentEventId) q = q.or('event_id.eq.' + currentEventId + ',event_id.is.null');
   const { data } = await q;
   packagesData = data || [];
@@ -6382,8 +6382,12 @@ function formatPackageMealsDisplay(p) {
 async function loadPackages() {
   await loadPackagesData();
   populatePackageSelect();
-  document.getElementById('packagesTable').innerHTML = packagesData.length ? packagesData.map(p => `
+  document.getElementById('packagesTable').innerHTML = packagesData.length ? packagesData.map((p, idx) => `
     <tr>
+      <td style="display:flex;gap:4px;align-items:center">
+        <button class="btn" style="font-size:11px;padding:2px 7px" ${idx===0?'disabled':''} title="Nach oben" onclick="movePackageOrder('${p.id}',-1)">▲</button>
+        <button class="btn" style="font-size:11px;padding:2px 7px" ${idx===packagesData.length-1?'disabled':''} title="Nach unten" onclick="movePackageOrder('${p.id}',1)">▼</button>
+      </td>
       <td><span class="badge">${p.code}</span></td>
       <td>${p.short_code||'–'}</td>
       <td>${p.category||'–'}</td><td>${p.nights||'–'}</td>
@@ -6398,7 +6402,29 @@ async function loadPackages() {
         <button class="btn" style="font-size:11px;padding:3px 8px" title="Als wiederverwendbare Vorlage für andere Events speichern" onclick="saveAsTemplate('${p.id}')">💾 Als Vorlage</button>
         <button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePackage('${p.id}')">Löschen</button>
       </td>
-    </tr>`).join('') : '<tr><td colspan="12" class="empty">Keine Packages gefunden. SQL-Setup ausführen.</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="13" class="empty">Keine Packages gefunden. SQL-Setup ausführen.</td></tr>';
+}
+
+// Vertauscht die Sortier-Position (sort_order) zweier benachbarter Packages und speichert
+// beide neuen Werte, damit die Reihenfolge auch im öffentlichen Registrierungsformular
+// (Dropdown-Auswahl) genau so erscheint, wie hier festgelegt.
+async function movePackageOrder(id, direction) {
+  var idx = packagesData.findIndex(function(p) { return p.id === id; });
+  if (idx === -1) return;
+  var targetIdx = idx + direction;
+  if (targetIdx < 0 || targetIdx >= packagesData.length) return;
+  var a = packagesData[idx];
+  var b = packagesData[targetIdx];
+  // Falls sort_order bei beiden gleich/0 ist (z.B. noch nie sortiert), zuerst anhand der
+  // aktuellen Listenposition eindeutige Werte vergeben, bevor getauscht wird.
+  var orderA = (a.sort_order != null) ? a.sort_order : idx;
+  var orderB = (b.sort_order != null) ? b.sort_order : targetIdx;
+  if (orderA === orderB) { orderA = idx; orderB = targetIdx; }
+  await Promise.all([
+    db.from('packages').update({ sort_order: orderB }).eq('id', a.id),
+    db.from('packages').update({ sort_order: orderA }).eq('id', b.id)
+  ]);
+  loadPackages();
 }
 
 // ================= PACKAGE-VORLAGEN (global, event-unabhängig) =================
@@ -6455,8 +6481,9 @@ async function loadTemplateIntoEvent(templateId) {
   if (!t) return;
   var existingCode = packagesData.find(function(p) { return p.code === t.code; });
   if (existingCode && !confirm('Es existiert bereits ein Package mit Code "' + t.code + '" in diesem Event. Trotzdem als neues Package hinzufügen?')) return;
+  var maxOrder = packagesData.reduce(function(max, p) { return Math.max(max, p.sort_order || 0); }, 0);
   var row = {
-    event_id: currentEventId,
+    event_id: currentEventId, sort_order: maxOrder + 1,
     code: t.code, short_code: t.short_code, category: t.category, nights: t.nights,
     room_type: t.room_type, meals: t.meals, pkg_breakfast_days: t.pkg_breakfast_days,
     pkg_lunch_days: t.pkg_lunch_days, pkg_dinner_days: t.pkg_dinner_days,
@@ -6591,7 +6618,10 @@ async function savePackage() {
   };
   let error;
   if (id) { ({ error } = await db.from('packages').update(row).eq('id', id)); }
-  else { ({ error } = await db.from('packages').insert(Object.assign({event_id: currentEventId || null}, row))); }
+  else {
+    var maxOrder = packagesData.reduce(function(max, p) { return Math.max(max, p.sort_order || 0); }, 0);
+    ({ error } = await db.from('packages').insert(Object.assign({event_id: currentEventId || null, sort_order: maxOrder + 1}, row)));
+  }
   if (error) { toast('Fehler: ' + error.message); return; }
   closeModal('packageModal'); toast('Package gespeichert'); loadPackages();
 }

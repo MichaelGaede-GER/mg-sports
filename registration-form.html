@@ -750,7 +750,7 @@ async function init() {
 }
 
 async function loadPackages() {
-  var pkgR = await db.from('packages').select('*').order('code');
+  var pkgR = await db.from('packages').select('*').order('sort_order').order('code');
   packagesData = pkgR.data || [];
   populatePackageSelect();
 }
