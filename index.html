@@ -10820,7 +10820,27 @@ async function importPersonToEntry(id) {
   var cnSel = document.getElementById('f_coach_name');
   if (cnSel && p.coach_name) { cnSel.value = p.coach_name; onEntryCoachSelect(); }
   if (p.coach_esid) { var ceEl = document.getElementById('f_coach_esid'); if (ceEl) ceEl.value = p.coach_esid; }
-  if(p.country) document.getElementById('f_country').value=p.country;
+  if(p.country) {
+    // Gleiche robuste Zuordnung wie beim Bearbeiten eines Teilnehmers: manche Länder-Codes
+    // in der Personendatenbank liegen im ISO2-Format vor (z.B. "de") statt im Squash-
+    // Verbandscode ("GER"), den das Dropdown erwartet. Ohne diese Umwandlung blieb das
+    // Land-Feld auf "Bitte wählen" stehen, obwohl der Wert eigentlich vorhanden war.
+    var countryEl = document.getElementById('f_country');
+    var countryVal = p.country;
+    countryEl.value = countryVal;
+    if (countryEl.value !== countryVal && countryVal) {
+      var iso2ToSquash = {};
+      Object.keys(SQUASH_TO_ISO2||{}).forEach(function(sq){ iso2ToSquash[SQUASH_TO_ISO2[sq]] = sq; });
+      var squashCode = iso2ToSquash[countryVal.toLowerCase()];
+      if (squashCode) countryEl.value = squashCode;
+    }
+    if (!countryEl.value && countryVal) {
+      var found = Array.from(countryEl.options).find(function(o){
+        return o.value.toLowerCase() === countryVal.toLowerCase() || o.text.toLowerCase().includes(countryVal.toLowerCase());
+      });
+      if (found) countryEl.value = found.value;
+    }
+  }
   var _savedPkg = document.getElementById('f_package') && document.getElementById('f_package').value;
   var _savedPkgPrice = document.getElementById('f_package_price') && document.getElementById('f_package_price').value;
   await loadPackagesData(); populatePackageSelect();
@@ -13993,6 +14013,23 @@ async function applyEntrySync() {
     if (cb.getAttribute('data-field') === 'f_gender') {
       if (val === 'Maennlich' || val === 'maennlich') val = 'Männlich';
       if (val === 'weiblich') val = 'Weiblich';
+    }
+    if (cb.getAttribute('data-field') === 'f_country' && val) {
+      // Gleiche ISO2→Squash-Code Zuordnung wie beim Bearbeiten/Übernehmen eines Teilnehmers
+      el.value = val;
+      if (el.value !== val) {
+        var iso2ToSquash = {};
+        Object.keys(SQUASH_TO_ISO2||{}).forEach(function(sq){ iso2ToSquash[SQUASH_TO_ISO2[sq]] = sq; });
+        var squashCode = iso2ToSquash[val.toLowerCase()];
+        if (squashCode) el.value = squashCode;
+      }
+      if (!el.value) {
+        var found = Array.from(el.options).find(function(o){
+          return o.value.toLowerCase() === val.toLowerCase() || o.text.toLowerCase().includes(val.toLowerCase());
+        });
+        if (found) el.value = found.value;
+      }
+      return;
     }
     el.value = val;
   });
