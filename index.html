@@ -2426,6 +2426,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
         <div class="card">
           <div class="card-header"><h3>Hotel-Verwaltung</h3>
+            <button class="btn" onclick="openLoadHotelTemplateModal()">📥 Aus Hotel-Datenbank laden</button>
+            <button class="btn" onclick="openHotelTemplatesModal()">🏨 Hotel-Datenbank verwalten</button>
             <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openHotelModal()">+ Hotel hinzufügen</button>
           </div>
           <div class="table-wrap"><table>
@@ -9497,8 +9499,16 @@ function getDisplayPaymentStatus(p) {
 
 
 async function loadWithdrawPolicy() {
-  var r = await db.from('app_settings').select('value').eq('key','withdraw_policy').limit(1);
+  // Withdrawal Policy gilt pro Event. Für Events, die noch keine eigene Policy gespeichert
+  // haben (z.B. bereits bestehende Events vor dieser Umstellung), wird als Fallback die
+  // frühere globale Einstellung ("withdraw_policy") verwendet, damit nichts plötzlich fehlt.
+  var key = currentEventId ? ('withdraw_policy_' + currentEventId) : 'withdraw_policy';
+  var r = await db.from('app_settings').select('value').eq('key', key).limit(1);
   var row = r.data && r.data[0];
+  if (!row && currentEventId) {
+    var legacy = await db.from('app_settings').select('value').eq('key', 'withdraw_policy').limit(1);
+    row = legacy.data && legacy.data[0];
+  }
   if (row && row.value) {
     try {
       var pol = JSON.parse(row.value);
@@ -9511,6 +9521,7 @@ async function loadWithdrawPolicy() {
 }
 
 async function saveWithdrawPolicy() {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
   var df = document.getElementById('wp_date_full') && document.getElementById('wp_date_full').value;
   var dh = document.getElementById('wp_date_half') && document.getElementById('wp_date_half').value;
   var dn = document.getElementById('wp_date_none') && document.getElementById('wp_date_none').value;
@@ -9519,9 +9530,10 @@ async function saveWithdrawPolicy() {
   WITHDRAW_DATE_HALF = new Date(dh);
   WITHDRAW_DATE_NONE = new Date(dn);
   var pol = { date_full: df, date_half: dh, date_none: dn };
-  await db.from('app_settings').delete().eq('key','withdraw_policy');
-  await db.from('app_settings').insert({key:'withdraw_policy', value: JSON.stringify(pol)});
-  toast('✅ Withdrawal Policy gespeichert');
+  var key = 'withdraw_policy_' + currentEventId;
+  await db.from('app_settings').delete().eq('key', key);
+  await db.from('app_settings').insert({key: key, value: JSON.stringify(pol)});
+  toast('✅ Withdrawal Policy für dieses Event gespeichert');
   renderWithdrawPolicySettings();
 }
 
@@ -9604,6 +9616,7 @@ async function setActiveEvent(id, name) {
   recomputeEventRole(); applyPermissions();
   if (currentPage === 'refereepenalty') restoreRefereePenaltyFolder().catch(function(){});
   refreshTournamentWithdrawalBadge().catch(function(){});
+  loadWithdrawPolicy().catch(function(){});
   toast('Aktives Event: '+name);
 }
 function updateActiveEventDisplay() {
@@ -9919,9 +9932,96 @@ async function loadHotelsSettings() {
   var tb=document.getElementById('hotelsSettingsTable'); if(!tb) return;
   tb.innerHTML=hotelsCache.length?hotelsCache.map(function(h){
     return '<tr><td><strong>'+h.name+'</strong></td><td>'+(h.contact_name||'-')+'</td><td>'+(h.email?'<a href="mailto:'+h.email+'" style="color:var(--blue)">'+h.email+'</a>':'-')+'</td><td>'+(h.phone||'-')+'</td><td style="font-size:12px">'+(h.address||'-')+'</td><td style="font-size:12px;color:var(--text2)">'+(h.notes||'-')+'</td>'
-    +'<td style="display:flex;gap:6px"><button class="btn" style="font-size:11px;padding:3px 8px" onclick="editHotel(\''+h.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteHotel(\''+h.id+'\')">Loeschen</button></td></tr>';
+    +'<td style="display:flex;gap:6px"><button class="btn" style="font-size:11px;padding:3px 8px" onclick="editHotel(\''+h.id+'\')">Bearbeiten</button><button class="btn" style="font-size:11px;padding:3px 8px" title="Als wiederverwendbare Vorlage für andere Events speichern" onclick="saveHotelAsTemplate(\''+h.id+'\')">💾 Als Vorlage</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteHotel(\''+h.id+'\')">Loeschen</button></td></tr>';
   }).join(''):'<tr><td colspan="7" class="empty">Noch keine Hotels erfasst</td></tr>';
 }
+// ================= HOTEL-DATENBANK (Vorlagen, event-unabhängig) =================
+// Eine wiederverwendbare Bibliothek von Hotel-Stammdaten, damit dieselben Hotels nicht bei
+// jedem neuen Event erneut manuell eingetippt werden müssen. Hotels selbst bleiben pro
+// Event getrennt (jedes Event kann eigene Preise/Belegungen haben) — diese Vorlagen dienen
+// nur dazu, die Kontaktdaten schnell in ein (neues) Event zu übernehmen.
+var hotelTemplatesCache = [];
+
+async function loadHotelTemplates() {
+  var r = await db.from('hotel_templates').select('*').order('name');
+  hotelTemplatesCache = r.data || [];
+  return hotelTemplatesCache;
+}
+
+async function saveHotelAsTemplate(hotelId) {
+  var h = hotelsCache.find(function(x) { return x.id === hotelId; });
+  if (!h) { toast('Hotel nicht gefunden'); return; }
+  var row = { name: h.name, contact_name: h.contact_name, email: h.email, phone: h.phone, address: h.address, notes: h.notes };
+  var r = await db.from('hotel_templates').insert(row);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ "' + h.name + '" in der Hotel-Datenbank gespeichert');
+}
+
+async function openLoadHotelTemplateModal() {
+  await loadHotelTemplates();
+  var existing = document.getElementById('loadHotelTemplateModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'loadHotelTemplateModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  var rows = hotelTemplatesCache.length ? hotelTemplatesCache.map(function(t) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1"><strong>' + t.name + '</strong><div style="font-size:12px;color:var(--text3)">' + (t.contact_name||'') + (t.email?' · '+t.email:'') + (t.phone?' · '+t.phone:'') + '</div></div>'
+      + '<button class="btn primary" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="loadHotelTemplateIntoEvent(this.dataset.id)">Laden</button>'
+      + '<button class="btn danger" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="deleteHotelTemplate(this.dataset.id)">Löschen</button>'
+      + '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--text3)">Noch keine Hotels in der Datenbank. Speichere ein bestehendes Hotel über "💾 Als Vorlage".</p>';
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:480px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">📥 Aus Hotel-Datenbank laden</h3>'
+    + rows
+    + '<button class="btn" style="width:100%;margin-top:16px" onclick="document.getElementById(\'loadHotelTemplateModal\').remove()">Schließen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function loadHotelTemplateIntoEvent(templateId) {
+  if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
+  var t = hotelTemplatesCache.find(function(x) { return x.id === templateId; });
+  if (!t) return;
+  var existingName = hotelsCache.find(function(h) { return h.name === t.name; });
+  if (existingName && !confirm('Es existiert bereits ein Hotel "' + t.name + '" in diesem Event. Trotzdem als neues Hotel hinzufügen?')) return;
+  var row = { event_id: currentEventId, name: t.name, contact_name: t.contact_name, email: t.email, phone: t.phone, address: t.address, notes: t.notes };
+  var r = await db.from('hotels').insert(row);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ "' + t.name + '" in dieses Event geladen');
+  var m = document.getElementById('loadHotelTemplateModal'); if (m) m.remove();
+  await loadHotelsSettings(); await populateHotelDropdowns();
+}
+
+async function deleteHotelTemplate(id) {
+  if (!confirm('Dieses Hotel wirklich aus der Datenbank löschen?')) return;
+  await db.from('hotel_templates').delete().eq('id', id);
+  toast('Gelöscht');
+  openLoadHotelTemplateModal();
+}
+
+async function openHotelTemplatesModal() {
+  await loadHotelTemplates();
+  var existing = document.getElementById('manageHotelTemplatesModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'manageHotelTemplatesModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  var rows = hotelTemplatesCache.length ? hotelTemplatesCache.map(function(t) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1"><strong>' + t.name + '</strong><div style="font-size:12px;color:var(--text3)">' + (t.contact_name||'') + (t.email?' · '+t.email:'') + (t.phone?' · '+t.phone:'') + '</div></div>'
+      + '<button class="btn danger" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="deleteHotelTemplate(this.dataset.id); document.getElementById(\'manageHotelTemplatesModal\').remove();">Löschen</button>'
+      + '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--text3)">Noch keine Hotels in der Datenbank. Nutze bei einem bestehenden Hotel den Button "💾 Als Vorlage", um es hier hinzuzufügen.</p>';
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:480px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:4px;font-size:15px;color:var(--text)">🏨 Hotel-Datenbank verwalten</h3>'
+    + '<p style="font-size:12px;color:var(--text3);margin-bottom:14px">Diese Hotels sind event-unabhängig und stehen für alle Events unter "Aus Hotel-Datenbank laden" zur Auswahl.</p>'
+    + rows
+    + '<button class="btn" style="width:100%;margin-top:16px" onclick="document.getElementById(\'manageHotelTemplatesModal\').remove()">Schließen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
 function openHotelModal(hotel) {
   document.getElementById('hotelModalTitle').textContent=hotel?'Hotel bearbeiten':'Hotel hinzufuegen';
   document.getElementById('hotelEditId').value=hotel?hotel.id:'';
