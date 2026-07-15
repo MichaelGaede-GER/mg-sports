@@ -1534,7 +1534,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         </div>
 
         <div class="card" style="margin-bottom:16px">
-          <div class="card-header"><h3>Kostenpositionen</h3></div>
+          <div class="card-header"><h3>Kostenpositionen</h3>
+            <button class="btn" onclick="openLoadCostTemplateModal()">📥 Aus Vorlage laden</button>
+            <button class="btn" onclick="openCostTemplatesModal()">🏷️ Vorlagen verwalten</button>
+          </div>
           <div class="card-body" style="padding:0">
             <div class="table-wrap"><table>
               <thead><tr><th>Kategorie</th><th>Bezeichnung</th><th>Tag</th><th>Einzelpreis</th><th>Menge</th><th>Einheit</th><th>Summe</th><th>Aktion</th></tr></thead>
@@ -7106,7 +7109,7 @@ function renderCostItemsTable() {
       + '<td>'+(c.quantity)+'</td>'
       + '<td style="font-size:12px;color:var(--text2)">'+(c.unit_label||'–')+'</td>'
       + '<td><strong>'+eur(total)+'</strong></td>'
-      + '<td><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteCostItem(\''+c.id+'\')">Löschen</button></td>'
+      + '<td style="display:flex;gap:6px"><button class="btn" style="font-size:11px;padding:3px 8px" title="Als wiederverwendbare Vorlage speichern" onclick="saveCostItemAsTemplate(\''+c.id+'\')">💾</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteCostItem(\''+c.id+'\')">Löschen</button></td>'
       + '</tr>';
   }).join('');
 }
@@ -7134,6 +7137,95 @@ function renderStaffCostsTable() {
       + '<td><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteStaffCost(\''+s.id+'\')">Löschen</button></td>'
       + '</tr>';
   }).join('');
+}
+
+// ================= KOSTENPOSITIONEN-VORLAGEN (event-unabhängig) =================
+// Eine wiederverwendbare Bibliothek einzelner Kostenpositionen (z.B. immer gleiche
+// Court-Miete oder Shuttle-Tagessatz), die sich mit einem Klick in ein (neues) Event
+// laden lassen, ohne andere Events zu beeinflussen.
+var costItemTemplatesCache = [];
+
+async function loadCostItemTemplates() {
+  var r = await db.from('cost_item_templates').select('*').order('category').order('label');
+  costItemTemplatesCache = r.data || [];
+  return costItemTemplatesCache;
+}
+
+async function saveCostItemAsTemplate(costId) {
+  var c = costItemsCache.find(function(x) { return x.id === costId; });
+  if (!c) { toast('Kostenposition nicht gefunden'); return; }
+  var row = { category: c.category, label: c.label, unit_cost: c.unit_cost, unit_label: c.unit_label };
+  var r = await db.from('cost_item_templates').insert(row);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ "' + c.label + '" als Vorlage gespeichert');
+}
+
+async function openLoadCostTemplateModal() {
+  await loadCostItemTemplates();
+  var existing = document.getElementById('loadCostTemplateModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'loadCostTemplateModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  var rows = costItemTemplatesCache.length ? costItemTemplatesCache.map(function(t) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1">'+(COST_CATEGORY_ICONS[t.category]||t.category)+' <strong>' + t.label + '</strong>'
+      + '<div style="font-size:12px;color:var(--text3)">' + eur(t.unit_cost) + (t.unit_label ? ' · '+t.unit_label : '') + '</div></div>'
+      + '<button class="btn primary" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="loadCostTemplateIntoEvent(this.dataset.id)">Laden</button>'
+      + '<button class="btn danger" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="deleteCostItemTemplate(this.dataset.id)">Löschen</button>'
+      + '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--text3)">Noch keine Vorlagen gespeichert. Speichere eine bestehende Kostenposition über das 💾-Symbol.</p>';
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:460px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">📥 Aus Vorlage laden</h3>'
+    + rows
+    + '<button class="btn" style="width:100%;margin-top:16px" onclick="document.getElementById(\'loadCostTemplateModal\').remove()">Schließen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function loadCostTemplateIntoEvent(templateId) {
+  if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
+  var t = costItemTemplatesCache.find(function(x) { return x.id === templateId; });
+  if (!t) return;
+  var row = {
+    event_id: currentEventId, category: t.category, label: t.label,
+    unit_cost: t.unit_cost, quantity: 1, unit_label: t.unit_label
+  };
+  var r = await db.from('event_costs').insert(row);
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ "' + t.label + '" in dieses Event geladen (Menge: 1 — bitte anpassen)');
+  var m = document.getElementById('loadCostTemplateModal'); if (m) m.remove();
+  loadCosts();
+}
+
+async function deleteCostItemTemplate(id) {
+  if (!confirm('Diese Vorlage wirklich löschen?')) return;
+  await db.from('cost_item_templates').delete().eq('id', id);
+  toast('Gelöscht');
+  openLoadCostTemplateModal();
+}
+
+async function openCostTemplatesModal() {
+  await loadCostItemTemplates();
+  var existing = document.getElementById('manageCostTemplatesModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'manageCostTemplatesModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  var rows = costItemTemplatesCache.length ? costItemTemplatesCache.map(function(t) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1">'+(COST_CATEGORY_ICONS[t.category]||t.category)+' <strong>' + t.label + '</strong>'
+      + '<div style="font-size:12px;color:var(--text3)">' + eur(t.unit_cost) + (t.unit_label ? ' · '+t.unit_label : '') + '</div></div>'
+      + '<button class="btn danger" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="deleteCostItemTemplate(this.dataset.id); document.getElementById(\'manageCostTemplatesModal\').remove();">Löschen</button>'
+      + '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--text3)">Noch keine Vorlagen. Nutze bei einer bestehenden Kostenposition das 💾-Symbol, um sie hier hinzuzufügen.</p>';
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:460px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:4px;font-size:15px;color:var(--text)">🏷️ Kostenpositionen-Vorlagen verwalten</h3>'
+    + '<p style="font-size:12px;color:var(--text3);margin-bottom:14px">Diese Vorlagen sind event-unabhängig und stehen für alle Events unter "Aus Vorlage laden" bereit.</p>'
+    + rows
+    + '<button class="btn" style="width:100%;margin-top:16px" onclick="document.getElementById(\'manageCostTemplatesModal\').remove()">Schließen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
 }
 
 async function addCostItem() {
