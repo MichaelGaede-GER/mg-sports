@@ -2367,6 +2367,35 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <tbody id="eventsTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <h3>Withdrawal Policy — <span id="wp_event_label" style="color:var(--blue)">kein Event aktiv</span></h3>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+              Gilt nur für das oben als <strong>Aktiv</strong> markierte Event. Legen Sie die Stichtage fest — alle Berechnungen im System (z.B. Erstattungsbeträge) nutzen diese Werte für dieses Event.
+            </p>
+            <div class="form-grid two" style="gap:12px;margin-bottom:14px">
+              <div class="form-group">
+                <label>100% Erstattung — Abmeldung <strong>vor</strong> diesem Datum</label>
+                <input type="date" id="wp_date_full" />
+              </div>
+              <div class="form-group">
+                <label>50% Erstattung — Abmeldung bis einschließlich diesem Datum</label>
+                <input type="date" id="wp_date_half" />
+              </div>
+              <div class="form-group">
+                <label>Keine Erstattung — Abmeldung ab diesem Datum</label>
+                <input type="date" id="wp_date_none" />
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end">
+                <button class="btn primary" onclick="saveWithdrawPolicy()" style="width:100%">💾 Für dieses Event speichern</button>
+              </div>
+            </div>
+            <div id="wp_preview" style="background:var(--bg2);border-radius:var(--radius);padding:12px 14px"></div>
+          </div>
+        </div>
       </div>
 
       <!-- BACKUP & RESTORE -->
@@ -2532,6 +2561,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         <div class="card">
           <div class="card-header">
             <h3>Altersklassen / Events</h3>
+            <button class="btn" onclick="openLoadAgeClassTemplateModal()">📥 Aus Vorlage laden</button>
+            <button class="btn" onclick="saveAgeClassesAsTemplate()">💾 Als Vorlage speichern</button>
             <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="addAgeClass()">+ Altersklasse hinzufügen</button>
           </div>
           <div class="card-body">
@@ -2548,32 +2579,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <span>📋 Policy</span><div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h3>Withdrawal Policy</h3>
-          </div>
+        <div class="card" style="background:var(--bg2);border-style:dashed">
           <div class="card-body">
-            <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
-              Legen Sie die Stichtage fest. Alle Berechnungen im System nutzen diese Werte.
-            </p>
-            <div class="form-grid two" style="gap:12px;margin-bottom:14px">
-              <div class="form-group">
-                <label>100% Erstattung — Abmeldung <strong>vor</strong> diesem Datum</label>
-                <input type="date" id="wp_date_full" />
-              </div>
-              <div class="form-group">
-                <label>50% Erstattung — Abmeldung bis einschließlich diesem Datum</label>
-                <input type="date" id="wp_date_half" />
-              </div>
-              <div class="form-group">
-                <label>Keine Erstattung — Abmeldung ab diesem Datum</label>
-                <input type="date" id="wp_date_none" />
-              </div>
-              <div class="form-group" style="display:flex;align-items:flex-end">
-                <button class="btn primary" onclick="saveWithdrawPolicy()" style="width:100%">💾 Speichern</button>
-              </div>
-            </div>
-            <div id="wp_preview" style="background:var(--bg2);border-radius:var(--radius);padding:12px 14px"></div>
+            <p style="font-size:13px;color:var(--text2)">ℹ️ Die <strong>Withdrawal Policy</strong> wurde in die <a href="#" onclick="nav('events');return false;" style="color:var(--blue)">Event-Verwaltung</a> verschoben, da sie pro Event separat gilt.</p>
           </div>
         </div>
 
@@ -5544,7 +5552,7 @@ function nav(page) {
   else if (page === 'broadcast') { populateBcFilterOptions(); loadBroadcastRecipients(); }
   else if (page === 'checkin') loadCheckin();
   else if (page === 'mealcheck') loadMealCheck();
-  else if (page === 'events') loadEvents();
+  else if (page === 'events') { loadEvents(); loadWithdrawPolicy().catch(function(){}); }
   else if (page === 'backup') initBackupPage();
   else if (page === 'persons') loadPersons();
   else if (page === 'settings') loadSettings();
@@ -9544,6 +9552,8 @@ function renderWithdrawPolicySettings() {
   if (df) df.value = WITHDRAW_DATE_FULL.toISOString().slice(0,10);
   if (dh) dh.value = WITHDRAW_DATE_HALF.toISOString().slice(0,10);
   if (dn) dn.value = WITHDRAW_DATE_NONE.toISOString().slice(0,10);
+  var lbl = document.getElementById('wp_event_label');
+  if (lbl) lbl.textContent = currentEventName || 'kein Event aktiv';
   // Update preview
   var prev = document.getElementById('wp_preview');
   if (prev) {
@@ -9617,6 +9627,7 @@ async function setActiveEvent(id, name) {
   if (currentPage === 'refereepenalty') restoreRefereePenaltyFolder().catch(function(){});
   refreshTournamentWithdrawalBadge().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
+  loadAgeClasses().catch(function(){});
   toast('Aktives Event: '+name);
 }
 function updateActiveEventDisplay() {
@@ -12511,8 +12522,16 @@ async function exportPersonsCSV() {
 var ageClassesCache = ['GU11','GU13','GU15','GU17','GU19','BU11','BU13','BU15','BU17','BU19'];
 
 async function loadAgeClasses() {
-  var r = await db.from('app_settings').select('value').eq('key','age_classes').limit(1);
+  // Altersklassen gelten pro Event. Für Events ohne eigene gespeicherte Liste (z.B.
+  // bestehende Events vor dieser Umstellung) wird als Fallback die frühere globale
+  // Einstellung ("age_classes") verwendet, damit nichts plötzlich leer erscheint.
+  var key = currentEventId ? ('age_classes_' + currentEventId) : 'age_classes';
+  var r = await db.from('app_settings').select('value').eq('key', key).limit(1);
   var row_loadAgeClasses = r.data && r.data[0];
+  if (!row_loadAgeClasses && currentEventId) {
+    var legacy = await db.from('app_settings').select('value').eq('key','age_classes').limit(1);
+    row_loadAgeClasses = legacy.data && legacy.data[0];
+  }
   if (row_loadAgeClasses && row_loadAgeClasses.value) {
     try { ageClassesCache = JSON.parse(row_loadAgeClasses.value); } catch(e) {}
   }
@@ -12521,8 +12540,73 @@ async function loadAgeClasses() {
 }
 
 async function saveAgeClasses() {
-  await db.from('app_settings').delete().eq('key','age_classes');
-  await db.from('app_settings').insert({key:'age_classes', value:JSON.stringify(ageClassesCache)});
+  var key = currentEventId ? ('age_classes_' + currentEventId) : 'age_classes';
+  await db.from('app_settings').delete().eq('key', key);
+  await db.from('app_settings').insert({key: key, value:JSON.stringify(ageClassesCache)});
+}
+
+// ================= ALTERSKLASSEN-VORLAGEN (event-unabhängig) =================
+// Eine wiederverwendbare Bibliothek kompletter Altersklassen-Sets, die sich mit einem
+// Klick in ein (neues) Event laden lassen, ohne andere Events zu beeinflussen.
+var ageClassTemplatesCache = [];
+
+async function loadAgeClassTemplates() {
+  var r = await db.from('age_class_templates').select('*').order('name');
+  ageClassTemplatesCache = r.data || [];
+  return ageClassTemplatesCache;
+}
+
+async function saveAgeClassesAsTemplate() {
+  if (!ageClassesCache.length) { toast('Keine Altersklassen zum Speichern vorhanden'); return; }
+  var name = prompt('Name für diese Vorlage (z.B. "Standard Junior Set"):');
+  if (!name) return;
+  var r = await db.from('age_class_templates').insert({ name: name.trim(), classes: JSON.stringify(ageClassesCache) });
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ Vorlage "' + name.trim() + '" gespeichert');
+}
+
+async function openLoadAgeClassTemplateModal() {
+  await loadAgeClassTemplates();
+  var existing = document.getElementById('loadAgeClassTemplateModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'loadAgeClassTemplateModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  var rows = ageClassTemplatesCache.length ? ageClassTemplatesCache.map(function(t) {
+    var classes = []; try { classes = JSON.parse(t.classes) || []; } catch(e) {}
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1"><strong>' + t.name + '</strong><div style="font-size:12px;color:var(--text3)">' + classes.join(', ') + '</div></div>'
+      + '<button class="btn primary" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="loadAgeClassTemplateIntoEvent(this.dataset.id)">Laden</button>'
+      + '<button class="btn danger" style="font-size:11px;padding:4px 10px" data-id="' + t.id + '" onclick="deleteAgeClassTemplate(this.dataset.id)">Löschen</button>'
+      + '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--text3)">Noch keine Vorlagen gespeichert. Speichere die aktuelle Liste über "💾 Als Vorlage".</p>';
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:460px;max-width:100%;max-height:85vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">📥 Aus Altersklassen-Vorlage laden</h3>'
+    + rows
+    + '<button class="btn" style="width:100%;margin-top:16px" onclick="document.getElementById(\'loadAgeClassTemplateModal\').remove()">Schließen</button>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function loadAgeClassTemplateIntoEvent(templateId) {
+  if (!currentEventId) { toast('Bitte zuerst ein Event aktivieren'); return; }
+  var t = ageClassTemplatesCache.find(function(x) { return x.id === templateId; });
+  if (!t) return;
+  var classes = []; try { classes = JSON.parse(t.classes) || []; } catch(e) {}
+  if (!confirm('Aktuelle Altersklassen-Liste dieses Events durch die Vorlage "' + t.name + '" ersetzen?')) return;
+  ageClassesCache = classes.slice();
+  await saveAgeClasses();
+  renderAgeClassesList();
+  updateEventSelects();
+  toast('✅ Vorlage "' + t.name + '" geladen');
+  var m = document.getElementById('loadAgeClassTemplateModal'); if (m) m.remove();
+}
+
+async function deleteAgeClassTemplate(id) {
+  if (!confirm('Diese Vorlage wirklich löschen?')) return;
+  await db.from('age_class_templates').delete().eq('id', id);
+  toast('Gelöscht');
+  openLoadAgeClassTemplateModal();
 }
 
 function renderAgeClassesList() {
