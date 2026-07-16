@@ -2685,17 +2685,9 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           <span>💶 Meldegebühr</span><div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
 
-        <div class="card">
-          <div class="card-header"><h3>Meldegebühr & VISA</h3></div>
+        <div class="card" style="background:var(--bg2);border-style:dashed">
           <div class="card-body">
-            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Gilt nur für das aktuell aktive Event.</p>
-            <div class="form-grid" style="max-width:500px">
-              <div class="form-group"><label>Meldegebühr pro Spieler (€)</label><input type="number" id="set_entry_fee" min="0" step="1" placeholder="90" /></div>
-              <div class="form-group"><label>VISA Express Aufschlag (€)</label><input type="number" id="set_visa_express_fee" min="0" step="1" placeholder="0" /></div>
-            </div>
-            <div style="margin-top:16px">
-              <button class="btn primary" onclick="saveEntryFeeFromSettings()">Für dieses Event speichern</button>
-            </div>
+            <p style="font-size:13px;color:var(--text2)">ℹ️ Die separate <strong>Meldegebühr</strong> und der <strong>VISA-Express-Aufschlag</strong> wurden entfernt — beides wird jetzt über die <strong>Package-Preise</strong> bzw. die <strong>Letter Types</strong> unten abgedeckt.</p>
           </div>
         </div>
 
@@ -4193,7 +4185,7 @@ MG Sports Event Management</textarea>
           <div style="width:18px;height:18px;flex-shrink:0;border-radius:3px;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;font-size:13px">✓</div>
           <div>
             <div style="font-size:13px;font-weight:500">Startgeld</div>
-            <div style="font-size:11px;color:var(--text3)" id="pkgEntryFeeLabel">90 €</div>
+            <div style="font-size:11px;color:var(--text3)" id="pkgEntryFeeLabel">im Package-Preis enthalten</div>
           </div>
         </label>
       </div>
@@ -4415,18 +4407,12 @@ async function checkTables() {
 }
 
 async function loadEntryFee() {
-  // Meldegebühr gilt pro Event. Für Events ohne eigenen Wert (z.B. bestehende Events vor
-  // dieser Umstellung) wird als Fallback die frühere globale Einstellung verwendet.
-  var efKey = currentEventId ? ('entry_fee_' + currentEventId) : 'entry_fee';
-  var r = await db.from('app_settings').select('value').eq('key', efKey).single();
-  if (r.data) {
-    entryFee = parseFloat(r.data.value) || 90;
-  } else if (currentEventId) {
-    var legacy = await db.from('app_settings').select('value').eq('key', 'entry_fee').single();
-    if (legacy.data) entryFee = parseFloat(legacy.data.value) || 90;
-  }
-  document.getElementById('entryFeeInput').value = entryFee;
-  document.getElementById('entryFeeDisplay').textContent = fmt(entryFee);
+  // Die separate Meldegebühr wurde entfernt (wird jetzt über die Package-Preise
+  // abgedeckt) — entryFee bleibt dauerhaft 0, diese Funktion behält aber ihre
+  // Reset-Funktion für die Formular-Checkboxen bei ("Neu erfassen").
+  entryFee = 0;
+  var efInput = document.getElementById('entryFeeInput'); if (efInput) efInput.value = entryFee;
+  var efDisplay = document.getElementById('entryFeeDisplay'); if (efDisplay) efDisplay.textContent = fmt(entryFee);
   /* f_entry_fee removed */
   const exprCb = document.getElementById('f_express'); if (exprCb) exprCb.checked = false;
   const mealCb = document.getElementById('f_meal_plus'); if (mealCb) mealCb.checked = false;
@@ -5616,20 +5602,18 @@ async function loadDashboard() {
   const exemptEvents = ['Coach/Parent','Referee','Officials','Team'];
   const pending = active.filter(p => p.payment_status === 'Ausstehend' || p.payment_status === 'Neu');
   const payingPlayers = active.filter(p => !exemptEvents.includes(p.events));
-  const totalFees = payingPlayers.length * entryFee;
   const pkgIncome = active.reduce((s, p) => s + (parseFloat(p.amount_received) || 0), 0);
 
   // Revenue calculations
   var totalReceived = active.reduce(function(s,p){ return s + (parseFloat(p.amount_received)||0); }, 0);
 
-  // Expected = entry fee (players only) + package price + meal option price + travel amount
-  var exemptRoles = ['Coach','Parent','Referee','Official','ESF Official'];
+  // Expected = package price + meal option price + travel amount (Meldegebühr ist bereits
+  // im Package-Preis enthalten, wird hier also nicht mehr separat addiert)
   var totalExpected = active.reduce(function(s,p) {
-    var fee = (!exemptRoles.includes(p.role) && !exemptEvents.includes(p.events)) ? (parseFloat(p.entry_fee)||entryFee) : 0;
     var pkg = parseFloat(p.package_price) || 0;
     var meal = parseFloat(p.meal_option_price) || 0;
     var travel = parseFloat(p.travel_amount) || 0;
-    return s + fee + pkg + meal + travel;
+    return s + pkg + meal + travel;
   }, 0);
 
   // Outstanding = package_price total - received
@@ -5704,8 +5688,7 @@ async function loadDashboard() {
   var ageHtml = allAgeGroups.map(function(a) {
     var cnt = active.filter(function(p){ return p.events === a; }).length;
     if (cnt === 0) return '';
-    var fee = exemptEvents.includes(a) ? '' : fmtK(cnt*entryFee);
-    return '<div class="age-item"><div class="cat">'+a+'</div><div class="num">'+cnt+'</div><div class="fee">'+fee+'</div></div>';
+    return '<div class="age-item"><div class="cat">'+a+'</div><div class="num">'+cnt+'</div></div>';
   }).join('');
   var ageEl = document.getElementById('ageGrid'); if (ageEl) ageEl.innerHTML = ageHtml || '<div class="empty">Noch keine Einträge</div>';
 
@@ -6662,7 +6645,7 @@ function openPackageModal(pkg) {
   const mealPriceEl = document.getElementById('pkgMealPrice');
   if (mealPriceEl) mealPriceEl.textContent = mealPkg ? 'Package S · ' + fmt(mealPkg.price) : 'Package S';
   const efEl = document.getElementById('pkgEntryFeeLabel');
-  if (efEl) efEl.textContent = fmt(entryFee);
+  if (efEl) efEl.textContent = 'im Package-Preis enthalten';
 
   if (pkg) {
     document.getElementById('pkgRoom').value = pkg.room_type||'';
@@ -9641,7 +9624,7 @@ let entryPassportFile = null;
 let entryCurrentPassportUrl = null;
 let personCurrentPhotoUrl = null;
 let personCurrentPassportUrl = null;
-let entryFee = 90;
+let entryFee = 0;
 let visaExpressFee = 0;
 let packagesData = [];
 let coachesCache = [];
@@ -9763,14 +9746,9 @@ async function loadEntryFeeExt() {
   });
 }
 async function loadVisaExpressFee() {
-  var vKey = currentEventId ? ('visa_express_fee_' + currentEventId) : 'visa_express_fee';
-  var r = await db.from('app_settings').select('value').eq('key', vKey).single();
-  if (r.data) {
-    visaExpressFee = parseFloat(r.data.value) || 0;
-  } else if (currentEventId) {
-    var legacy = await db.from('app_settings').select('value').eq('key', 'visa_express_fee').single();
-    if (legacy.data) visaExpressFee = parseFloat(legacy.data.value) || 0;
-  }
+  // Der separate VISA-Express-Aufschlag wurde entfernt (wird jetzt über Letter Types
+  // mit eigenem Preis abgedeckt) — visaExpressFee bleibt dauerhaft 0.
+  visaExpressFee = 0;
 }
 async function loadMahnTemplates() {
   var r=await db.from('app_settings').select('*');
@@ -9818,8 +9796,6 @@ async function setActiveEvent(id, name) {
   refreshTournamentWithdrawalBadge().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
   loadAgeClasses().catch(function(){});
-  loadEntryFee().catch(function(){});
-  loadVisaExpressFee().catch(function(){});
   loadLetterTypesSettings().catch(function(){});
   toast('Aktives Event: '+name);
 }
@@ -14675,10 +14651,16 @@ async function applyPackageMealDays(packageCode) {
   var hasMealDays = pkg.pkg_breakfast_days || pkg.pkg_lunch_days || pkg.pkg_dinner_days;
   var mealIncluded = pkg.meal_included === 'Ja';
 
-  // Note: the master "Event Meals" checkbox (f_meal_plus) is intentionally left untouched —
-  // it's a fully independent, manual toggle (see updatePackagePrice()). This only pre-fills
-  // the breakfast/lunch/dinner day template from the package as a starting point; it stays
-  // freely editable per person afterwards.
+  // Note: the master "Event Meals" checkbox (f_meal_plus) is intentionally left untouched
+  // for all packages EXCEPT "T" (Tournament Team) — for T it gets auto-activated, since
+  // Tournament Team members always get Event Meals included.
+  if (packageCode === 'T') {
+    var eventMealsCb = document.getElementById('f_meal_plus');
+    if (eventMealsCb && !eventMealsCb.checked) {
+      eventMealsCb.checked = true;
+      if (typeof onEventMealsToggle === 'function') onEventMealsToggle();
+    }
+  }
   ['breakfast','lunch','dinner'].forEach(function(meal) {
     var pkgDays = pkg['pkg_'+meal+'_days'] || '';
     var activeDays = pkgDays ? pkgDays.split(',').filter(Boolean) : [];

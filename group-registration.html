@@ -984,7 +984,11 @@ function populateRoomTypeSelect(id) {
   if (!sel) return;
   var cur = sel.value;
   var labels = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
-  sel.innerHTML = '<option value="">' + t('ph_select_roomtype') + '</option>' + ROOM_TYPES.map(function(rt) {
+  var roleEl = document.getElementById('p_role_' + id);
+  var role = roleEl ? roleEl.value : '';
+  // Referees dürfen nur ein Doppelzimmer wählen (werden immer zu zweit untergebracht).
+  var availableTypes = (role === 'Referee') ? ROOM_TYPES.filter(function(rt) { return rt === 'Doppelzimmer'; }) : ROOM_TYPES;
+  sel.innerHTML = '<option value="">' + t('ph_select_roomtype') + '</option>' + availableTypes.map(function(rt) {
     var free = roomFree(rt);
     var disabled = free <= 0 && rt !== cur;
     var totalRooms = roomCapacity[rt] || 0;
@@ -992,7 +996,7 @@ function populateRoomTypeSelect(id) {
     var freeRooms = Math.max(0, totalRooms - usedRooms);
     return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + freeRooms + ' ' + t('ra_free_suffix') + ')') + '</option>';
   }).join('');
-  if (cur) sel.value = cur;
+  if (cur && availableTypes.indexOf(cur) !== -1) sel.value = cur;
 }
 
 function populateHotelSelect(id) {
@@ -1462,6 +1466,7 @@ function onRoleChange(id) {
 
   populateShirtSelect(id);
   populatePackageSelect(id);
+  populateRoomTypeSelect(id);
 }
 
 function populateShirtSelect(id) {
