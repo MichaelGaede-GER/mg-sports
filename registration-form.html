@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Entry Registration – European Junior Open 2026</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -194,7 +195,7 @@
           <div class="form-group" style="grid-column:1"><label data-i18n="f_checkin">Check-in Date <span class="req">*</span></label><input type="date" id="r_checkin" onchange="calcCheckout()" /></div>
           <div class="form-group"><label data-i18n="f_checkout">Check-out Date <span class="req">*</span></label><input type="date" id="r_checkout" /><div class="esid-hint" id="r_checkout_hint"></div></div>
         </div>
-        <div class="esid-hint" id="r_roompartner_hint" style="margin-top:8px"></div>
+        <div id="r_roompartner_hint" style="margin-top:10px;padding:12px 14px;border-radius:8px;background:var(--amber-bg,#fff3cd);border:1px solid #ffe08a;color:#7a5c00;font-size:16px;font-weight:600;line-height:1.4"></div>
       </div>
     </div>
 
@@ -240,6 +241,11 @@
             <div class="form-group"><label data-i18n="f_passport_number">Passport Number <span class="req">*</span></label><input type="text" id="r_visa_passport_number" /></div>
             <div class="form-group"><label data-i18n="f_date_of_issue">Date of Issue <span class="req">*</span></label><input type="date" id="r_date_of_issue" /></div>
             <div class="form-group"><label data-i18n="f_date_of_expiry">Date of Expiry <span class="req">*</span></label><input type="date" id="r_date_of_expiry" /></div>
+            <div class="form-group full">
+              <label data-i18n="f_passport_picture">Passport picture</label>
+              <div style="font-size:12px;color:#8a93a6;margin-bottom:6px" data-i18n="f_passport_picture_hint">Please upload your passport</div>
+              <input type="file" id="r_passport_photo" accept="image/*,application/pdf" />
+            </div>
           </div>
         </div>
         <div class="form-group full" style="margin-top:14px"><label data-i18n="f_memo">Notes / Special Requests</label>
@@ -290,6 +296,15 @@ const SUPABASE_URL = 'https://xngiyfqbjyhnmgukhanj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZ2l5ZnFianlobm1ndWtoYW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDEwMzksImV4cCI6MjA5NzgxNzAzOX0.CjzN8HH9cxJRtc9wrBPwTsw2ayPf7em_LeCM7HBQLxQ';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+var registeredEventName = null;
+
+// ==== EmailJS Konfiguration (bitte mit deinen eigenen Werten von emailjs.com befüllen) ====
+const EMAILJS_PUBLIC_KEY = 'iTmRZnd2JRJc7KuFb';
+const EMAILJS_SERVICE_ID = 'service_o7rgokk';
+const EMAILJS_TEMPLATE_ID = 'template_xf7w9u8';
+if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
 
 var selectedPackage = null;
 var ageAutoFilledFlag = false; // true if Age Category was last set automatically (not by the user)
@@ -392,6 +407,8 @@ en: {
   f_passport_number: 'Passport Number <span class="req">*</span>',
   f_date_of_issue: 'Date of Issue <span class="req">*</span>',
   f_date_of_expiry: 'Date of Expiry <span class="req">*</span>',
+  f_passport_picture: "Passport picture",
+  f_passport_picture_hint: "Please upload your passport",
   hint_no_letter_packages: "No Confirmation Letter packages configured",
   summary_header: "💶 Payment Summary",
   summary_empty: "Select a package to see the amount due.",
@@ -516,6 +533,8 @@ de: {
   f_passport_number: 'Passnummer <span class="req">*</span>',
   f_date_of_issue: 'Ausstellungsdatum <span class="req">*</span>',
   f_date_of_expiry: 'Ablaufdatum <span class="req">*</span>',
+  f_passport_picture: "Passfoto",
+  f_passport_picture_hint: "Bitte lade eine Kopie deines Reisepasses hoch",
   hint_no_letter_packages: "Keine Confirmation-Letter-Packages hinterlegt",
   summary_header: "💶 Zahlungsübersicht",
   summary_empty: "Wähle ein Package, um den fälligen Betrag zu sehen.",
@@ -720,6 +739,7 @@ async function init() {
 
   var evFull = await db.from('events').select('*').eq('id', eventId).single();
   if (evFull.data) {
+    registeredEventName = evFull.data.name;
     document.getElementById('pageTitleText').textContent = evFull.data.name;
     document.title = 'Registration – ' + evFull.data.name;
     if (evFull.data.date_to) eventEndDate = new Date(evFull.data.date_to);
@@ -1430,6 +1450,37 @@ async function submitRegistration() {
     eb.style.display = 'block';
     eb.innerHTML = '❌ ' + t('err_generic') + r.error.message;
     return;
+  }
+
+  // Optionaler Passfoto-Upload (nur wenn Confirmation Letter benötigt wird und eine Datei
+  // gewählt wurde). Läuft nach dem Insert, damit die neue participant-ID als Speicherpfad
+  // genutzt werden kann — genau wie im Admin-Tool bei der Personendatenbank.
+  var passportFileInput = document.getElementById('r_passport_photo');
+  if (needsLetter && passportFileInput && passportFileInput.files && passportFileInput.files[0]) {
+    try {
+      var file = passportFileInput.files[0];
+      var ext = file.type === 'application/pdf' ? 'pdf' : 'jpg';
+      var path = r.data.id + '/passport.' + ext;
+      var up = await db.storage.from('person-media').upload(path, file, { upsert: true, contentType: file.type });
+      if (!up.error) {
+        var pub = db.storage.from('person-media').getPublicUrl(path);
+        await db.from('participants').update({ passport_doc_url: pub.data.publicUrl }).eq('id', r.data.id);
+      }
+    } catch (e) { /* Upload-Fehler blockieren die Registrierung nicht, still ignorieren */ }
+  }
+
+  // Automatische Bestätigungsmail per EmailJS (läuft direkt im Browser, kein Server nötig).
+  // Schlägt der Versand fehl (z.B. EmailJS noch nicht eingerichtet), wird die Anmeldung
+  // dadurch NICHT blockiert.
+  if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email: v('r_email'),
+        to_name: (v('r_firstname') + ' ' + v('r_lastname')).trim(),
+        event_name: registeredEventName || 'the tournament',
+        esid: v('r_member_id') || '-'
+      });
+    } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
   }
 
   document.getElementById('formContainer').style.display = 'none';

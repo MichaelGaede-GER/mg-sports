@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Group Registration – European Junior Open 2026</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -211,6 +212,14 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ==== EmailJS Konfiguration (bitte mit deinen eigenen Werten von emailjs.com befüllen) ====
+const EMAILJS_PUBLIC_KEY = 'iTmRZnd2JRJc7KuFb';
+const EMAILJS_SERVICE_ID = 'service_o7rgokk';
+const EMAILJS_TEMPLATE_ID = 'template_xf7w9u8';
+if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
 var eventId = null;
 var eventEndDate = null;
 var isPastDeadline = false;
@@ -361,6 +370,8 @@ en: {
   f_passport_number: 'Passport Number <span class="req">*</span>',
   f_date_of_issue: 'Date of Issue <span class="req">*</span>',
   f_date_of_expiry: 'Date of Expiry <span class="req">*</span>',
+  f_passport_picture: "Passport picture",
+  f_passport_picture_hint: "Please upload your passport",
   hint_no_letter_packages: "No Confirmation Letter packages configured",
   summary_header: "💶 Payment Summary",
   summary_empty: "Add package selections to see the amount due.",
@@ -505,6 +516,8 @@ de: {
   f_passport_number: 'Passnummer <span class="req">*</span>',
   f_date_of_issue: 'Ausstellungsdatum <span class="req">*</span>',
   f_date_of_expiry: 'Ablaufdatum <span class="req">*</span>',
+  f_passport_picture: "Passfoto",
+  f_passport_picture_hint: "Bitte lade eine Kopie deines Reisepasses hoch",
   hint_no_letter_packages: "Keine Confirmation-Letter-Packages hinterlegt",
   summary_header: "💶 Zahlungsübersicht",
   summary_empty: "Package-Auswahl hinzufügen, um den fälligen Betrag zu sehen.",
@@ -801,6 +814,7 @@ function addParticipantRow() {
     + '<div class="form-group" id="p_passport_number_wrap_' + id + '" style="display:none"><label data-i18n="f_passport_number">' + t('f_passport_number') + '</label><input type="text" id="p_visa_passport_number_' + id + '" /></div>'
     + '<div class="form-group" id="p_date_of_issue_wrap_' + id + '" style="display:none"><label data-i18n="f_date_of_issue">' + t('f_date_of_issue') + '</label><input type="date" id="p_date_of_issue_' + id + '" /></div>'
     + '<div class="form-group" id="p_date_of_expiry_wrap_' + id + '" style="display:none"><label data-i18n="f_date_of_expiry">' + t('f_date_of_expiry') + '</label><input type="date" id="p_date_of_expiry_' + id + '" /></div>'
+    + '<div class="form-group full" id="p_passport_picture_wrap_' + id + '" style="display:none"><label data-i18n="f_passport_picture">' + t('f_passport_picture') + '</label><div style="font-size:12px;color:#8a93a6;margin-bottom:6px" data-i18n="f_passport_picture_hint">' + t('f_passport_picture_hint') + '</div><input type="file" id="p_passport_photo_' + id + '" accept="image/*,application/pdf" /></div>'
     + '</div>'
     + '<span class="travel-toggle" onclick="toggleIndividualTravel(' + id + ')" id="p_traveltoggle_' + id + '" data-i18n="f_travel_toggle">' + t('f_travel_toggle') + '</span>'
     + '<div class="travel-fields" id="p_travelfields_' + id + '">'
@@ -998,7 +1012,7 @@ function onPackageChange(id) {
 // the mandatory passport/birth details needed to issue the letter.
 function onConfirmationLetterToggle(id) {
   var show = document.getElementById('p_visa_' + id).value === 'Ja';
-  ['p_letter_type_wrap_', 'p_place_of_birth_wrap_', 'p_passport_number_wrap_', 'p_date_of_issue_wrap_', 'p_date_of_expiry_wrap_'].forEach(function(prefix) {
+  ['p_letter_type_wrap_', 'p_place_of_birth_wrap_', 'p_passport_number_wrap_', 'p_date_of_issue_wrap_', 'p_date_of_expiry_wrap_', 'p_passport_picture_wrap_'].forEach(function(prefix) {
     var el = document.getElementById(prefix + id);
     if (el) el.style.display = show ? '' : 'none';
   });
@@ -1494,7 +1508,9 @@ async function submitGroupRegistration() {
   // Requested room types (to re-check capacity right before insert)
   var requestedRoomCounts = {};
 
-  participantIds.forEach(function(id, idx) {
+  for (var _piIdx = 0; _piIdx < participantIds.length; _piIdx++) {
+    var id = participantIds[_piIdx];
+    var idx = _piIdx;
     var pFirst = document.getElementById('p_firstname_' + id).value.trim();
     var pLast = document.getElementById('p_lastname_' + id).value.trim();
     var pCountry = document.getElementById('p_country_' + id).value;
@@ -1615,6 +1631,25 @@ async function submitGroupRegistration() {
     var letterSel = document.getElementById('p_letter_type_' + id);
     var letterOpt = needsLetter && letterSel ? letterSel.selectedOptions[0] : null;
 
+    // Passfoto-Upload (nur wenn Confirmation Letter benötigt wird und eine Datei gewählt
+    // wurde). Jeder Teilnehmer bekommt vorab eine UUID, damit der Speicherpfad schon vor
+    // dem gemeinsamen Bulk-Insert feststeht.
+    var participantId = crypto.randomUUID();
+    var passportDocUrl = null;
+    var passportFileInput = document.getElementById('p_passport_photo_' + id);
+    if (needsLetter && passportFileInput && passportFileInput.files && passportFileInput.files[0]) {
+      try {
+        var pFile = passportFileInput.files[0];
+        var pExt = pFile.type === 'application/pdf' ? 'pdf' : 'jpg';
+        var pPath = participantId + '/passport.' + pExt;
+        var pUp = await db.storage.from('person-media').upload(pPath, pFile, { upsert: true, contentType: pFile.type });
+        if (!pUp.error) {
+          var pPub = db.storage.from('person-media').getPublicUrl(pPath);
+          passportDocUrl = pPub.data.publicUrl;
+        }
+      } catch (e) { /* Upload-Fehler blockiert die Registrierung nicht */ }
+    }
+
     // Preserve room-related info that would otherwise be lost:
     // - if past deadline, room_type gets overwritten with 'Warteliste' below, so the
     //   actually requested room type needs to be noted somewhere for the organizer.
@@ -1628,6 +1663,8 @@ async function submitGroupRegistration() {
     var roomMemo = roomMemoParts.length ? roomMemoParts.join(' | ') : null;
 
     rows.push({
+      id: participantId,
+      passport_doc_url: passportDocUrl,
       event_id: eventId,
       lastname: pLast, firstname: pFirst, country: pCountry,
       dob: pDob || null, gender: pGender, member_id: pEsid,
@@ -1655,7 +1692,7 @@ async function submitGroupRegistration() {
       payment_status: 'Pending',
       updated_at: new Date().toISOString()
     });
-  });
+  }
 
   var needsAccessCode = rows.some(function(r) { return r.package === 'T'; });
   if (needsAccessCode) {
@@ -1728,6 +1765,24 @@ async function submitGroupRegistration() {
     errBox.innerHTML = t('err_generic') + r.error.message;
     errBox.scrollIntoView({ behavior: 'smooth' });
     return;
+  }
+
+  // Automatische Bestätigungsmail pro Teilnehmer per EmailJS (läuft direkt im Browser,
+  // kein Server nötig). Schlägt der Versand fehl (z.B. EmailJS noch nicht eingerichtet),
+  // wird die Anmeldung dadurch NICHT blockiert.
+  if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
+    for (var _mi = 0; _mi < rows.length; _mi++) {
+      var _mRow = rows[_mi];
+      if (!_mRow.email) continue;
+      try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: _mRow.email,
+          to_name: (( _mRow.firstname||'') + ' ' + (_mRow.lastname||'')).trim(),
+          event_name: eventNameRaw || 'the tournament',
+          esid: _mRow.member_id || '-'
+        });
+      } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
+    }
   }
 
   document.getElementById('formContainer').style.display = 'none';
