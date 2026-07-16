@@ -1469,6 +1469,63 @@ function onSameTravelToggle() {
 }
 
 // ---------- SUBMIT ----------
+// Baut eine vollständige, lesbare Zusammenfassung aller ausgefüllten Felder als Klartext
+// (mit Zeilenumbrüchen) für die Bestätigungsmail. Leere/nicht zutreffende Felder werden
+// übersprungen, damit die Mail nicht überladen wirkt.
+function buildRegistrationSummaryText(row, roomTypeLabel) {
+  var lines = [];
+  function add(label, value) { if (value !== null && value !== undefined && value !== '') lines.push(label + ': ' + value); }
+  function section(title) { lines.push(''); lines.push('— ' + title + ' —'); }
+
+  section('Personal Data');
+  add('Last Name', row.lastname);
+  add('First Name', row.firstname);
+  add('Country', row.country);
+  add('Date of Birth', row.dob);
+  add('Gender', row.gender);
+  add('ESID / Member ID', row.member_id);
+  add('Mobile', row.mobile);
+  add('Email', row.email);
+  add('Role', row.role);
+  add('Age Category / Event', row.events);
+  add('Shirt Size', row.shirt);
+
+  section('Package & Hotel');
+  add('Package', row.package);
+  add('Package Price', row.package_price != null ? row.package_price.toFixed(2) + ' EUR' : null);
+  add('Room Type', roomTypeLabel || row.room_type);
+  add('Hotel', row.hotel);
+  add('Check-in', row.checkin);
+  add('Check-out', row.checkout);
+
+  section('Travel');
+  add('Airport Bus', row.ams_bus);
+  add('Additional Airport Transfer', row.airport_plus);
+  add('Arrival Date', row.arrival_date);
+  add('Arrival Time', row.arrival_time);
+  add('Flight In', row.flight_in);
+  add('Departure Date', row.departure_date);
+  add('Departure Time', row.departure_time);
+  add('Flight Out', row.flight_out);
+
+  if (row.visa === 'Ja') {
+    section('VISA / Confirmation Letter');
+    add('VISA Required', row.visa);
+    add('Place of Birth', row.place_of_birth);
+    add('Passport Number', row.passport_id);
+    add('Date of Issue', row.visa_date_of_issue);
+    add('Date of Expiry', row.visa_date_of_expiry);
+    add('Letter Type', row.confirmation_letter_type);
+  }
+
+  if (row.memo) {
+    section('Additional Notes');
+    lines.push(row.memo);
+  }
+
+  return lines.join('\n').trim();
+}
+
 async function submitGroupRegistration() {
   var errors = [];
 
@@ -1771,6 +1828,7 @@ async function submitGroupRegistration() {
   // kein Server nötig). Schlägt der Versand fehl (z.B. EmailJS noch nicht eingerichtet),
   // wird die Anmeldung dadurch NICHT blockiert.
   if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
+    var roomTypeLabelsMail = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
     for (var _mi = 0; _mi < rows.length; _mi++) {
       var _mRow = rows[_mi];
       if (!_mRow.email) continue;
@@ -1779,7 +1837,8 @@ async function submitGroupRegistration() {
           to_email: _mRow.email,
           to_name: (( _mRow.firstname||'') + ' ' + (_mRow.lastname||'')).trim(),
           event_name: eventNameRaw || 'the tournament',
-          esid: _mRow.member_id || '-'
+          esid: _mRow.member_id || '-',
+          registration_summary: buildRegistrationSummaryText(_mRow, roomTypeLabelsMail[_mRow.room_type] || _mRow.room_type)
         });
       } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
     }
