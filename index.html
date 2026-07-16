@@ -1041,6 +1041,21 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <div class="form-group"><label>Letter-Preis (€)</label>
                   <input type="number" id="f_confirmation_letter_price" step="0.01" placeholder="0.00" />
                 </div>
+                <div class="form-group" style="grid-column:1/-1">
+                  <label>Passport picture</label>
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Please upload your passport</div>
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <div id="entryPassportDocPreview" style="width:100px;height:100px;border-radius:var(--radius);border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;background:var(--bg3);gap:4px;flex-shrink:0" onclick="document.getElementById('entryPassportDocInput').click()">
+                      <span style="font-size:24px">📄</span>
+                      <span style="font-size:10px;color:var(--text3)">PDF oder Bild</span>
+                    </div>
+                    <input type="file" id="entryPassportDocInput" accept="image/*,.pdf" style="display:none" onchange="previewEntryPassportDoc(event)" />
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('entryPassportDocInput').click()">Datei auswählen</button>
+                      <button class="btn danger" id="entryPassportDeleteBtn" style="font-size:11px;padding:4px 10px;display:none" onclick="deleteEntryPassportDoc()">Datei löschen</button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div style="display:flex;gap:10px;margin-top:16px">
                 <button class="btn" onclick="prefillConfirmationLetter()">
@@ -2673,13 +2688,31 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         <div class="card">
           <div class="card-header"><h3>Meldegebühr & VISA</h3></div>
           <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Gilt nur für das aktuell aktive Event.</p>
             <div class="form-grid" style="max-width:500px">
               <div class="form-group"><label>Meldegebühr pro Spieler (€)</label><input type="number" id="set_entry_fee" min="0" step="1" placeholder="90" /></div>
               <div class="form-group"><label>VISA Express Aufschlag (€)</label><input type="number" id="set_visa_express_fee" min="0" step="1" placeholder="0" /></div>
             </div>
             <div style="margin-top:16px">
-              <button class="btn primary" onclick="saveEntryFeeFromSettings()">Speichern</button>
+              <button class="btn primary" onclick="saveEntryFeeFromSettings()">Für dieses Event speichern</button>
             </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <h3>Letter Types (Confirmation Letter)</h3>
+            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="openLetterTypeModal()">+ Letter Type hinzufügen</button>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+              Diese Optionen erscheinen im Registrierungsformular unter "Letter Type", sobald "Confirmation Letter required?" mit Ja beantwortet wird.
+              Gilt nur für das aktuell aktive Event.
+            </p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Bezeichnung</th><th>Preis (€)</th><th>Aktionen</th></tr></thead>
+              <tbody id="letterTypesTable"><tr><td colspan="3" class="loading">Lade…</td></tr></tbody>
+            </table></div>
           </div>
         </div>
 
@@ -4382,8 +4415,16 @@ async function checkTables() {
 }
 
 async function loadEntryFee() {
-  const { data } = await db.from('app_settings').select('value').eq('key', 'entry_fee').single();
-  if (data) { entryFee = parseFloat(data.value) || 90; }
+  // Meldegebühr gilt pro Event. Für Events ohne eigenen Wert (z.B. bestehende Events vor
+  // dieser Umstellung) wird als Fallback die frühere globale Einstellung verwendet.
+  var efKey = currentEventId ? ('entry_fee_' + currentEventId) : 'entry_fee';
+  var r = await db.from('app_settings').select('value').eq('key', efKey).single();
+  if (r.data) {
+    entryFee = parseFloat(r.data.value) || 90;
+  } else if (currentEventId) {
+    var legacy = await db.from('app_settings').select('value').eq('key', 'entry_fee').single();
+    if (legacy.data) entryFee = parseFloat(legacy.data.value) || 90;
+  }
   document.getElementById('entryFeeInput').value = entryFee;
   document.getElementById('entryFeeDisplay').textContent = fmt(entryFee);
   /* f_entry_fee removed */
@@ -6028,6 +6069,7 @@ function clearForm() {
   const twBadge = document.getElementById('tournamentWithdrawSourceBadge'); if (twBadge) twBadge.style.display = 'none';
   { const mci = document.getElementById('mealCheckinInfo'); if (mci) mci.innerHTML = '– kein Teilnehmer geladen –'; }
   ['cl_fullname','cl_dob','cl_place_of_birth','cl_passport','cl_date_of_issue','cl_date_of_expiry','f_confirmation_letter_price'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  deleteEntryPassportDoc();
   var clTypeEl = document.getElementById('f_confirmation_letter_type'); if (clTypeEl) { clTypeEl.value=''; clTypeEl.removeAttribute('data-pending-value'); }
 }
 
@@ -6068,6 +6110,22 @@ async function editEntry(id) {
   var clExpiry = document.getElementById('cl_date_of_expiry'); if (clExpiry) clExpiry.value = p.visa_date_of_expiry || '';
   var clType = document.getElementById('f_confirmation_letter_type'); if (clType) { clType.value = p.confirmation_letter_type || ''; clType.setAttribute('data-pending-value', p.confirmation_letter_type || ''); }
   var clPrice = document.getElementById('f_confirmation_letter_price'); if (clPrice) clPrice.value = p.confirmation_letter_price || '';
+  entryPassportFile = null;
+  entryCurrentPassportUrl = p.passport_doc_url || null;
+  var entryPassportPreview = document.getElementById('entryPassportDocPreview');
+  var entryPassportDelBtn = document.getElementById('entryPassportDeleteBtn');
+  if (entryPassportPreview) {
+    if (p.passport_doc_url) {
+      var isPdfDoc = p.passport_doc_url.toLowerCase().includes('.pdf');
+      entryPassportPreview.innerHTML = isPdfDoc
+        ? '<span style="font-size:24px">📄</span><a href="'+p.passport_doc_url+'" target="_blank" style="font-size:10px;color:var(--blue)">Öffnen</a>'
+        : '<img src="'+p.passport_doc_url+'" style="width:100%;height:100%;object-fit:cover" />';
+      if (entryPassportDelBtn) entryPassportDelBtn.style.display = 'block';
+    } else {
+      entryPassportPreview.innerHTML = '<span style="font-size:24px">📄</span><span style="font-size:10px;color:var(--text3)">PDF oder Bild</span>';
+      if (entryPassportDelBtn) entryPassportDelBtn.style.display = 'none';
+    }
+  }
   setTimeout(checkMahnungDateRequired, 100);
   setTimeout(updateTotalBreakdown, 200);
   var syncBtn = document.getElementById('syncPersonBtnTop');
@@ -6249,7 +6307,27 @@ async function saveEntry() {
     if (wdStatus) computedPaymentStatus = wdStatus;
   }
 
+  // Passfoto-Upload (Confirmation Letter Tab) — analog zur Personendatenbank: bei neuen
+  // Teilnehmern wird vorab eine UUID erzeugt, damit der Speicherpfad schon vor dem Insert
+  // feststeht.
+  var participantTempId = id || crypto.randomUUID();
+  var entryPassportUrl = entryCurrentPassportUrl;
+  if (entryPassportFile) {
+    try {
+      if (entryPassportFile.type.startsWith('image/')) {
+        var compressedEntryDoc = await compressImageFile(entryPassportFile, 1400, 0.8);
+        entryPassportUrl = await uploadPersonMediaFile(participantTempId + '/passport.jpg', compressedEntryDoc, 'image/jpeg');
+      } else {
+        entryPassportUrl = await uploadPersonMediaFile(participantTempId + '/passport.pdf', entryPassportFile, 'application/pdf');
+      }
+    } catch (e) {
+      toast('⚠️ Passfoto-Upload fehlgeschlagen: ' + (e.message||e));
+      return;
+    }
+  }
+
   const row = {
+    passport_doc_url: entryPassportUrl,
     group_tp: v('group_tp'), lastname, firstname,
     country: v('country').toUpperCase(), mobile: v('mobile'), email: v('email'),
     dob: v('dob')||null, passport_id: v('passport_id'), gender: v('gender'),
@@ -6337,6 +6415,7 @@ async function saveEntry() {
   if (id) {
     ({ error } = await db.from('participants').update(row).eq('id', id));
   } else {
+    row.id = participantTempId;
     ({ error } = await db.from('participants').insert(row));
   }
   if (error) { toast('Fehler: ' + error.message); return; }
@@ -9558,6 +9637,8 @@ let eventLogoFile = null;
 let personPhotoFile = null;
 var DUMMY_PHOTO_URL = DUMMY_PHOTO_URL;
 let personPassportFile = null;
+let entryPassportFile = null;
+let entryCurrentPassportUrl = null;
 let personCurrentPhotoUrl = null;
 let personCurrentPassportUrl = null;
 let entryFee = 90;
@@ -9681,7 +9762,16 @@ async function loadEntryFeeExt() {
     if (s.key.startsWith('mahn') && mahnTemplates.hasOwnProperty(s.key)) mahnTemplates[s.key] = s.value;
   });
 }
-async function loadVisaExpressFee() { var r=await db.from('app_settings').select('value').eq('key','visa_express_fee').single(); if(r.data) visaExpressFee=parseFloat(r.data.value)||0; }
+async function loadVisaExpressFee() {
+  var vKey = currentEventId ? ('visa_express_fee_' + currentEventId) : 'visa_express_fee';
+  var r = await db.from('app_settings').select('value').eq('key', vKey).single();
+  if (r.data) {
+    visaExpressFee = parseFloat(r.data.value) || 0;
+  } else if (currentEventId) {
+    var legacy = await db.from('app_settings').select('value').eq('key', 'visa_express_fee').single();
+    if (legacy.data) visaExpressFee = parseFloat(legacy.data.value) || 0;
+  }
+}
 async function loadMahnTemplates() {
   var r=await db.from('app_settings').select('*');
   if(!r.data) return;
@@ -9728,6 +9818,9 @@ async function setActiveEvent(id, name) {
   refreshTournamentWithdrawalBadge().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
   loadAgeClasses().catch(function(){});
+  loadEntryFee().catch(function(){});
+  loadVisaExpressFee().catch(function(){});
+  loadLetterTypesSettings().catch(function(){});
   toast('Aktives Event: '+name);
 }
 function updateActiveEventDisplay() {
@@ -9972,13 +10065,81 @@ async function saveMealTimes() {
   toast('✅ Essenszeiten gespeichert');
 }
 async function saveEntryFeeFromSettings() {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
   entryFee=parseFloat(document.getElementById('set_entry_fee')&&document.getElementById('set_entry_fee').value)||90;
   visaExpressFee=parseFloat(document.getElementById('set_visa_express_fee')&&document.getElementById('set_visa_express_fee').value)||0;
   var efi=document.getElementById('entryFeeInput'); if(efi) efi.value=entryFee;
   var efd=document.getElementById('entryFeeDisplay'); if(efd) efd.textContent=fmt(entryFee);
-  await db.from('app_settings').upsert([{key:'entry_fee',value:String(entryFee)},{key:'visa_express_fee',value:String(visaExpressFee)}]);
-  toast('Einstellungen gespeichert');
+  await db.from('app_settings').upsert([
+    {key:'entry_fee_'+currentEventId, value:String(entryFee)},
+    {key:'visa_express_fee_'+currentEventId, value:String(visaExpressFee)}
+  ]);
+  toast('✅ Für dieses Event gespeichert');
 }
+// ================= LETTER TYPES (Confirmation Letter, pro Event) =================
+var letterTypesCache = [];
+
+async function loadLetterTypesSettings() {
+  var tb = document.getElementById('letterTypesTable');
+  if (!tb) return;
+  if (!currentEventId) { tb.innerHTML = '<tr><td colspan="3" class="empty">Bitte zuerst ein Event aktivieren</td></tr>'; return; }
+  tb.innerHTML = '<tr><td colspan="3" class="loading">Lade…</td></tr>';
+  var r = await db.from('letter_types').select('*').eq('event_id', currentEventId).order('price');
+  if (r.error) { tb.innerHTML = '<tr><td colspan="3" class="empty">Fehler: ' + r.error.message + '</td></tr>'; return; }
+  letterTypesCache = r.data || [];
+  if (!letterTypesCache.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">Noch keine Letter Types für dieses Event erfasst</td></tr>'; return; }
+  tb.innerHTML = letterTypesCache.map(function(lt) {
+    return '<tr><td><strong>' + lt.name + '</strong></td><td>' + fmt(lt.price) + '</td>'
+      + '<td style="display:flex;gap:6px">'
+      + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="openLetterTypeModal(\'' + lt.id + '\')">Bearbeiten</button>'
+      + '<button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteLetterType(\'' + lt.id + '\')">Löschen</button>'
+      + '</td></tr>';
+  }).join('');
+}
+
+function openLetterTypeModal(id) {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  var lt = id ? letterTypesCache.find(function(x) { return x.id === id; }) : null;
+  var existing = document.getElementById('letterTypeModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'letterTypeModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) menu.remove(); };
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:22px;width:380px;max-width:100%;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:14px;font-size:15px;color:var(--text)">' + (lt ? 'Letter Type bearbeiten' : 'Letter Type hinzufügen') + '</h3>'
+    + '<input type="hidden" id="lt_edit_id" value="' + (lt ? lt.id : '') + '" />'
+    + '<div class="form-group" style="margin-bottom:10px"><label>Bezeichnung</label><input type="text" id="lt_name" placeholder="z.B. Confirmation Letter Standard" value="' + (lt ? lt.name : '') + '" /></div>'
+    + '<div class="form-group"><label>Preis (€)</label><input type="number" id="lt_price" step="0.01" min="0" value="' + (lt ? lt.price : '') + '" /></div>'
+    + '<div style="display:flex;gap:8px;margin-top:16px">'
+    + '<button class="btn primary" style="flex:1" onclick="saveLetterType()">Speichern</button>'
+    + '<button class="btn" style="flex:1" onclick="document.getElementById(\'letterTypeModal\').remove()">Abbrechen</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function saveLetterType() {
+  var id = document.getElementById('lt_edit_id').value;
+  var name = document.getElementById('lt_name').value.trim();
+  var price = parseFloat(document.getElementById('lt_price').value) || 0;
+  if (!name) { toast('Bitte eine Bezeichnung eingeben'); return; }
+  var row = { name: name, price: price };
+  var r = id ? await db.from('letter_types').update(row).eq('id', id)
+             : await db.from('letter_types').insert(Object.assign({ event_id: currentEventId }, row));
+  if (r.error) { toast('⚠️ Fehler: ' + r.error.message); return; }
+  toast('✅ Gespeichert');
+  var m = document.getElementById('letterTypeModal'); if (m) m.remove();
+  loadLetterTypesSettings();
+}
+
+async function deleteLetterType(id) {
+  if (!confirm('Diesen Letter Type wirklich löschen?')) return;
+  await db.from('letter_types').delete().eq('id', id);
+  toast('Gelöscht');
+  loadLetterTypesSettings();
+}
+
+
 async function deleteAllParticipants() {
   if(!confirm('Moechtest du wirklich ALLE Teilnehmer loeschen?\n\nDieser Vorgang kann NICHT rueckgaengig gemacht werden!')) return;
   var w=prompt('Zur Bestaetigung bitte "LOESCHEN" eintippen:');
@@ -10784,6 +10945,22 @@ function previewPersonPassportDoc(event) {
 }
 function deletePersonPhoto() { personPhotoFile=null; personCurrentPhotoUrl=null; var p=document.getElementById('personPhotoPreview');if(p)p.innerHTML='<span style="font-size:28px">Foto</span>';var b=document.getElementById('personPhotoDeleteBtn');if(b)b.style.display='none';if(document.getElementById('personPhotoInput'))document.getElementById('personPhotoInput').value=''; }
 function deletePersonPassportDoc() { personPassportFile=null; personCurrentPassportUrl=null; var p=document.getElementById('personPassportDocPreview');if(p)p.innerHTML='<span style="font-size:28px">Dok</span><span style="font-size:11px;color:var(--text3)">PDF oder Bild</span>';var b=document.getElementById('personPassportDeleteBtn');if(b)b.style.display='none';if(document.getElementById('personPassportDocInput'))document.getElementById('personPassportDocInput').value=''; }
+
+// Passfoto-Upload im Teilnehmerformular (Confirmation Letter Tab) — analog zum Upload in
+// der Personendatenbank, nutzt dieselben Storage-Helfer (compressImageFile, uploadPersonMediaFile).
+function previewEntryPassportDoc(event) {
+  var file=event.target.files[0]; if(!file) return; entryPassportFile=file;
+  var prev=document.getElementById('entryPassportDocPreview');
+  if(file.type.startsWith('image/')){var reader=new FileReader();reader.onload=function(e){if(prev)prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover" />';};reader.readAsDataURL(file);}
+  else{if(prev)prev.innerHTML='<span style="font-size:24px">PDF</span><span style="font-size:10px;color:var(--text2);padding:0 4px;text-align:center;overflow:hidden">'+file.name+'</span>';}
+  var btn=document.getElementById('entryPassportDeleteBtn'); if(btn) btn.style.display='block';
+}
+function deleteEntryPassportDoc() {
+  entryPassportFile=null; entryCurrentPassportUrl=null;
+  var p=document.getElementById('entryPassportDocPreview'); if(p)p.innerHTML='<span style="font-size:24px">📄</span><span style="font-size:10px;color:var(--text3)">PDF oder Bild</span>';
+  var b=document.getElementById('entryPassportDeleteBtn'); if(b)b.style.display='none';
+  var inp=document.getElementById('entryPassportDocInput'); if(inp) inp.value='';
+}
 function showUploadProgress(pct, text) { var p=document.getElementById('personUploadProgress');if(p)p.style.display='block';var b=document.getElementById('personUploadBar');if(b)b.style.width=pct+'%';var t=document.getElementById('personUploadText');if(t)t.textContent=text; }
 function hideUploadProgress() { var p=document.getElementById('personUploadProgress');if(p)p.style.display='none'; }
 

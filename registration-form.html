@@ -770,8 +770,11 @@ async function init() {
 }
 
 async function loadPackages() {
-  var pkgR = await db.from('packages').select('*').order('sort_order').order('code');
+  var pkgQ = db.from('packages').select('*').order('sort_order').order('code');
+  if (eventId) pkgQ = pkgQ.or('event_id.eq.' + eventId + ',event_id.is.null');
+  var pkgR = await pkgQ;
   packagesData = pkgR.data || [];
+  await loadLetterTypesData();
   populatePackageSelect();
 }
 
@@ -956,15 +959,20 @@ function onConfirmationLetterToggle() {
   renderPaymentSummary();
 }
 
+var letterTypesData = [];
+async function loadLetterTypesData() {
+  var r = await db.from('letter_types').select('*').eq('event_id', eventId).order('price');
+  letterTypesData = r.data || [];
+}
+
 function populateLetterTypeSelect() {
   var sel = document.getElementById('r_letter_type');
   var cur = sel.value;
-  var options = packagesData.filter(function(p) { return p.code === 'Confirmation Letter' || p.code === 'Confirmation Letter Express'; });
-  if (!options.length) { sel.innerHTML = '<option value="">' + t('hint_no_letter_packages') + '</option>'; return; }
-  sel.innerHTML = '<option value="">' + t('ph_select') + '</option>' + options.map(function(p) {
-    return '<option value="' + p.code + '" data-price="' + (p.price || 0) + '">' + p.code + ' (€ ' + parseFloat(p.price || 0).toFixed(2) + ')</option>';
+  if (!letterTypesData.length) { sel.innerHTML = '<option value="">' + t('hint_no_letter_packages') + '</option>'; return; }
+  sel.innerHTML = '<option value="">' + t('ph_select') + '</option>' + letterTypesData.map(function(lt) {
+    return '<option value="' + lt.name + '" data-price="' + (lt.price || 0) + '">' + lt.name + ' (€ ' + parseFloat(lt.price || 0).toFixed(2) + ')</option>';
   }).join('');
-  if (cur && options.some(function(p) { return p.code === cur; })) sel.value = cur;
+  if (cur && letterTypesData.some(function(lt) { return lt.name === cur; })) sel.value = cur;
 }
 
 function renderPaymentSummary() {
