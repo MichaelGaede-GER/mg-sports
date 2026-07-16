@@ -1652,7 +1652,7 @@ async function submitGroupRegistration() {
     var roleForCode = document.getElementById('p_role_' + id).value;
     if (ROLES_REQUIRING_CODE.indexOf(roleForCode) !== -1) {
       var officialCodeEl = document.getElementById('p_official_code_' + id);
-      var expectedOfficialCode = officialAccessCode || 'Official2026'; // fallback if not yet configured in event settings
+      var expectedOfficialCode = (officialAccessCode || 'Official2026').trim(); // fallback if not yet configured in event settings
       if (v('p_official_code_' + id) !== expectedOfficialCode) {
         errors.push(label + ': ' + t('err_official_code'));
         officialCodeEl.classList.add('error');
@@ -1754,7 +1754,7 @@ async function submitGroupRegistration() {
   var needsAccessCode = rows.some(function(r) { return r.package === 'T'; });
   if (needsAccessCode) {
     var codeEl = document.getElementById('g_accessCode');
-    var expectedTeamCode = teamAccessCode || 'REFEREE-2026'; // fallback if not yet configured in event settings
+    var expectedTeamCode = (teamAccessCode || 'REFEREE-2026').trim(); // fallback if not yet configured in event settings
     if (v('g_accessCode') !== expectedTeamCode) {
       errors.push(t('err_access_code'));
       codeEl.classList.add('error');

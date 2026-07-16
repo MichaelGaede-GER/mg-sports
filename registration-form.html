@@ -1374,7 +1374,7 @@ async function submitRegistration() {
   var needsAccessCode = selectedPackage === 'T';
   if (needsAccessCode) {
     var codeEl = document.getElementById('r_accessCode');
-    var expectedTeamCode = teamAccessCode || 'REFEREE-2026'; // fallback if not yet configured in event settings
+    var expectedTeamCode = (teamAccessCode || 'REFEREE-2026').trim(); // fallback if not yet configured in event settings
     if (v('r_accessCode') !== expectedTeamCode) { errors.push(t('err_access_code')); codeEl.classList.add('error'); }
     else { codeEl.classList.remove('error'); }
   }
@@ -1382,7 +1382,7 @@ async function submitRegistration() {
   var roleForCode = document.getElementById('r_role').value;
   if (ROLES_REQUIRING_CODE.indexOf(roleForCode) !== -1) {
     var officialCodeEl = document.getElementById('r_official_code');
-    var expectedOfficialCode = officialAccessCode || 'Official2026'; // fallback if not yet configured in event settings
+    var expectedOfficialCode = (officialAccessCode || 'Official2026').trim(); // fallback if not yet configured in event settings
     if (v('r_official_code') !== expectedOfficialCode) { errors.push(t('err_official_code')); officialCodeEl.classList.add('error'); }
     else { officialCodeEl.classList.remove('error'); }
   }
