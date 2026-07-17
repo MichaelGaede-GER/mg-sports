@@ -2691,32 +2691,22 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         </div>
 
         <div class="card" style="margin-top:16px">
-          <div class="card-header"><h3>🎓 Zertifikat-Vorlage (Certificate of Participation)</h3></div>
+          <div class="card-header"><h3>🎓 Zertifikat (Certificate of Participation)</h3></div>
           <div class="card-body">
             <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
-              Lade hier deine Zertifikats-Vorlage als Bild hoch. Name und Altersklasse werden beim Erstellen automatisch
-              an der unten eingestellten Position eingeblendet. Gilt nur für das aktuell aktive Event.
+              Das Zertifikat wird komplett automatisch erstellt: Event-Logo, Eventname, Ort und Datum kommen direkt
+              aus der Event-Verwaltung, Name und Kategorie aus dem jeweiligen Teilnehmer. Hier legst du nur noch die
+              zwei Unterschriften fest — gilt nur für das aktuell aktive Event.
             </p>
-            <div style="display:grid;grid-template-columns:220px 1fr;gap:20px">
-              <div>
-                <div id="certTemplatePreviewBox" style="width:100%;aspect-ratio:1055/1491;border:2px dashed var(--border2);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);overflow:hidden;position:relative" onclick="document.getElementById('certTemplateInput').click()">
-                  <div id="certTemplatePreviewImg"><span style="font-size:24px">➕</span></div>
-                  <div id="certNamePreviewMarker" style="position:absolute;left:5%;width:90%;text-align:center;font-size:11px;color:#185FA5;font-weight:700;display:none;pointer-events:none">[NAME]</div>
-                  <div id="certCategoryPreviewMarker" style="position:absolute;left:5%;width:90%;text-align:center;font-size:9px;color:#185FA5;font-weight:700;display:none;pointer-events:none">[KATEGORIE]</div>
-                </div>
-                <input type="file" id="certTemplateInput" accept="image/*" style="display:none" onchange="loadCertificateTemplate(event)" />
-                <button class="btn danger" id="certTemplateDeleteBtn" style="font-size:10px;padding:2px 6px;margin-top:6px;display:none" onclick="deleteCertificateTemplate()">Vorlage löschen</button>
-              </div>
-              <div>
-                <div class="form-grid" style="max-width:420px">
-                  <div class="form-group"><label>Name – vertikale Position (%)</label><input type="number" id="cert_name_y" min="0" max="100" step="1" value="53" oninput="updateCertPreviewMarkers()" /></div>
-                  <div class="form-group"><label>Name – Schriftgröße (px)</label><input type="number" id="cert_name_size" min="10" max="200" step="1" value="54" /></div>
-                  <div class="form-group"><label>Kategorie – vertikale Position (%)</label><input type="number" id="cert_cat_y" min="0" max="100" step="1" value="65" oninput="updateCertPreviewMarkers()" /></div>
-                  <div class="form-group"><label>Kategorie – Schriftgröße (px)</label><input type="number" id="cert_cat_size" min="8" max="80" step="1" value="20" /></div>
-                </div>
-                <p style="font-size:11px;color:var(--text3);margin-top:8px">Die blauen Markierungen im Vorschaubild links zeigen ungefähr, wo Name/Kategorie landen. Nach dem Speichern einmal über "🎓 Zertifikat" bei einem Teilnehmer testen und bei Bedarf die Werte hier feinjustieren.</p>
-                <button class="btn primary" style="margin-top:10px" onclick="saveCertificateConfig()">💾 Für dieses Event speichern</button>
-              </div>
+            <div class="form-grid">
+              <div class="form-group"><label>Unterschrift 1 – Name</label><input type="text" id="cert_sig1_name" placeholder="z.B. Bart Wijnhoven" /></div>
+              <div class="form-group"><label>Unterschrift 1 – Titel</label><input type="text" id="cert_sig1_title" placeholder="z.B. Event Organizer" /></div>
+              <div class="form-group"><label>Unterschrift 2 – Name</label><input type="text" id="cert_sig2_name" placeholder="z.B. Michael Gäde" /></div>
+              <div class="form-group"><label>Unterschrift 2 – Titel</label><input type="text" id="cert_sig2_title" placeholder="z.B. Deutscher Squash Verband / President" /></div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:10px">
+              <button class="btn primary" onclick="saveCertificateConfig()">💾 Für dieses Event speichern</button>
+              <button class="btn" onclick="previewCertificateSample()">👁 Beispiel-Vorschau</button>
             </div>
           </div>
         </div>
@@ -10409,121 +10399,152 @@ function sendHotelEmail() {
 // Vorlage + Positionierung werden pro Event gespeichert (wie Sponsor-Logos: Bild als
 // Base64 in app_settings, hier zusätzlich komprimiert da es sich um ein großes A4-Bild
 // handelt statt eines kleinen Logos).
-var certTemplateB64 = null;
-var certConfig = { name_y: 53, name_size: 54, cat_y: 65, cat_size: 20 };
+var certConfig = { sig1_name: '', sig1_title: '', sig2_name: '', sig2_title: '' };
 
 async function loadCertificateSettings() {
-  certTemplateB64 = null;
-  certConfig = { name_y: 53, name_size: 54, cat_y: 65, cat_size: 20 };
-  var previewImg = document.getElementById('certTemplatePreviewImg');
-  var delBtn = document.getElementById('certTemplateDeleteBtn');
-  if (previewImg) previewImg.innerHTML = '<span style="font-size:24px">➕</span>';
-  if (delBtn) delBtn.style.display = 'none';
+  certConfig = { sig1_name: '', sig1_title: '', sig2_name: '', sig2_title: '' };
   if (!currentEventId) return;
-
-  var r1 = await db.from('app_settings').select('value').eq('key', 'certificate_template_' + currentEventId).maybeSingle();
-  if (r1.data && r1.data.value) {
-    certTemplateB64 = r1.data.value;
-    if (previewImg) previewImg.innerHTML = '<img src="data:image/jpeg;base64,' + certTemplateB64 + '" style="width:100%;height:100%;object-fit:cover" />';
-    if (delBtn) delBtn.style.display = 'block';
+  var r = await db.from('app_settings').select('value').eq('key', 'certificate_config_' + currentEventId).maybeSingle();
+  if (r.data && r.data.value) {
+    try { certConfig = Object.assign(certConfig, JSON.parse(r.data.value)); } catch(e) {}
   }
-  var r2 = await db.from('app_settings').select('value').eq('key', 'certificate_config_' + currentEventId).maybeSingle();
-  if (r2.data && r2.data.value) {
-    try { certConfig = Object.assign(certConfig, JSON.parse(r2.data.value)); } catch(e) {}
-  }
-  var nameY = document.getElementById('cert_name_y'); if (nameY) nameY.value = certConfig.name_y;
-  var nameSize = document.getElementById('cert_name_size'); if (nameSize) nameSize.value = certConfig.name_size;
-  var catY = document.getElementById('cert_cat_y'); if (catY) catY.value = certConfig.cat_y;
-  var catSize = document.getElementById('cert_cat_size'); if (catSize) catSize.value = certConfig.cat_size;
-  updateCertPreviewMarkers();
-}
-
-async function loadCertificateTemplate(event) {
-  var file = event.target.files[0]; if (!file) return;
-  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
-  toast('Lade Vorlage hoch…');
-  try {
-    var blob = await compressImageFile(file, 1400, 0.88);
-    var reader = new FileReader();
-    reader.onload = async function(e) {
-      var b64 = e.target.result.split(',')[1];
-      certTemplateB64 = b64;
-      var previewImg = document.getElementById('certTemplatePreviewImg');
-      if (previewImg) previewImg.innerHTML = '<img src="data:image/jpeg;base64,' + b64 + '" style="width:100%;height:100%;object-fit:cover" />';
-      var delBtn = document.getElementById('certTemplateDeleteBtn'); if (delBtn) delBtn.style.display = 'block';
-      await db.from('app_settings').upsert({ key: 'certificate_template_' + currentEventId, value: b64 });
-      updateCertPreviewMarkers();
-      toast('✅ Vorlage gespeichert');
-    };
-    reader.readAsDataURL(blob);
-  } catch (e) { toast('⚠️ Fehler: ' + e.message); }
-}
-
-async function deleteCertificateTemplate() {
-  if (!currentEventId || !confirm('Zertifikats-Vorlage für dieses Event wirklich löschen?')) return;
-  certTemplateB64 = null;
-  await db.from('app_settings').delete().eq('key', 'certificate_template_' + currentEventId);
-  var previewImg = document.getElementById('certTemplatePreviewImg'); if (previewImg) previewImg.innerHTML = '<span style="font-size:24px">➕</span>';
-  var delBtn = document.getElementById('certTemplateDeleteBtn'); if (delBtn) delBtn.style.display = 'none';
-  toast('Gelöscht');
-}
-
-function updateCertPreviewMarkers() {
-  var nameMarker = document.getElementById('certNamePreviewMarker');
-  var catMarker = document.getElementById('certCategoryPreviewMarker');
-  var nameY = parseFloat(document.getElementById('cert_name_y') && document.getElementById('cert_name_y').value) || 53;
-  var catY = parseFloat(document.getElementById('cert_cat_y') && document.getElementById('cert_cat_y').value) || 65;
-  if (nameMarker) { nameMarker.style.top = nameY + '%'; nameMarker.style.display = certTemplateB64 ? 'block' : 'none'; }
-  if (catMarker) { catMarker.style.top = catY + '%'; catMarker.style.display = certTemplateB64 ? 'block' : 'none'; }
+  var s1n = document.getElementById('cert_sig1_name'); if (s1n) s1n.value = certConfig.sig1_name || '';
+  var s1t = document.getElementById('cert_sig1_title'); if (s1t) s1t.value = certConfig.sig1_title || '';
+  var s2n = document.getElementById('cert_sig2_name'); if (s2n) s2n.value = certConfig.sig2_name || '';
+  var s2t = document.getElementById('cert_sig2_title'); if (s2t) s2t.value = certConfig.sig2_title || '';
 }
 
 async function saveCertificateConfig() {
   if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
   certConfig = {
-    name_y: parseFloat(document.getElementById('cert_name_y').value) || 53,
-    name_size: parseFloat(document.getElementById('cert_name_size').value) || 54,
-    cat_y: parseFloat(document.getElementById('cert_cat_y').value) || 65,
-    cat_size: parseFloat(document.getElementById('cert_cat_size').value) || 20
+    sig1_name: document.getElementById('cert_sig1_name').value.trim(),
+    sig1_title: document.getElementById('cert_sig1_title').value.trim(),
+    sig2_name: document.getElementById('cert_sig2_name').value.trim(),
+    sig2_title: document.getElementById('cert_sig2_title').value.trim()
   };
   await db.from('app_settings').upsert({ key: 'certificate_config_' + currentEventId, value: JSON.stringify(certConfig) });
   toast('✅ Für dieses Event gespeichert');
 }
 
-// Erzeugt das Zertifikat als Bild (Vorlage + Name/Kategorie als Overlay per Canvas) und
-// öffnet ein Vorschau-Fenster mit Download- und Teilen-Optionen (E-Mail/WhatsApp).
-async function generateCertificate(participantId) {
-  if (!certTemplateB64) {
-    toast('⚠️ Bitte zuerst in den Einstellungen eine Zertifikats-Vorlage für dieses Event hochladen');
-    return;
+// Baut das Zertifikat komplett dynamisch als HTML/CSS auf (kein festes Hintergrundbild) und
+// rendert es per html2canvas zu einem JPG. Event-Logo, Eventname, Ort und Datum kommen aus
+// der Event-Verwaltung, Name/Kategorie vom jeweiligen Teilnehmer, Unterschriften aus den
+// Zertifikat-Einstellungen.
+function buildCertificateHtml(opts) {
+  var logoHtml = opts.logoUrl
+    ? '<img src="' + opts.logoUrl + '" style="max-height:100px;max-width:220px;object-fit:contain" />'
+    : '<div style="font-size:52px">🏆</div>';
+  return '' +
+    '<div style="width:1055px;height:1491px;background:linear-gradient(160deg,#fdfbf5,#f7f1e3);position:relative;font-family:Georgia,\'Times New Roman\',serif;color:#0b1f3a;box-sizing:border-box;padding:34px">' +
+      '<div style="position:absolute;inset:34px;border:3px solid #0b1f3a;box-sizing:border-box"></div>' +
+      '<div style="position:absolute;inset:44px;border:1.5px solid #c9a24b;box-sizing:border-box"></div>' +
+      '<div style="position:absolute;top:56px;left:56px;font-size:26px;color:#c9a24b">✦</div>' +
+      '<div style="position:absolute;top:56px;right:56px;font-size:26px;color:#c9a24b">✦</div>' +
+      '<div style="position:absolute;bottom:56px;left:56px;font-size:26px;color:#c9a24b">✦</div>' +
+      '<div style="position:absolute;bottom:56px;right:56px;font-size:26px;color:#c9a24b">✦</div>' +
+      '<div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;text-align:center;padding:50px 70px">' +
+        '<div style="height:110px;display:flex;align-items:center;justify-content:center">' + logoHtml + '</div>' +
+        '<div style="width:220px;height:2px;background:#c9a24b;margin:18px 0"></div>' +
+        '<div style="font-size:58px;font-weight:700;letter-spacing:4px">CERTIFICATE</div>' +
+        '<div style="font-size:20px;letter-spacing:6px;color:#5a5a5a;margin-top:2px">OF PARTICIPATION</div>' +
+        '<div style="margin-top:26px;background:#0b1f3a;color:#e9c46a;padding:10px 34px;font-size:16px;letter-spacing:2px;font-weight:700">' + (opts.eventName || '').toUpperCase() + '</div>' +
+        '<div style="margin-top:34px;font-size:16px;font-style:italic;color:#333">This certificate is proudly presented to</div>' +
+        '<div style="width:70%;height:1px;background:#c9a24b;margin:14px 0"></div>' +
+        '<div style="font-size:46px;font-weight:700;padding:0 20px">' + (opts.playerName || '').toUpperCase() + '</div>' +
+        '<div style="width:70%;height:1px;background:#c9a24b;margin:14px 0"></div>' +
+        '<div style="margin-top:20px;font-size:15px;line-height:1.7;color:#333;max-width:640px">' +
+          'in recognition of participation in the ' + (opts.eventName || '') + '<br>' +
+          (opts.location ? 'held in ' + opts.location + '<br>' : '') +
+          (opts.dateRange || '') +
+        '</div>' +
+        '<div style="margin-top:22px;font-size:15px;letter-spacing:1px">— Category: <strong>' + (opts.category || '–') + '</strong> —</div>' +
+        '<div style="margin-top:36px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f5dfa0,#c9a24b 70%);display:flex;align-items:center;justify-content:center;border:3px solid #9c7a2e;box-shadow:0 0 0 4px #fdfbf5,0 0 0 5px #c9a24b">' +
+          '<div style="font-size:11px;font-weight:700;color:#0b1f3a;line-height:1.4">★<br>OFFICIAL<br>PARTICIPANT</div>' +
+        '</div>' +
+        '<div style="flex:1"></div>' +
+        '<div style="width:100%;display:flex;justify-content:space-between;padding:0 30px">' +
+          '<div style="text-align:center;min-width:220px">' +
+            '<div style="font-family:\'Brush Script MT\',\'Segoe Script\',cursive;font-size:30px">' + (opts.sig1Name || '') + '</div>' +
+            '<div style="border-top:1px solid #0b1f3a;margin-top:6px;padding-top:6px;font-size:12px;color:#333">' + (opts.sig1Title || '') + '</div>' +
+          '</div>' +
+          '<div style="text-align:center;min-width:220px">' +
+            '<div style="font-family:\'Brush Script MT\',\'Segoe Script\',cursive;font-size:30px">' + (opts.sig2Name || '') + '</div>' +
+            '<div style="border-top:1px solid #0b1f3a;margin-top:6px;padding-top:6px;font-size:12px;color:#333">' + (opts.sig2Title || '') + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function fmtCertDateRange(dateFrom, dateTo) {
+  if (!dateFrom && !dateTo) return '';
+  var opts = { day: 'numeric', month: 'long', year: 'numeric' };
+  var f = dateFrom ? new Date(dateFrom) : null;
+  var t = dateTo ? new Date(dateTo) : null;
+  if (f && t && f.getTime() !== t.getTime()) {
+    var fStr = f.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+    var tStr = t.toLocaleDateString('en-GB', opts);
+    return fStr + ' – ' + tStr;
   }
+  return (f || t).toLocaleDateString('en-GB', opts);
+}
+
+async function renderCertificateToBlob(opts) {
+  var holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-9999px;top:0;';
+  holder.innerHTML = buildCertificateHtml(opts);
+  document.body.appendChild(holder);
+  try {
+    var canvas = await html2canvas(holder.firstElementChild, { scale: 2, backgroundColor: '#fdfbf5', useCORS: true, allowTaint: true });
+    return await new Promise(function(resolve) { canvas.toBlob(function(blob) { resolve(blob); }, 'image/jpeg', 0.93); });
+  } finally {
+    document.body.removeChild(holder);
+  }
+}
+
+async function generateCertificate(participantId) {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
   var pr = await db.from('participants').select('*').eq('id', participantId).single();
   var p = pr.data;
   if (!p) { toast('Teilnehmer nicht gefunden'); return; }
+  toast('Erzeuge Zertifikat…');
 
-  var img = new Image();
-  img.onload = function() {
-    var canvas = document.createElement('canvas');
-    canvas.width = img.width; canvas.height = img.height;
-    var ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
+  var ev = await db.from('events').select('*').eq('id', currentEventId).single();
+  var evData = ev.data || {};
+  var logoUrl = evData.logo_url ? ('data:image/png;base64,' + evData.logo_url) : null;
 
-    var fullName = (p.firstname || '') + ' ' + (p.lastname || '');
-    var category = p.events || '';
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#0b1f3a';
-    ctx.font = '700 ' + (certConfig.name_size * (img.width / 1055)) + 'px Georgia, "Times New Roman", serif';
-    ctx.fillText(fullName.trim().toUpperCase(), canvas.width / 2, canvas.height * (certConfig.name_y / 100));
-
-    ctx.font = '600 ' + (certConfig.cat_size * (img.width / 1055)) + 'px Georgia, "Times New Roman", serif';
-    ctx.fillText('Category: ' + category, canvas.width / 2, canvas.height * (certConfig.cat_y / 100));
-
-    canvas.toBlob(function(blob) {
-      showCertificatePreview(blob, p);
-    }, 'image/jpeg', 0.92);
-  };
-  img.src = 'data:image/jpeg;base64,' + certTemplateB64;
+  var blob = await renderCertificateToBlob({
+    logoUrl: logoUrl,
+    eventName: evData.name || '',
+    location: evData.location || '',
+    dateRange: fmtCertDateRange(evData.date_from, evData.date_to),
+    playerName: (p.firstname || '') + ' ' + (p.lastname || ''),
+    category: p.events || '',
+    sig1Name: certConfig.sig1_name, sig1Title: certConfig.sig1_title,
+    sig2Name: certConfig.sig2_name, sig2Title: certConfig.sig2_title
+  });
+  showCertificatePreview(blob, p);
 }
+
+async function previewCertificateSample() {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  toast('Erzeuge Beispiel…');
+  var ev = await db.from('events').select('*').eq('id', currentEventId).single();
+  var evData = ev.data || {};
+  var logoUrl = evData.logo_url ? ('data:image/png;base64,' + evData.logo_url) : null;
+  var blob = await renderCertificateToBlob({
+    logoUrl: logoUrl,
+    eventName: evData.name || 'Your Tournament',
+    location: evData.location || '',
+    dateRange: fmtCertDateRange(evData.date_from, evData.date_to),
+    playerName: 'Max Mustermann',
+    category: 'BU17',
+    sig1Name: document.getElementById('cert_sig1_name').value.trim(), sig1Title: document.getElementById('cert_sig1_title').value.trim(),
+    sig2Name: document.getElementById('cert_sig2_name').value.trim(), sig2Title: document.getElementById('cert_sig2_title').value.trim()
+  });
+  showCertificatePreview(blob, { firstname: 'Max', lastname: 'Mustermann' });
+}
+
 
 function showCertificatePreview(blob, p) {
   var url = URL.createObjectURL(blob);
