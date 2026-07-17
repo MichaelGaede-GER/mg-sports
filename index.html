@@ -415,7 +415,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     </div>
     <div class="nav-section" data-i18n="nav_section_export">Export</div>
     <div class="nav-item" onclick="nav('reports')">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span data-i18n="nav_reports">Berichte & PDFs</span>
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span data-i18n="nav_reports">Berichte</span>
     </div>
     <div class="nav-item" onclick="nav('airport')">
       <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span data-i18n="nav_airport">Airport Transfer</span>
@@ -1831,7 +1831,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
 
       <!-- BERICHTE -->
       <div class="page" id="page-reports">
-        <div class="page-header"><h2>Berichte & PDFs</h2></div>
+        <div class="page-header"><h2>Berichte</h2></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:8px">
 
           <!-- Hotel-Liste -->
@@ -1896,6 +1896,15 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <button class="btn primary" style="flex:1" onclick="exportWithdrawPDF()">🖨 Drucken / PDF</button>
               <button class="btn" style="flex:1" onclick="exportWithdrawExcel()">📊 Excel</button>
               <button class="btn" style="flex:1" onclick="emailReport('withdraw')">✉ Per E-Mail</button>
+            </div>
+          </div>
+
+          <!-- VISA Express -->
+          <div class="card" style="margin:0">
+            <div class="card-header"><div style="font-size:20px;margin-right:8px">🛂</div><div><div style="font-weight:600;font-size:13px">VISA Express</div><div style="font-size:11px;color:var(--text3)">Einnahmen aus Express-Letter Types</div></div></div>
+            <div class="card-body" style="display:flex;gap:8px">
+              <button class="btn primary" style="flex:1" onclick="exportVisaExpressPDF()">🖨 Drucken / PDF</button>
+              <button class="btn" style="flex:1" onclick="exportVisaExpressExcel()">📊 Excel</button>
             </div>
           </div>
 
@@ -5529,7 +5538,7 @@ function nav(page) {
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => { if (i.getAttribute('onclick') && i.getAttribute('onclick').includes("'"+page+"'")) i.classList.add('active'); });
-  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',invoices:'Rechnungen',refereepenalty:'Schieds-Pflicht',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte & PDFs',airport:'Airport Transfer',users:'Benutzer & Rollen'};
+  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',invoices:'Rechnungen',refereepenalty:'Schieds-Pflicht',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte',airport:'Airport Transfer',users:'Benutzer & Rollen'};
   document.getElementById('topbarTitle').textContent = titles[page] || page;
   currentPage = page;
   if (page === 'dashboard') {
@@ -9349,6 +9358,43 @@ async function exportWithdrawPDF() {
   );
 }
 
+// Zeigt alle Teilnehmer mit einem Letter Type, dessen Bezeichnung "Express" enthält (z.B.
+// "Confirmation Letter Express"), inklusive Gesamtsumme der Einnahmen daraus.
+async function getVisaExpressData() {
+  var q = db.from('participants').select('*').ilike('confirmation_letter_type', '%express%').neq('withdraw','Ja').order('lastname');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
+  var r = await q;
+  return r.data || [];
+}
+
+async function exportVisaExpressPDF() {
+  var data = await getVisaExpressData();
+  if (!data.length) { toast('Keine VISA-Express-Buchungen vorhanden'); return; }
+  var total = data.reduce(function(s,p){ return s + (parseFloat(p.confirmation_letter_price)||0); }, 0);
+  var rows = data.map(function(p) {
+    return [p.lastname, p.firstname, p.country||'–', p.confirmation_letter_type||'–', fmt(p.confirmation_letter_price), p.payment_status||'–'];
+  });
+  rows.push(['', '', '', '', '', '']);
+  rows.push(['GESAMT', '', '', data.length + ' Personen', fmt(total), '']);
+  printTable('VISA Express – Einnahmenübersicht',
+    ['Nachname','Vorname','Land','Letter Type','Preis (€)','Zahlungsstatus'],
+    rows
+  );
+}
+
+async function exportVisaExpressExcel() {
+  var data = await getVisaExpressData();
+  if (!data.length) { toast('Keine VISA-Express-Buchungen vorhanden'); return; }
+  var total = data.reduce(function(s,p){ return s + (parseFloat(p.confirmation_letter_price)||0); }, 0);
+  var headers = ['Nachname','Vorname','Land','Letter Type','Preis (€)','Zahlungsstatus'];
+  var rows = data.map(function(p) {
+    return [p.lastname, p.firstname, p.country||'', p.confirmation_letter_type||'', (parseFloat(p.confirmation_letter_price)||0).toFixed(2), p.payment_status||''];
+  });
+  rows.push(['', '', '', '', '', '']);
+  rows.push(['GESAMT', '', '', data.length + ' Personen', total.toFixed(2), '']);
+  await exportExcelBase('VisaExpress', 'VISA-Express', headers, rows);
+}
+
 async function exportCSV() {
   const { data } = await db.from('participants').select('*').order('lastname');
   if (!data || !data.length) { toast('Keine Daten vorhanden'); return; }
@@ -9472,7 +9518,7 @@ var I18N = {
     nav_section_marketing: 'Marketing',
     nav_marketing: 'Verteiler',
     nav_section_export: 'Export',
-    nav_reports: 'Berichte & PDFs',
+    nav_reports: 'Berichte',
     nav_airport: 'Airport Transfer',
     nav_broadcast: 'Broadcast',
     nav_checkin: 'Check-in',
@@ -9524,7 +9570,7 @@ var I18N = {
     nav_section_marketing: 'Marketing',
     nav_marketing: 'Distribution List',
     nav_section_export: 'Export',
-    nav_reports: 'Reports & PDFs',
+    nav_reports: 'Reports',
     nav_airport: 'Airport Transfer',
     nav_broadcast: 'Broadcast',
     nav_checkin: 'Check-in',
@@ -14011,7 +14057,7 @@ var PERMISSIONS = [
   {key:'packages',     label:'Packages'},
   {key:'hotel',        label:'Hotel'},
   {key:'payments',     label:'Zahlungen'},
-  {key:'reports',      label:'Berichte & PDFs'},
+  {key:'reports',      label:'Berichte'},
   {key:'settings',     label:'Einstellungen'},
   {key:'users',        label:'Benutzer & Rollen'},
   {key:'import',       label:'Import'},
