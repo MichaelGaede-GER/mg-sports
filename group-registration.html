@@ -98,6 +98,10 @@
     <p data-i18n-html="success_text">Thank you. Your group has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
     <p style="margin-top:16px;font-size:12px;color:var(--text3)"><span data-i18n="success_groupcode">Group Code:</span> <strong id="groupCodeOut">–</strong> · <span id="groupCountOut"></span> <span data-i18n="success_participants_suffix">participant(s)</span></p>
     <div id="successDupNote" style="display:none;margin-top:14px;background:var(--amber-bg, #fff3cd);color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:12px 16px;font-size:13px;text-align:left"></div>
+    <div id="successEditLinkBox" style="display:none;margin-top:16px;background:#eaf6ec;color:#1e7a34;border:1px solid #b6e0be;border-radius:8px;padding:14px 16px;font-size:13px;text-align:left">
+      📌 Möchtet ihr später etwas ändern? Speichert euch diesen Link (er wurde auch an jede hinterlegte E-Mail-Adresse geschickt):<br>
+      <a id="successEditLinkAnchor" href="#" style="word-break:break-all;color:#1e7a34;font-weight:600"></a>
+    </div>
   </div>
 
   <div id="formContainer">
@@ -221,6 +225,10 @@ if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
 }
 
 var eventId = null;
+var groupEditMode = false;
+var groupEditToken = null;
+var existingGroupCode = null;
+var dbIdByParticipantId = {}; // DOM-participantId -> bestehende participants.id (nur im Edit-Modus)
 var eventEndDate = null;
 var isPastDeadline = false;
 var officialAccessCode = null;
@@ -693,9 +701,65 @@ async function init() {
   await loadHotels();
   await loadRoleConfig();
 
+  // Bearbeitungs-Link: ?edit=TOKEN lädt die komplette bestehende Gruppen-Anmeldung zum
+  // Ändern, statt neue Teilnehmer anzulegen. Der Token wird beim ersten Absenden erzeugt
+  // und per E-Mail an jede Person der Gruppe verschickt.
+  var editParam = params.get('edit');
+  if (editParam) {
+    var editR = await db.from('participants').select('*').eq('edit_token', editParam).eq('event_id', eventId).order('created_at');
+    if (editR.data && editR.data.length) {
+      groupEditMode = true;
+      groupEditToken = editParam;
+      existingGroupCode = editR.data[0].group_tp || null;
+      editR.data.forEach(function(p) {
+        var domId = addParticipantRow();
+        dbIdByParticipantId[domId] = p.id;
+        prefillGroupParticipant(domId, p);
+      });
+      var banner = document.getElementById('errorBox');
+      if (banner) {
+        banner.style.display = 'block';
+        banner.style.background = '#eaf6ec'; banner.style.color = '#1e7a34'; banner.style.borderColor = '#1e7a34';
+        banner.innerHTML = '✏️ Du bearbeitest eure bestehende Gruppen-Anmeldung (' + editR.data.length + ' Personen). Änderungen werden beim Absenden gespeichert.';
+      }
+      var btn = document.getElementById('submitBtn');
+      if (btn) btn.textContent = 'Änderungen speichern';
+      refreshAllShareSelects();
+      renderGroupPaymentSummary();
+      return;
+    } else {
+      var eb2 = document.getElementById('errorBox');
+      if (eb2) { eb2.style.display = 'block'; eb2.innerHTML = '⚠️ Bearbeitungs-Link ungültig oder abgelaufen. Bitte wende dich an die Turnierleitung.'; }
+    }
+  }
+
   // Start with 2 participant rows to make the "group" nature obvious
   addParticipantRow();
   addParticipantRow();
+}
+
+// Befüllt einen (bereits per addParticipantRow() angelegten) Teilnehmer-Block mit den
+// Daten einer bestehenden Anmeldung.
+function prefillGroupParticipant(id, p) {
+  function setVal(fid, val) { var el = document.getElementById(fid); if (el && val !== null && val !== undefined) el.value = val; }
+
+  setVal('p_lastname_' + id, p.lastname); setVal('p_firstname_' + id, p.firstname);
+  setVal('p_country_' + id, p.country); setVal('p_dob_' + id, p.dob); setVal('p_gender_' + id, p.gender);
+  setVal('p_member_id_' + id, p.member_id); setVal('p_passport_id_' + id, p.passport_id);
+  setVal('p_mobile_' + id, p.mobile); setVal('p_email_' + id, p.email);
+  setVal('p_role_' + id, p.role); if (typeof onRoleChange === 'function') onRoleChange(id);
+  setVal('p_events_' + id, p.events); setVal('p_shirt_' + id, p.shirt);
+  setVal('p_package_' + id, p.package); if (typeof onPackageChange === 'function') onPackageChange(id);
+  setVal('p_roomtype_' + id, p.room_type);
+  setVal('p_hotel_' + id, p.hotel); setVal('p_checkin_' + id, p.checkin); setVal('p_checkout_' + id, p.checkout);
+  var visaEl = document.getElementById('p_visa_' + id); if (visaEl) visaEl.value = p.visa || '';
+  if (p.visa === 'Ja') {
+    setVal('p_place_of_birth_' + id, p.place_of_birth);
+    setVal('p_visa_passport_number_' + id, p.passport_id);
+    setVal('p_date_of_issue_' + id, p.visa_date_of_issue);
+    setVal('p_date_of_expiry_' + id, p.visa_date_of_expiry);
+    setVal('p_letter_type_' + id, p.confirmation_letter_type);
+  }
 }
 
 var letterTypesData = [];
@@ -850,6 +914,7 @@ function addParticipantRow() {
   refreshAllShareSelects();
   updateParticipantCountLabel();
   renderGroupPaymentSummary();
+  return id;
 }
 
 function populateGenderSelect(id) {
@@ -1704,7 +1769,7 @@ async function submitGroupRegistration() {
     // Passfoto-Upload (nur wenn Confirmation Letter benötigt wird und eine Datei gewählt
     // wurde). Jeder Teilnehmer bekommt vorab eine UUID, damit der Speicherpfad schon vor
     // dem gemeinsamen Bulk-Insert feststeht.
-    var participantId = crypto.randomUUID();
+    var participantId = (groupEditMode && dbIdByParticipantId[id]) ? dbIdByParticipantId[id] : crypto.randomUUID();
     var passportDocUrl = null;
     var passportFileInput = document.getElementById('p_passport_photo_' + id);
     if (needsLetter && passportFileInput && passportFileInput.files && passportFileInput.files[0]) {
@@ -1810,25 +1875,43 @@ async function submitGroupRegistration() {
   // Duplicate ESID check against existing DB records — no longer blocks submission.
   // Matching entries are tagged and still submitted as "Pending" so the organizer
   // can review and merge them (e.g. adding flight data or upgrading a package).
-  var dupQ = await db.from('participants').select('member_id,firstname,lastname').in('member_id', esidsInGroup).eq('event_id', eventId);
-  var dupEsidSet = {};
-  (dupQ.data || []).forEach(function(d) { dupEsidSet[d.member_id] = true; });
-  var dupNames = (dupQ.data || []).map(function(d) { return d.member_id + ' (' + d.firstname + ' ' + d.lastname + ')'; });
-  if (dupNames.length) {
-    rows.forEach(function(row) {
-      if (row.member_id && dupEsidSet[row.member_id]) {
-        var dupNote = t('note_esid_pending_review');
-        row.memo = row.memo ? (dupNote + ' | ' + row.memo) : dupNote;
-      }
-    });
+  // Im Edit-Modus übersprungen, da die Personen ja bereits mit genau diesen ESIDs erfasst sind.
+  if (!groupEditMode) {
+    var dupQ = await db.from('participants').select('member_id,firstname,lastname').in('member_id', esidsInGroup).eq('event_id', eventId);
+    var dupEsidSet = {};
+    (dupQ.data || []).forEach(function(d) { dupEsidSet[d.member_id] = true; });
+    var dupNames = (dupQ.data || []).map(function(d) { return d.member_id + ' (' + d.firstname + ' ' + d.lastname + ')'; });
+    if (dupNames.length) {
+      rows.forEach(function(row) {
+        if (row.member_id && dupEsidSet[row.member_id]) {
+          var dupNote = t('note_esid_pending_review');
+          row.memo = row.memo ? (dupNote + ' | ' + row.memo) : dupNote;
+        }
+      });
+    }
   }
 
-  // Build a group code and attach to every row
+  // Build a group code and attach to every row (im Edit-Modus den vorhandenen Code
+  // der ersten Person wiederverwenden, damit die Gruppe verknüpft bleibt).
   function slug(s) { return (s || 'GROUP').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'GROUP'; }
-  var groupCode = 'GRP-' + slug(v('g_lastname')) + '-' + Math.random().toString(16).slice(2, 6).toUpperCase();
-  rows.forEach(function(r) { r.group_tp = groupCode; });
+  var groupCode = (groupEditMode && existingGroupCode) || ('GRP-' + slug(v('g_lastname')) + '-' + Math.random().toString(16).slice(2, 6).toUpperCase());
+  var sharedEditToken = groupEditToken || (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).replace(/-/g, '');
+  rows.forEach(function(r) { r.group_tp = groupCode; r.edit_token = sharedEditToken; });
 
-  var r = await db.from('participants').insert(rows).select();
+  var r;
+  if (groupEditMode) {
+    // Jede Person einzeln per UPDATE aktualisieren (bestehende IDs), statt neue Zeilen anzulegen.
+    var updateErrors = [];
+    for (var _ui = 0; _ui < rows.length; _ui++) {
+      var rowCopy = Object.assign({}, rows[_ui]);
+      var rowId = rowCopy.id; delete rowCopy.id;
+      var ur = await db.from('participants').update(rowCopy).eq('id', rowId);
+      if (ur.error) updateErrors.push(ur.error.message);
+    }
+    r = updateErrors.length ? { error: { message: updateErrors.join('; ') } } : { data: rows };
+  } else {
+    r = await db.from('participants').insert(rows).select();
+  }
   if (r.error) {
     btn.disabled = false; btn.textContent = t('submit_btn');
     errBox.style.display = 'block';
@@ -1842,6 +1925,7 @@ async function submitGroupRegistration() {
   // wird die Anmeldung dadurch NICHT blockiert.
   if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
     var roomTypeLabelsMail = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+    var groupEditLink = window.location.origin + window.location.pathname + '?event=' + eventId + '&edit=' + sharedEditToken;
     for (var _mi = 0; _mi < rows.length; _mi++) {
       var _mRow = rows[_mi];
       if (!_mRow.email) continue;
@@ -1851,7 +1935,8 @@ async function submitGroupRegistration() {
           to_name: (( _mRow.firstname||'') + ' ' + (_mRow.lastname||'')).trim(),
           event_name: eventNameRaw || 'the tournament',
           esid: _mRow.member_id || '-',
-          registration_summary: buildRegistrationSummaryText(_mRow, roomTypeLabelsMail[_mRow.room_type] || _mRow.room_type)
+          registration_summary: buildRegistrationSummaryText(_mRow, roomTypeLabelsMail[_mRow.room_type] || _mRow.room_type),
+          edit_link: groupEditLink
         });
       } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
     }
@@ -1862,9 +1947,16 @@ async function submitGroupRegistration() {
   document.getElementById('groupCodeOut').textContent = groupCode;
   document.getElementById('groupCountOut').textContent = rows.length;
   var dupNoteBox = document.getElementById('successDupNote');
-  if (dupNames.length && dupNoteBox) {
+  if (typeof dupNames !== 'undefined' && dupNames.length && dupNoteBox) {
     dupNoteBox.style.display = 'block';
     dupNoteBox.innerHTML = t('note_esid_review_success') + '<br>• ' + dupNames.join('<br>• ');
+  }
+  var linkBox = document.getElementById('successEditLinkBox');
+  var linkAnchor = document.getElementById('successEditLinkAnchor');
+  if (linkBox && linkAnchor) {
+    var fullGroupLink = window.location.origin + window.location.pathname + '?event=' + eventId + '&edit=' + sharedEditToken;
+    linkAnchor.href = fullGroupLink; linkAnchor.textContent = fullGroupLink;
+    linkBox.style.display = 'block';
   }
   document.getElementById('successBox').scrollIntoView({ behavior: 'smooth' });
 }
