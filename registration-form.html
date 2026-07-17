@@ -108,7 +108,9 @@
           <div class="form-group"><label data-i18n="f_gender">Gender <span class="req">*</span></label>
             <select id="r_gender" onchange="calcAgeCategory()"></select>
           </div>
-          <div class="form-group"><label data-i18n="f_member_id">Member ID / ESID <span class="req">*</span></label><input type="text" id="r_member_id" placeholder="e.g. ES473686007" pattern="ES[0-9]{9}" /><div class="esid-hint" data-i18n="f_member_id_hint">Format: ES + 9 digits, e.g. ES473686007</div></div>
+          <div class="form-group"><label data-i18n="f_member_id">Member ID / ESID <span class="req">*</span></label><input type="text" id="r_member_id" placeholder="e.g. ES473686007" pattern="ES[0-9]{9}" onblur="checkPlayerBlocked()" /><div class="esid-hint" data-i18n="f_member_id_hint">Format: ES + 9 digits, e.g. ES473686007</div>
+            <div id="blockedPlayerBanner" style="display:none;margin-top:8px;background:#fdecea;color:#7a1a1a;border:1px solid #f5b3ac;border-radius:8px;padding:12px 14px;font-size:13px"></div>
+          </div>
           <div class="form-group"><label data-i18n="f_passport">Passport / ID Number</label><input type="text" id="r_passport_id" /></div>
           <div class="form-group"><label data-i18n="f_mobile">Mobile <span class="req">*</span></label><input type="tel" id="r_mobile" placeholder="+49 151 …" /></div>
           <div class="form-group full"><label data-i18n="f_email">E-Mail <span class="req">*</span></label><input type="email" id="r_email" placeholder="your@email.com" /></div>
@@ -303,6 +305,28 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 var registeredEventName = null;
 var editingParticipantId = null; // gesetzt, wenn über ?edit=TOKEN eine bestehende Anmeldung geladen wurde
 var editToken = null;
+var isPlayerBlocked = false; // true, wenn die eingegebene ESID zu einer gesperrten Person gehört
+
+// Prüft anhand der eingegebenen ESID in der Personendatenbank, ob diese Person gesperrt
+// ist ("Penalty / Sperre" in der Personendatenbank). Ist das der Fall, wird die Anmeldung
+// blockiert und der hinterlegte Grund sichtbar angezeigt.
+async function checkPlayerBlocked() {
+  var esid = document.getElementById('r_member_id').value.trim();
+  var banner = document.getElementById('blockedPlayerBanner');
+  isPlayerBlocked = false;
+  if (banner) banner.style.display = 'none';
+  if (!esid) return;
+  try {
+    var r = await db.from('persons_penalty_check').select('penalty,penalty_reason').eq('member_id', esid).maybeSingle();
+    if (r.data && r.data.penalty) {
+      isPlayerBlocked = true;
+      if (banner) {
+        banner.style.display = 'block';
+        banner.textContent = t('err_player_blocked') + (r.data.penalty_reason || '–');
+      }
+    }
+  } catch (e) { /* Prüfung ist informativ, blockiert bei Fehler nicht zusätzlich */ }
+}
 
 // ==== EmailJS Konfiguration (bitte mit deinen eigenen Werten von emailjs.com befüllen) ====
 const EMAILJS_PUBLIC_KEY = 'iTmRZnd2JRJc7KuFb';
@@ -486,6 +510,7 @@ en: {
   note_esid_review_success: "ℹ️ This ESID was already registered. Your changes have been submitted to the organizer for review and will be merged into the existing registration:",
   err_room_full: "Sorry, this room type just became fully booked. Please choose another one.",
   err_generic: "Error: ",
+  err_player_blocked: "⛔ Registration not possible. This player is currently blocked.\nReason: ",
 
   age_hint_enter_dob: "– enter date of birth –",
   age_hint_label: "Age at tournament end: ",
@@ -613,6 +638,7 @@ de: {
   note_esid_review_success: "ℹ️ Diese ESID war bereits registriert. Deine Änderungen wurden zur Prüfung an den Veranstalter übermittelt und werden mit der bestehenden Anmeldung zusammengeführt:",
   err_room_full: "Dieser Zimmertyp ist gerade ausgebucht worden. Bitte einen anderen wählen.",
   err_generic: "Fehler: ",
+  err_player_blocked: "⛔ Anmeldung nicht möglich. Diese Person ist derzeit gesperrt.\nGrund: ",
 
   age_hint_enter_dob: "– Geburtsdatum eingeben –",
   age_hint_label: "Alter am Turnierende: ",
@@ -1396,6 +1422,19 @@ function buildRegistrationSummaryText(row, roomTypeLabel) {
 }
 
 async function submitRegistration() {
+  // Sicherheitshalber nochmal frisch prüfen (falls onblur nicht ausgelöst wurde, z.B. bei
+  // Autofill) und die Anmeldung komplett blockieren, falls die Person gesperrt ist.
+  await checkPlayerBlocked();
+  if (isPlayerBlocked) {
+    var eb0 = document.getElementById('errorBox');
+    if (eb0) {
+      eb0.style.display = 'block';
+      eb0.innerHTML = document.getElementById('blockedPlayerBanner').textContent;
+      eb0.scrollIntoView({ behavior: 'smooth' });
+    }
+    return;
+  }
+
   var required = [
     ['r_lastname', t('f_lastname')], ['r_firstname', t('f_firstname')], ['r_country', t('f_country')],
     ['r_dob', t('f_dob')], ['r_gender', t('f_gender')], ['r_member_id', t('f_member_id')],

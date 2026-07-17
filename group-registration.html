@@ -229,6 +229,28 @@ var groupEditMode = false;
 var groupEditToken = null;
 var existingGroupCode = null;
 var dbIdByParticipantId = {}; // DOM-participantId -> bestehende participants.id (nur im Edit-Modus)
+var blockedParticipants = {}; // DOM-participantId -> true, wenn ESID zu einer gesperrten Person gehört
+
+// Prüft anhand der eingegebenen ESID in der Personendatenbank, ob diese Person gesperrt
+// ist ("Penalty / Sperre" in der Personendatenbank). Ist das der Fall, wird die Anmeldung
+// blockiert und der hinterlegte Grund direkt bei dieser Person im Formular angezeigt.
+async function checkPlayerBlocked(id) {
+  var esid = document.getElementById('p_member_id_' + id).value.trim();
+  var banner = document.getElementById('p_blockedbanner_' + id);
+  blockedParticipants[id] = false;
+  if (banner) banner.style.display = 'none';
+  if (!esid) return;
+  try {
+    var r = await db.from('persons_penalty_check').select('penalty,penalty_reason').eq('member_id', esid).maybeSingle();
+    if (r.data && r.data.penalty) {
+      blockedParticipants[id] = true;
+      if (banner) {
+        banner.style.display = 'block';
+        banner.textContent = t('err_player_blocked') + (r.data.penalty_reason || '–');
+      }
+    }
+  } catch (e) { /* Prüfung ist informativ, blockiert bei Fehler nicht zusätzlich */ }
+}
 var eventEndDate = null;
 var isPastDeadline = false;
 var officialAccessCode = null;
@@ -365,6 +387,7 @@ en: {
   note_requested_room: "🛏 Requested room type",
   note_sharing_with: "👥 Sharing room with",
   err_generic: "❌ Error: ",
+  err_player_blocked: "⛔ Registration not possible. This player is currently blocked.\nReason: ",
   err_at_least_one_participant: "At least one participant is required",
   err_declaration: "Declaration (please accept the terms)",
   err_group_leader_lastname: "Group Leader Last Name",
@@ -512,6 +535,7 @@ de: {
   note_requested_room: "🛏 Gewünschter Zimmertyp",
   note_sharing_with: "👥 Teilt Zimmer mit",
   err_generic: "❌ Fehler: ",
+  err_player_blocked: "⛔ Anmeldung nicht möglich. Diese Person ist derzeit gesperrt.\nGrund: ",
   err_at_least_one_participant: "Mindestens ein Teilnehmer ist erforderlich",
   err_declaration: "Erklärung (bitte den Bedingungen zustimmen)",
   err_group_leader_lastname: "Nachname Gruppenleiter",
@@ -866,7 +890,7 @@ function addParticipantRow() {
     + '<div class="form-group"><label data-i18n="f_country">' + t('f_country') + '</label><select id="p_country_' + id + '"></select></div>'
     + '<div class="form-group"><label data-i18n="f_dob">' + t('f_dob') + '</label><input type="date" id="p_dob_' + id + '" onchange="calcAgeCategory(' + id + ')" /></div>'
     + '<div class="form-group"><label data-i18n="f_gender">' + t('f_gender') + '</label><select id="p_gender_' + id + '" onchange="calcAgeCategory(' + id + ')"></select></div>'
-    + '<div class="form-group"><label data-i18n="f_member_id">' + t('f_member_id') + '</label><input type="text" id="p_member_id_' + id + '" data-i18n-ph="f_member_id_ph" placeholder="' + t('f_member_id_ph') + '" /><div class="esid-hint" data-i18n="f_member_id_hint">' + t('f_member_id_hint') + '</div></div>'
+    + '<div class="form-group"><label data-i18n="f_member_id">' + t('f_member_id') + '</label><input type="text" id="p_member_id_' + id + '" data-i18n-ph="f_member_id_ph" placeholder="' + t('f_member_id_ph') + '" onblur="checkPlayerBlocked(' + id + ')" /><div class="esid-hint" data-i18n="f_member_id_hint">' + t('f_member_id_hint') + '</div><div id="p_blockedbanner_' + id + '" style="display:none;margin-top:8px;background:#fdecea;color:#7a1a1a;border:1px solid #f5b3ac;border-radius:8px;padding:12px 14px;font-size:13px"></div></div>'
     + '<div class="form-group"><label data-i18n="f_passport">' + t('f_passport') + '</label><input type="text" id="p_passport_id_' + id + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_mobile_optional">' + t('f_mobile_optional') + '</label><input type="tel" id="p_mobile_' + id + '" data-i18n-ph="f_mobile_ph" placeholder="' + t('f_mobile_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_email_optional">' + t('f_email_optional') + '</label><input type="email" id="p_email_' + id + '" data-i18n-ph="f_email_ph" placeholder="' + t('f_email_ph') + '" /></div>'
@@ -1614,6 +1638,23 @@ function buildRegistrationSummaryText(row, roomTypeLabel, travelRelevant) {
 
 async function submitGroupRegistration() {
   var errors = [];
+
+  // Sicherheitshalber für jeden Teilnehmer nochmal frisch prüfen (falls onblur nicht
+  // ausgelöst wurde) und die komplette Anmeldung blockieren, sobald eine Person in der
+  // Gruppe gesperrt ist.
+  await Promise.all(participantIds.map(function(id) { return checkPlayerBlocked(id); }));
+  var blockedIds = participantIds.filter(function(id) { return blockedParticipants[id]; });
+  if (blockedIds.length) {
+    var errBox0 = document.getElementById('errorBox');
+    if (errBox0) {
+      errBox0.style.display = 'block';
+      errBox0.innerHTML = blockedIds.map(function(id) {
+        return document.getElementById('p_blockedbanner_' + id).textContent;
+      }).join('<br><br>');
+      errBox0.scrollIntoView({ behavior: 'smooth' });
+    }
+    return;
+  }
 
   function normalizeMobile(val) { return (val||'').trim().replace(/^00/, '+').replace(/[\s()-]/g, ''); }
   function isValidMobile(val) { return /^\+[1-9][0-9]{6,14}$/.test(val); }
