@@ -558,7 +558,6 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   <th class="sortable" onclick="sortParticipants('payment_status')" id="pth_payment_status">Zahlung <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('total')" id="pth_total">Gesamt <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortParticipants('updated_at')" id="pth_updated_at" title="Zuletzt bearbeitet" style="text-align:center">✏ <span class="sort-icon">↕</span></th>
-  <th style="white-space:nowrap;position:sticky;left:0;z-index:2;background:var(--bg2)">Aktionen</th>
 </tr></thead>
             <tbody id="participantsTable"><tr><td colspan="12" class="loading">Lade…</td></tr></tbody>
           </table></div>
@@ -5818,11 +5817,13 @@ async function loadParticipants() {
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr>'
 + '<td style="white-space:nowrap">'
-        + eb + ' ' + vb + ' ' + certBtn + ' ' + sendBtns + ' ' + db2
+        + eb + ' ' + vb + ' ' + certBtn + ' ' + sendBtns
         + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Kostenlos' && p.payment_status !== 'Pending'
            ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
            : '')
         + (p.mobile ? ' <button class="btn" style="font-size:11px;padding:3px 6px;background:#25D366;color:#fff;border-color:#25D366" data-mobile="'+p.mobile+'" data-name="'+p.firstname+' '+p.lastname+'" onclick="openWhatsAppDirect(this.dataset.mobile, this.dataset.name)" title="WhatsApp">💬</button>' : '')
+        + '<span style="display:inline-block;width:1px;height:20px;background:var(--border2);margin:0 10px;vertical-align:middle"></span>'
+        + db2
         + '</td>'
             + '<td style="padding:4px 6px">'
         + (p.photo_url
