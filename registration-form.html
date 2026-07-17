@@ -1357,15 +1357,22 @@ function buildRegistrationSummaryText(row, roomTypeLabel) {
   add('Check-in', row.checkin);
   add('Check-out', row.checkout);
 
-  section('Travel');
-  add('Airport Bus', row.ams_bus);
-  add('Additional Airport Transfer', row.airport_plus);
-  add('Arrival Date', row.arrival_date);
-  add('Arrival Time', row.arrival_time);
-  add('Flight In', row.flight_in);
-  add('Departure Date', row.departure_date);
-  add('Departure Time', row.departure_time);
-  add('Flight Out', row.flight_out);
+  // Travel/Transport wird (wie im Formular selbst) nur einbezogen, wenn das gewählte
+  // Package tatsächlich einen Transfer beinhaltet — sonst stehen hier sonst automatisch
+  // erzeugte Default-Werte (z.B. "Nein"), die die Person gar nicht ausgefüllt/gesehen hat.
+  var travelCardEl = document.getElementById('travelCard');
+  var travelRelevant = travelCardEl && travelCardEl.style.display !== 'none';
+  if (travelRelevant) {
+    section('Travel');
+    add('Airport Bus', row.ams_bus);
+    add('Additional Airport Transfer', row.airport_plus);
+    add('Arrival Date', row.arrival_date);
+    add('Arrival Time', row.arrival_time);
+    add('Flight In', row.flight_in);
+    add('Departure Date', row.departure_date);
+    add('Departure Time', row.departure_time);
+    add('Flight Out', row.flight_out);
+  }
 
   if (row.visa === 'Ja') {
     section('VISA / Confirmation Letter');
