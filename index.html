@@ -2690,6 +2690,37 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           </div>
         </div>
 
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><h3>🎓 Zertifikat-Vorlage (Certificate of Participation)</h3></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+              Lade hier deine Zertifikats-Vorlage als Bild hoch. Name und Altersklasse werden beim Erstellen automatisch
+              an der unten eingestellten Position eingeblendet. Gilt nur für das aktuell aktive Event.
+            </p>
+            <div style="display:grid;grid-template-columns:220px 1fr;gap:20px">
+              <div>
+                <div id="certTemplatePreviewBox" style="width:100%;aspect-ratio:1055/1491;border:2px dashed var(--border2);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);overflow:hidden;position:relative" onclick="document.getElementById('certTemplateInput').click()">
+                  <div id="certTemplatePreviewImg"><span style="font-size:24px">➕</span></div>
+                  <div id="certNamePreviewMarker" style="position:absolute;left:5%;width:90%;text-align:center;font-size:11px;color:#185FA5;font-weight:700;display:none;pointer-events:none">[NAME]</div>
+                  <div id="certCategoryPreviewMarker" style="position:absolute;left:5%;width:90%;text-align:center;font-size:9px;color:#185FA5;font-weight:700;display:none;pointer-events:none">[KATEGORIE]</div>
+                </div>
+                <input type="file" id="certTemplateInput" accept="image/*" style="display:none" onchange="loadCertificateTemplate(event)" />
+                <button class="btn danger" id="certTemplateDeleteBtn" style="font-size:10px;padding:2px 6px;margin-top:6px;display:none" onclick="deleteCertificateTemplate()">Vorlage löschen</button>
+              </div>
+              <div>
+                <div class="form-grid" style="max-width:420px">
+                  <div class="form-group"><label>Name – vertikale Position (%)</label><input type="number" id="cert_name_y" min="0" max="100" step="1" value="53" oninput="updateCertPreviewMarkers()" /></div>
+                  <div class="form-group"><label>Name – Schriftgröße (px)</label><input type="number" id="cert_name_size" min="10" max="200" step="1" value="54" /></div>
+                  <div class="form-group"><label>Kategorie – vertikale Position (%)</label><input type="number" id="cert_cat_y" min="0" max="100" step="1" value="65" oninput="updateCertPreviewMarkers()" /></div>
+                  <div class="form-group"><label>Kategorie – Schriftgröße (px)</label><input type="number" id="cert_cat_size" min="8" max="80" step="1" value="20" /></div>
+                </div>
+                <p style="font-size:11px;color:var(--text3);margin-top:8px">Die blauen Markierungen im Vorschaubild links zeigen ungefähr, wo Name/Kategorie landen. Nach dem Speichern einmal über "🎓 Zertifikat" bei einem Teilnehmer testen und bei Bedarf die Werte hier feinjustieren.</p>
+                <button class="btn primary" style="margin-top:10px" onclick="saveCertificateConfig()">💾 Für dieses Event speichern</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
           <span>💶 Meldegebühr</span><div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
@@ -5820,13 +5851,14 @@ async function loadParticipants() {
       : '-';
     var eb = '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>';
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
+    var certBtn = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateCertificate(this.dataset.id)" title="Certificate of Participation erstellen">🎓</button>';
     var sendBtns = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button>'
       + ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>'
       + (p.digital_pass_sent_at ? ' <span style="font-size:12px;color:var(--green)" title="Digitaler Pass gesendet am '+new Date(p.digital_pass_sent_at).toLocaleString('de-DE')+'">✅</span>' : '');
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr>'
 + '<td style="white-space:nowrap">'
-        + eb + ' ' + vb + ' ' + sendBtns + ' ' + db2
+        + eb + ' ' + vb + ' ' + certBtn + ' ' + sendBtns + ' ' + db2
         + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Kostenlos' && p.payment_status !== 'Pending'
            ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
            : '')
@@ -9827,6 +9859,7 @@ async function setActiveEvent(id, name) {
   loadWithdrawPolicy().catch(function(){});
   loadAgeClasses().catch(function(){});
   loadLetterTypesSettings().catch(function(){});
+  loadCertificateSettings().catch(function(){});
   toast('Aktives Event: '+name);
 }
 function updateActiveEventDisplay() {
@@ -10001,6 +10034,7 @@ async function exportWaitlistPDF() {
 
 // SETTINGS
 async function loadSettings() {
+  try { await loadCertificateSettings(); } catch(e) { console.error('loadCertificateSettings error:', e); }
   try { await loadPhysioConfig(); } catch(e) { console.error('loadPhysioConfig error:', e); }
   try { await loadWithdrawPolicy(); } catch(e) { console.error('loadWithdrawPolicy error:', e); }
   try { await loadMealOptionsSettings(); } catch(e) { console.error('loadMealOptionsSettings error:', e); }
@@ -10371,6 +10405,176 @@ function sendHotelEmail() {
 }
 
 // SPONSOR LOGOS
+// ================= ZERTIFIKAT (Certificate of Participation) =================
+// Vorlage + Positionierung werden pro Event gespeichert (wie Sponsor-Logos: Bild als
+// Base64 in app_settings, hier zusätzlich komprimiert da es sich um ein großes A4-Bild
+// handelt statt eines kleinen Logos).
+var certTemplateB64 = null;
+var certConfig = { name_y: 53, name_size: 54, cat_y: 65, cat_size: 20 };
+
+async function loadCertificateSettings() {
+  certTemplateB64 = null;
+  certConfig = { name_y: 53, name_size: 54, cat_y: 65, cat_size: 20 };
+  var previewImg = document.getElementById('certTemplatePreviewImg');
+  var delBtn = document.getElementById('certTemplateDeleteBtn');
+  if (previewImg) previewImg.innerHTML = '<span style="font-size:24px">➕</span>';
+  if (delBtn) delBtn.style.display = 'none';
+  if (!currentEventId) return;
+
+  var r1 = await db.from('app_settings').select('value').eq('key', 'certificate_template_' + currentEventId).maybeSingle();
+  if (r1.data && r1.data.value) {
+    certTemplateB64 = r1.data.value;
+    if (previewImg) previewImg.innerHTML = '<img src="data:image/jpeg;base64,' + certTemplateB64 + '" style="width:100%;height:100%;object-fit:cover" />';
+    if (delBtn) delBtn.style.display = 'block';
+  }
+  var r2 = await db.from('app_settings').select('value').eq('key', 'certificate_config_' + currentEventId).maybeSingle();
+  if (r2.data && r2.data.value) {
+    try { certConfig = Object.assign(certConfig, JSON.parse(r2.data.value)); } catch(e) {}
+  }
+  var nameY = document.getElementById('cert_name_y'); if (nameY) nameY.value = certConfig.name_y;
+  var nameSize = document.getElementById('cert_name_size'); if (nameSize) nameSize.value = certConfig.name_size;
+  var catY = document.getElementById('cert_cat_y'); if (catY) catY.value = certConfig.cat_y;
+  var catSize = document.getElementById('cert_cat_size'); if (catSize) catSize.value = certConfig.cat_size;
+  updateCertPreviewMarkers();
+}
+
+async function loadCertificateTemplate(event) {
+  var file = event.target.files[0]; if (!file) return;
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  toast('Lade Vorlage hoch…');
+  try {
+    var blob = await compressImageFile(file, 1400, 0.88);
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+      var b64 = e.target.result.split(',')[1];
+      certTemplateB64 = b64;
+      var previewImg = document.getElementById('certTemplatePreviewImg');
+      if (previewImg) previewImg.innerHTML = '<img src="data:image/jpeg;base64,' + b64 + '" style="width:100%;height:100%;object-fit:cover" />';
+      var delBtn = document.getElementById('certTemplateDeleteBtn'); if (delBtn) delBtn.style.display = 'block';
+      await db.from('app_settings').upsert({ key: 'certificate_template_' + currentEventId, value: b64 });
+      updateCertPreviewMarkers();
+      toast('✅ Vorlage gespeichert');
+    };
+    reader.readAsDataURL(blob);
+  } catch (e) { toast('⚠️ Fehler: ' + e.message); }
+}
+
+async function deleteCertificateTemplate() {
+  if (!currentEventId || !confirm('Zertifikats-Vorlage für dieses Event wirklich löschen?')) return;
+  certTemplateB64 = null;
+  await db.from('app_settings').delete().eq('key', 'certificate_template_' + currentEventId);
+  var previewImg = document.getElementById('certTemplatePreviewImg'); if (previewImg) previewImg.innerHTML = '<span style="font-size:24px">➕</span>';
+  var delBtn = document.getElementById('certTemplateDeleteBtn'); if (delBtn) delBtn.style.display = 'none';
+  toast('Gelöscht');
+}
+
+function updateCertPreviewMarkers() {
+  var nameMarker = document.getElementById('certNamePreviewMarker');
+  var catMarker = document.getElementById('certCategoryPreviewMarker');
+  var nameY = parseFloat(document.getElementById('cert_name_y') && document.getElementById('cert_name_y').value) || 53;
+  var catY = parseFloat(document.getElementById('cert_cat_y') && document.getElementById('cert_cat_y').value) || 65;
+  if (nameMarker) { nameMarker.style.top = nameY + '%'; nameMarker.style.display = certTemplateB64 ? 'block' : 'none'; }
+  if (catMarker) { catMarker.style.top = catY + '%'; catMarker.style.display = certTemplateB64 ? 'block' : 'none'; }
+}
+
+async function saveCertificateConfig() {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  certConfig = {
+    name_y: parseFloat(document.getElementById('cert_name_y').value) || 53,
+    name_size: parseFloat(document.getElementById('cert_name_size').value) || 54,
+    cat_y: parseFloat(document.getElementById('cert_cat_y').value) || 65,
+    cat_size: parseFloat(document.getElementById('cert_cat_size').value) || 20
+  };
+  await db.from('app_settings').upsert({ key: 'certificate_config_' + currentEventId, value: JSON.stringify(certConfig) });
+  toast('✅ Für dieses Event gespeichert');
+}
+
+// Erzeugt das Zertifikat als Bild (Vorlage + Name/Kategorie als Overlay per Canvas) und
+// öffnet ein Vorschau-Fenster mit Download- und Teilen-Optionen (E-Mail/WhatsApp).
+async function generateCertificate(participantId) {
+  if (!certTemplateB64) {
+    toast('⚠️ Bitte zuerst in den Einstellungen eine Zertifikats-Vorlage für dieses Event hochladen');
+    return;
+  }
+  var pr = await db.from('participants').select('*').eq('id', participantId).single();
+  var p = pr.data;
+  if (!p) { toast('Teilnehmer nicht gefunden'); return; }
+
+  var img = new Image();
+  img.onload = function() {
+    var canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    var fullName = (p.firstname || '') + ' ' + (p.lastname || '');
+    var category = p.events || '';
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#0b1f3a';
+    ctx.font = '700 ' + (certConfig.name_size * (img.width / 1055)) + 'px Georgia, "Times New Roman", serif';
+    ctx.fillText(fullName.trim().toUpperCase(), canvas.width / 2, canvas.height * (certConfig.name_y / 100));
+
+    ctx.font = '600 ' + (certConfig.cat_size * (img.width / 1055)) + 'px Georgia, "Times New Roman", serif';
+    ctx.fillText('Category: ' + category, canvas.width / 2, canvas.height * (certConfig.cat_y / 100));
+
+    canvas.toBlob(function(blob) {
+      showCertificatePreview(blob, p);
+    }, 'image/jpeg', 0.92);
+  };
+  img.src = 'data:image/jpeg;base64,' + certTemplateB64;
+}
+
+function showCertificatePreview(blob, p) {
+  var url = URL.createObjectURL(blob);
+  var fileName = 'Zertifikat_' + (p.lastname||'') + '_' + (p.firstname||'') + '.jpg';
+  var existing = document.getElementById('certPreviewModal'); if (existing) existing.remove();
+  var menu = document.createElement('div');
+  menu.id = 'certPreviewModal';
+  menu.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = function(e) { if (e.target === menu) { menu.remove(); URL.revokeObjectURL(url); } };
+  menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:20px;max-width:480px;width:100%;max-height:92vh;overflow:auto;border:1px solid var(--border)">'
+    + '<h3 style="margin-bottom:12px;font-size:15px;color:var(--text)">🎓 Zertifikat – ' + p.firstname + ' ' + p.lastname + '</h3>'
+    + '<img src="' + url + '" style="width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:14px" />'
+    + '<div style="display:flex;flex-direction:column;gap:8px">'
+    + '<a class="btn primary" href="' + url + '" download="' + fileName + '" style="text-align:center;text-decoration:none">⬇️ Herunterladen</a>'
+    + '<button class="btn" style="background:#25D366;border-color:#25D366;color:#fff" data-mobile="' + (p.mobile||'') + '" onclick="shareCertificate(this, \'' + url + '\', \'' + fileName + '\', \'whatsapp\')">💬 Per WhatsApp teilen</button>'
+    + '<button class="btn" data-email="' + (p.email||'') + '" onclick="shareCertificate(this, \'' + url + '\', \'' + fileName + '\', \'email\')">✉️ Per E-Mail teilen</button>'
+    + '<button class="btn" onclick="document.getElementById(\'certPreviewModal\').remove();URL.revokeObjectURL(\'' + url + '\')">Schließen</button>'
+    + '</div>'
+    + '<p style="font-size:11px;color:var(--text3);margin-top:10px">Hinweis: Je nach Browser öffnet sich ein Teilen-Menü, in dem das Bild direkt mitgeschickt wird. Klappt das nicht, wird das Zertifikat stattdessen heruntergeladen — bitte dann manuell an die E-Mail/WhatsApp-Nachricht anhängen.</p>'
+    + '</div>';
+  document.body.appendChild(menu);
+}
+
+async function shareCertificate(btn, url, fileName, channel) {
+  var resp = await fetch(url);
+  var blob = await resp.blob();
+  var file = new File([blob], fileName, { type: 'image/jpeg' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Certificate of Participation', text: 'Your Certificate of Participation' });
+      return;
+    } catch (e) { /* user cancelled or share failed — fall through to manual fallback */ }
+  }
+
+  // Fallback: Browser unterstützt kein direktes Datei-Teilen — Zertifikat herunterladen und
+  // den jeweiligen Kanal mit einem Hinweistext öffnen, damit manuell angehängt werden kann.
+  var a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+  if (channel === 'whatsapp') {
+    var mobile = btn.getAttribute('data-mobile');
+    var phoneDigits = mobile ? mobile.replace(/[^0-9+]/g, '').replace(/^\+/, '') : '';
+    var text = encodeURIComponent('Here is your Certificate of Participation 🎓 (see attached file)');
+    window.open(phoneDigits ? ('https://wa.me/' + phoneDigits + '?text=' + text) : ('https://wa.me/?text=' + text), '_blank');
+    toast('📥 Zertifikat heruntergeladen — bitte in WhatsApp manuell anhängen');
+  } else {
+    var email = btn.getAttribute('data-email');
+    window.location.href = 'mailto:' + encodeURIComponent(email||'') + '?subject=' + encodeURIComponent('Your Certificate of Participation') + '&body=' + encodeURIComponent('Please find your Certificate of Participation attached.');
+    toast('📥 Zertifikat heruntergeladen — bitte an die E-Mail manuell anhängen');
+  }
+}
+
 async function loadSponsorLogos() {
   var r=await db.from('app_settings').select('*');
   if(!r.data) return;
@@ -15912,6 +16116,7 @@ async function loadIdCards() {
         + '<td style="padding:4px 8px;font-size:11px">'+(p.role||'–')+'</td>'
         + '<td style="padding:4px 8px">'
         + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button> '
+        + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="generateCertificate(this.dataset.id)" title="Certificate of Participation erstellen">🎓 Zertifikat</button> '
         + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button> '
         + '<button class="btn" style="font-size:10px;padding:2px 8px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button> '
         + '<button class="btn" style="font-size:10px;padding:2px 8px'+(p.pass_note?';border-color:var(--blue);color:var(--blue)':'')+'" data-id="'+p.id+'" onclick="openPassNoteModal(this.dataset.id)" title="'+(p.pass_note?'Zusatzinfo bearbeiten':'Zusatzinfo für Pass hinzufügen')+'">📝</button>'
