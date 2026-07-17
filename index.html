@@ -2708,22 +2708,6 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           </div>
         </div>
 
-        <!-- ROLE PERMISSIONS CARD -->
-        <div class="card" style="margin-top:16px">
-          <div class="card-header">
-            <h3>🔐 Benutzerrechte</h3>
-            <button class="btn primary" onclick="saveRolePermissions()">💾 Speichern</button>
-          </div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
-              Lege fest welche Seiten jede Rolle sehen darf. Admin hat immer vollen Zugriff.
-            </p>
-            <div id="roleAccessGrid" style="overflow-x:auto">
-              <p style="color:var(--text3);font-size:13px">Lade Rollen…</p>
-            </div>
-          </div>
-        </div>
-
         <div style="margin:28px 0 10px;font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
           <span>⚠ Gefahrenzone</span><div style="flex:1;height:1px;background:var(--red)"></div>
         </div>
@@ -9971,7 +9955,6 @@ async function exportWaitlistPDF() {
 
 // SETTINGS
 async function loadSettings() {
-  setTimeout(loadRolePermissionsSettings, 300);
   try { await loadPhysioConfig(); } catch(e) { console.error('loadPhysioConfig error:', e); }
   try { await loadWithdrawPolicy(); } catch(e) { console.error('loadWithdrawPolicy error:', e); }
   try { await loadMealOptionsSettings(); } catch(e) { console.error('loadMealOptionsSettings error:', e); }
