@@ -1349,7 +1349,8 @@ function buildRegistrationSummaryText(row, roomTypeLabel) {
   add('Coach ESID', row.coach_esid);
   add('Shirt Size', row.shirt);
 
-  section('Package & Hotel');
+  var hasHotelInfo = !!(roomTypeLabel || row.room_type || row.hotel || row.checkin || row.checkout);
+  section(hasHotelInfo ? 'Package & Hotel' : 'Package');
   add('Package', row.package);
   add('Package Price', row.package_price != null ? row.package_price.toFixed(2) + ' EUR' : null);
   add('Room Type', roomTypeLabel || row.room_type);
