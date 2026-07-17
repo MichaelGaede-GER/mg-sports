@@ -1550,7 +1550,7 @@ function onSameTravelToggle() {
 // Baut eine vollständige, lesbare Zusammenfassung aller ausgefüllten Felder als Klartext
 // (mit Zeilenumbrüchen) für die Bestätigungsmail. Leere/nicht zutreffende Felder werden
 // übersprungen, damit die Mail nicht überladen wirkt.
-function buildRegistrationSummaryText(row, roomTypeLabel) {
+function buildRegistrationSummaryText(row, roomTypeLabel, travelRelevant) {
   var lines = [];
   function add(label, value) { if (value !== null && value !== undefined && value !== '') lines.push(label + ': ' + value); }
   function section(title) { lines.push(''); lines.push('— ' + title + ' —'); }
@@ -1576,15 +1576,20 @@ function buildRegistrationSummaryText(row, roomTypeLabel) {
   add('Check-in', row.checkin);
   add('Check-out', row.checkout);
 
-  section('Travel');
-  add('Airport Bus', row.ams_bus);
-  add('Additional Airport Transfer', row.airport_plus);
-  add('Arrival Date', row.arrival_date);
-  add('Arrival Time', row.arrival_time);
+  // Travel/Transport nur einbeziehen, wenn das Package DIESER Person tatsächlich einen
+  // Transfer beinhaltet — sonst stehen hier automatisch erzeugte Default-Werte (z.B.
+  // "Nein"), die die Person gar nicht ausgefüllt/gesehen hat.
+  if (travelRelevant) {
+    section('Travel');
+    add('Airport Bus', row.ams_bus);
+    add('Additional Airport Transfer', row.airport_plus);
+    add('Arrival Date', row.arrival_date);
+    add('Arrival Time', row.arrival_time);
   add('Flight In', row.flight_in);
   add('Departure Date', row.departure_date);
   add('Departure Time', row.departure_time);
   add('Flight Out', row.flight_out);
+  }
 
   if (row.visa === 'Ja') {
     section('VISA / Confirmation Letter');
@@ -1930,12 +1935,14 @@ async function submitGroupRegistration() {
       var _mRow = rows[_mi];
       if (!_mRow.email) continue;
       try {
+        var _mPkg = packagesCache.find(function(pk) { return pk.code === _mRow.package; });
+        var _mTravelRelevant = !!(_mPkg && _mPkg.transport === 'Ja');
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           to_email: _mRow.email,
           to_name: (( _mRow.firstname||'') + ' ' + (_mRow.lastname||'')).trim(),
           event_name: eventNameRaw || 'the tournament',
           esid: _mRow.member_id || '-',
-          registration_summary: buildRegistrationSummaryText(_mRow, roomTypeLabelsMail[_mRow.room_type] || _mRow.room_type),
+          registration_summary: buildRegistrationSummaryText(_mRow, roomTypeLabelsMail[_mRow.room_type] || _mRow.room_type, _mTravelRelevant),
           edit_link: groupEditLink
         });
       } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
