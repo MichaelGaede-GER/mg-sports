@@ -1042,7 +1042,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                   <input type="number" id="f_confirmation_letter_price" step="0.01" placeholder="0.00" />
                 </div>
                 <div class="form-group" style="grid-column:1/-1">
-                  <label>Passport picture</label>
+                  <label>Reisepass / Ausweis</label>
                   <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Please upload your passport</div>
                   <div style="display:flex;align-items:center;gap:12px">
                     <div id="entryPassportDocPreview" style="width:100px;height:100px;border-radius:var(--radius);border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;background:var(--bg3);gap:4px;flex-shrink:0" onclick="document.getElementById('entryPassportDocInput').click()">
@@ -14415,11 +14415,29 @@ async function syncEntryWithPersons() {
     }
   });
 
+  // Reisepass/Ausweis-Dokument (Datei-Upload, kein normales Textfeld) — Sonderbehandlung,
+  // da der Wert nicht aus einem DOM-Input gelesen werden kann.
+  var passportField = {entry: '__passport_doc', person: 'passport_doc_url', label: 'Reisepass / Ausweis'};
+  var personPassportVal = person.passport_doc_url || '';
+  var entryPassportVal = entryCurrentPassportUrl || '';
+  if (personPassportVal && !entryPassportVal) {
+    missingInEntry.push({field: passportField, personVal: personPassportVal});
+  } else if (entryPassportVal && !personPassportVal) {
+    missingInPersons.push({field: passportField, entryVal: entryPassportVal});
+  } else if (entryPassportVal && personPassportVal && entryPassportVal !== personPassportVal) {
+    conflicts.push({field: passportField, entryVal: entryPassportVal, personVal: personPassportVal});
+  }
+
   // Show sync modal
   openEntrySyncModal(person, missingInEntry, missingInPersons, conflicts);
 }
 
 var _entrySyncData = null;
+
+function syncDisplayVal(field, val) {
+  if (field.entry === '__passport_doc') return val ? '📄 Dokument vorhanden' : '–';
+  return val;
+}
 
 function openEntrySyncModal(person, missingInEntry, missingInPersons, conflicts) {
   _entrySyncData = {person, missingInEntry, missingInPersons, conflicts};
@@ -14435,7 +14453,7 @@ function openEntrySyncModal(person, missingInEntry, missingInPersons, conflicts)
     content += missingInEntry.map(function(item) {
       return '<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--green-bg);border-radius:6px;margin-bottom:4px;cursor:pointer;font-size:13px">'
         + '<input type="checkbox" class="sync-to-entry" data-field="'+item.field.entry+'" data-value="'+item.personVal+'" checked style="accent-color:var(--green)">'
-        + '<strong>'+item.field.label+':</strong> '+item.personVal+'</label>';
+        + '<strong>'+item.field.label+':</strong> '+syncDisplayVal(item.field, item.personVal)+'</label>';
     }).join('');
     content += '</div>';
   }
@@ -14445,7 +14463,7 @@ function openEntrySyncModal(person, missingInEntry, missingInPersons, conflicts)
     content += missingInPersons.map(function(item) {
       return '<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--blue-bg);border-radius:6px;margin-bottom:4px;cursor:pointer;font-size:13px">'
         + '<input type="checkbox" class="sync-to-persons" data-field="'+item.field.person+'" data-value="'+item.entryVal+'" checked style="accent-color:var(--blue)">'
-        + '<strong>'+item.field.label+':</strong> '+item.entryVal+'</label>';
+        + '<strong>'+item.field.label+':</strong> '+syncDisplayVal(item.field, item.entryVal)+'</label>';
     }).join('');
     content += '</div>';
   }
@@ -14455,8 +14473,8 @@ function openEntrySyncModal(person, missingInEntry, missingInPersons, conflicts)
     content += conflicts.map(function(item) {
       return '<div style="padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:6px;font-size:12px">'
         + '<strong>'+item.field.label+':</strong><br>'
-        + '<label style="display:flex;align-items:center;gap:6px;margin-top:4px"><input type="radio" name="conflict_'+item.field.entry+'" value="entry" checked style="accent-color:var(--blue)"> Formular: <strong>'+item.entryVal+'</strong></label>'
-        + '<label style="display:flex;align-items:center;gap:6px;margin-top:2px"><input type="radio" name="conflict_'+item.field.entry+'" value="person"> Personen-DB: <strong>'+item.personVal+'</strong></label>'
+        + '<label style="display:flex;align-items:center;gap:6px;margin-top:4px"><input type="radio" name="conflict_'+item.field.entry+'" value="entry" checked style="accent-color:var(--blue)"> Formular: <strong>'+syncDisplayVal(item.field, item.entryVal)+'</strong></label>'
+        + '<label style="display:flex;align-items:center;gap:6px;margin-top:2px"><input type="radio" name="conflict_'+item.field.entry+'" value="person"> Personen-DB: <strong>'+syncDisplayVal(item.field, item.personVal)+'</strong></label>'
         + '</div>';
     }).join('');
     content += '</div>';
@@ -14475,9 +14493,25 @@ async function applyEntrySync() {
 
   // Apply to entry form
   document.querySelectorAll('.sync-to-entry:checked').forEach(function(cb) {
+    var val = cb.getAttribute('data-value');
+    if (cb.getAttribute('data-field') === '__passport_doc') {
+      // Reisepass/Ausweis ist ein Datei-Upload, kein normales Input-Feld — Vorschau und
+      // internen Zustand direkt aktualisieren statt el.value zu setzen.
+      entryCurrentPassportUrl = val;
+      entryPassportFile = null;
+      var prev = document.getElementById('entryPassportDocPreview');
+      var delBtn = document.getElementById('entryPassportDeleteBtn');
+      if (prev) {
+        var isPdfDoc = val && val.toLowerCase().includes('.pdf');
+        prev.innerHTML = isPdfDoc
+          ? '<span style="font-size:24px">📄</span><a href="'+val+'" target="_blank" style="font-size:10px;color:var(--blue)">Öffnen</a>'
+          : '<img src="'+val+'" style="width:100%;height:100%;object-fit:cover" />';
+      }
+      if (delBtn) delBtn.style.display = 'block';
+      return;
+    }
     var el = document.getElementById(cb.getAttribute('data-field'));
     if (!el) return;
-    var val = cb.getAttribute('data-value');
     // Normalize gender values
     if (cb.getAttribute('data-field') === 'f_gender') {
       if (val === 'Maennlich' || val === 'maennlich') val = 'Männlich';
@@ -14518,8 +14552,22 @@ async function applyEntrySync() {
           updates[item.field.person] = item.entryVal;
         } else {
           // Persons DB wins → update entry form
-          var el = document.getElementById(item.field.entry);
-          if (el) el.value = item.personVal;
+          if (item.field.entry === '__passport_doc') {
+            entryCurrentPassportUrl = item.personVal;
+            entryPassportFile = null;
+            var prev = document.getElementById('entryPassportDocPreview');
+            var delBtn = document.getElementById('entryPassportDeleteBtn');
+            if (prev) {
+              var isPdfDoc = item.personVal && item.personVal.toLowerCase().includes('.pdf');
+              prev.innerHTML = isPdfDoc
+                ? '<span style="font-size:24px">📄</span><a href="'+item.personVal+'" target="_blank" style="font-size:10px;color:var(--blue)">Öffnen</a>'
+                : '<img src="'+item.personVal+'" style="width:100%;height:100%;object-fit:cover" />';
+            }
+            if (delBtn) delBtn.style.display = 'block';
+          } else {
+            var el = document.getElementById(item.field.entry);
+            if (el) el.value = item.personVal;
+          }
         }
       }
     });
@@ -14547,7 +14595,8 @@ async function applyEntrySync() {
         'cl_fullname':'visa_full_name','cl_dob':'visa_dob',
         'cl_place_of_birth':'visa_place_of_birth','cl_passport':'visa_passport_no',
         'cl_date_of_issue':'visa_issue_date','cl_date_of_expiry':'visa_expiry_date',
-        'f_squashlevels_id':'squashlevels_id','f_squashlevels_rating':'squashlevels_rating'
+        'f_squashlevels_id':'squashlevels_id','f_squashlevels_rating':'squashlevels_rating',
+        '__passport_doc':'passport_doc_url'
       };
       var col = fieldMap[cb.getAttribute('data-field')];
       if (col) {
