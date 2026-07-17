@@ -10025,6 +10025,7 @@ async function exportWaitlistPDF() {
 // SETTINGS
 async function loadSettings() {
   try { await loadCertificateSettings(); } catch(e) { console.error('loadCertificateSettings error:', e); }
+  try { await loadLetterTypesSettings(); } catch(e) { console.error('loadLetterTypesSettings error:', e); }
   try { await loadPhysioConfig(); } catch(e) { console.error('loadPhysioConfig error:', e); }
   try { await loadWithdrawPolicy(); } catch(e) { console.error('loadWithdrawPolicy error:', e); }
   try { await loadMealOptionsSettings(); } catch(e) { console.error('loadMealOptionsSettings error:', e); }
@@ -10444,7 +10445,7 @@ function buildCertificateHtml(opts) {
     '<div style="width:1054px;height:1492px;position:relative;font-family:Georgia,\'Times New Roman\',serif;background:#f8f4ec">' +
       '<img src="data:image/jpeg;base64,' + CERT_BACKGROUND_B64 + '" style="position:absolute;inset:0;width:100%;height:100%" />' +
       // Logo
-      '<div style="position:absolute;left:20.4%;width:50.8%;top:4.5%;height:24%;display:flex;align-items:center;justify-content:center">' + logoHtml + '</div>' +
+      '<div style="position:absolute;left:15%;width:70%;top:4.5%;height:24%;display:flex;align-items:center;justify-content:center">' + logoHtml + '</div>' +
       // Event name in ribbon
       '<div style="position:absolute;left:18.5%;width:63.6%;top:50.3%;height:3.8%;display:flex;align-items:center;justify-content:center;color:#e9c46a;font-size:26px;font-weight:700;letter-spacing:1px;text-transform:uppercase">' + (opts.eventName || '') + '</div>' +
       // Player name
