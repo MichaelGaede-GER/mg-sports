@@ -589,6 +589,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <button class="entry-tab" onclick="switchEntryTab('hotel',this)">🏨 Hotel & Reise</button>
           <button class="entry-tab" onclick="switchEntryTab('payment',this)">💳 Zahlung</button>
           <button class="entry-tab" onclick="switchEntryTab('other',this)">⚙ Sonstiges</button>
+          <button class="entry-tab" onclick="switchEntryTab('media',this)">📸 Dokument &amp; Foto</button>
           <button class="entry-tab" onclick="switchEntryTab('nationalfed',this)">🏳 National Federation</button>
         </div>
 
@@ -1044,18 +1045,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                   <input type="number" id="f_confirmation_letter_price" step="0.01" placeholder="0.00" />
                 </div>
                 <div class="form-group" style="grid-column:1/-1">
-                  <label>Reisepass / Ausweis</label>
-                  <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Please upload your passport</div>
-                  <div style="display:flex;align-items:center;gap:12px">
-                    <div id="entryPassportDocPreview" style="width:100px;height:100px;border-radius:var(--radius);border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;background:var(--bg3);gap:4px;flex-shrink:0" onclick="document.getElementById('entryPassportDocInput').click()">
-                      <span style="font-size:24px">📄</span>
-                      <span style="font-size:10px;color:var(--text3)">PDF oder Bild</span>
-                    </div>
-                    <input type="file" id="entryPassportDocInput" accept="image/*,.pdf" style="display:none" onchange="previewEntryPassportDoc(event)" />
-                    <div style="display:flex;flex-direction:column;gap:6px">
-                      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('entryPassportDocInput').click()">Datei auswählen</button>
-                      <button class="btn danger" id="entryPassportDeleteBtn" style="font-size:11px;padding:4px 10px;display:none" onclick="deleteEntryPassportDoc()">Datei löschen</button>
-                    </div>
+                  <div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg2);border-radius:var(--radius)">
+                    📄 Reisepass / Ausweis und Teilnehmerfoto findest du jetzt im Reiter <strong>„📸 Dokument &amp; Foto"</strong>.
                   </div>
                 </div>
               </div>
@@ -1281,6 +1272,52 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <div id="entryTab-media" class="entry-tab-content">
+<div class="card">
+          <div class="card-header"><h3>Dokument &amp; Foto</h3></div>
+          <div class="card-body">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px;padding:10px 12px;background:var(--bg2);border-radius:var(--radius)">
+              Diese Dateien werden vom Teilnehmer über das Anmeldeformular hochgeladen. Über
+              <strong>„🔄 Personen-DB abgleichen"</strong> oben lassen sie sich mit der Personendatenbank abgleichen.
+            </div>
+            <div style="display:flex;gap:32px;flex-wrap:wrap">
+
+              <div style="flex:1;min-width:260px">
+                <label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px">Teilnehmerfoto</label>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Wird für Ausweis und Urkunde verwendet</div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:110px;height:110px;border-radius:50%;overflow:hidden;border:2px dashed var(--border2);background:var(--bg3);cursor:pointer;flex-shrink:0" onclick="document.getElementById('entryPhotoInput').click()">
+                    <img id="entryPhotoImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.visibility='hidden'" />
+                  </div>
+                  <input type="file" id="entryPhotoInput" accept="image/*" style="display:none" onchange="previewEntryPhoto(event)" />
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <button class="btn" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('entryPhotoInput').click()">Foto auswählen</button>
+                    <button class="btn danger" id="entryPhotoDeleteBtn" style="font-size:11px;padding:4px 10px;display:none" onclick="deleteEntryPhoto()">Foto löschen</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:1;min-width:260px">
+                <label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px">Reisepass / Ausweis</label>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px">PDF oder Bild, z.B. für den Confirmation Letter</div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div id="entryPassportDocPreview" style="width:110px;height:110px;border-radius:var(--radius);border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;background:var(--bg3);gap:4px;flex-shrink:0" onclick="document.getElementById('entryPassportDocInput').click()">
+                    <span style="font-size:24px">📄</span>
+                    <span style="font-size:10px;color:var(--text3)">PDF oder Bild</span>
+                  </div>
+                  <input type="file" id="entryPassportDocInput" accept="image/*,.pdf" style="display:none" onchange="previewEntryPassportDoc(event)" />
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <button class="btn" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('entryPassportDocInput').click()">Datei auswählen</button>
+                    <button class="btn danger" id="entryPassportDeleteBtn" style="font-size:11px;padding:4px 10px;display:none" onclick="deleteEntryPassportDoc()">Datei löschen</button>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -4439,9 +4476,11 @@ async function loadEntryFee() {
   var rs = document.getElementById('f_room_select'); if (rs) rs.value = '';
   window._eventAutoFilled = false;
   var evBadge = document.getElementById('eventAutoBadge'); if (evBadge) evBadge.style.display = 'none';
-  var pi2 = document.getElementById('entryPhotoImg');
-  if (pi2) pi2.src = DUMMY_PHOTO_URL;
+  entryPhotoFile = null;
+  entryCurrentPhotoUrl = null;
   window._entryPhotoUrl = null;
+  if (typeof setEntryPhotoPreview === 'function') setEntryPhotoPreview(null);
+  var epi = document.getElementById('entryPhotoInput'); if (epi) epi.value = '';
   var ri = document.getElementById('roomSelectInfo'); if (ri) ri.textContent = '';
   var ro = document.getElementById('roomOccupantsInfo'); if (ro) ro.style.display = 'none';
   var rw = document.getElementById('roomWarning'); if (rw) rw.style.display = 'none';
@@ -6169,15 +6208,19 @@ async function editEntry(id) {
   if (sqIdEl) sqIdEl.value = p.squashlevels_id || '';
   if (sqRatingEl) sqRatingEl.value = p.squashlevels_rating || '';
   updateEntrySquashlevelLink();
+  // Teilnehmerfoto: eigenes Foto hat Vorrang, sonst wird das Bild aus der Personen-DB gezeigt
+  entryPhotoFile = null;
+  entryCurrentPhotoUrl = p.photo_url || null;
   window._entryPhotoUrl = p.photo_url || null;
-  var photoImg2 = document.getElementById('entryPhotoImg');
-  if (photoImg2) {
-    if (p.photo_url) { photoImg2.src = p.photo_url; }
-    else if (p.member_id) {
-      db.from('persons').select('photo_url').eq('member_id', p.member_id).maybeSingle().then(function(pr) {
-        if (pr.data && pr.data.photo_url) { photoImg2.src = pr.data.photo_url; window._entryPhotoUrl = pr.data.photo_url; }
-      });
-    }
+  setEntryPhotoPreview(p.photo_url || null);
+  if (!p.photo_url && p.member_id) {
+    db.from('persons').select('photo_url').eq('member_id', p.member_id).maybeSingle().then(function(pr) {
+      if (pr.data && pr.data.photo_url) {
+        entryCurrentPhotoUrl = pr.data.photo_url;
+        window._entryPhotoUrl = pr.data.photo_url;
+        setEntryPhotoPreview(pr.data.photo_url);
+      }
+    });
   }
   // Load room dropdown and pre-select current room
   populateRoomDropdown().then(function() {
@@ -6359,8 +6402,22 @@ async function saveEntry() {
     }
   }
 
+  // Teilnehmerfoto hochladen (Reiter "Dokument & Foto")
+  var entryPhotoUrl = entryCurrentPhotoUrl;
+  if (entryPhotoFile) {
+    try {
+      var compressedEntryPhoto = await compressImageFile(entryPhotoFile, 800, 0.85);
+      entryPhotoUrl = await uploadPersonMediaFile(participantTempId + '/photo.jpg', compressedEntryPhoto, 'image/jpeg');
+      entryPhotoUrl += '?v=' + Date.now(); // Cache-Buster, damit ein Austausch sofort sichtbar ist
+    } catch (e) {
+      toast('⚠️ Foto-Upload fehlgeschlagen: ' + (e.message || e));
+      return;
+    }
+  }
+
   const row = {
     passport_doc_url: entryPassportUrl,
+    photo_url: entryPhotoUrl,
     group_tp: v('group_tp'), lastname, firstname,
     country: v('country').toUpperCase(), mobile: v('mobile'), email: v('email'),
     dob: v('dob')||null, passport_id: v('passport_id'), gender: v('gender'),
@@ -9745,7 +9802,13 @@ let sponsorLogos = {1:'',2:'',3:'',4:''};
 let currentEventLogoB64 = '';
 let eventLogoFile = null;
 let personPhotoFile = null;
-var DUMMY_PHOTO_URL = DUMMY_PHOTO_URL;
+var DUMMY_PHOTO_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+  + '<rect width="100" height="100" fill="%23e9edf3"/>'
+  + '<circle cx="50" cy="38" r="18" fill="%23b4bdcb"/>'
+  + '<path d="M14 100c0-22 16-34 36-34s36 12 36 34z" fill="%23b4bdcb"/></svg>');
+let entryPhotoFile = null;         // neu gewähltes Teilnehmerfoto (noch nicht hochgeladen)
+let entryCurrentPhotoUrl = null;   // bereits gespeichertes Foto des Teilnehmers
 let personPassportFile = null;
 let entryPassportFile = null;
 let entryCurrentPassportUrl = null;
@@ -11447,6 +11510,28 @@ function deleteEntryPassportDoc() {
   var b=document.getElementById('entryPassportDeleteBtn'); if(b)b.style.display='none';
   var inp=document.getElementById('entryPassportDocInput'); if(inp) inp.value='';
 }
+// Teilnehmerfoto im Reiter "Dokument & Foto" — dieselbe Mechanik wie beim Ausweis:
+// Datei wird nur vorgemerkt und erst beim Speichern des Teilnehmers hochgeladen.
+function setEntryPhotoPreview(url) {
+  var img = document.getElementById('entryPhotoImg');
+  var btn = document.getElementById('entryPhotoDeleteBtn');
+  if (img) { img.style.visibility = 'visible'; img.src = url || DUMMY_PHOTO_URL; }
+  if (btn) btn.style.display = url ? 'block' : 'none';
+}
+function previewEntryPhoto(event) {
+  var file = event.target.files[0]; if (!file) return;
+  entryPhotoFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e) { setEntryPhotoPreview(e.target.result); };
+  reader.readAsDataURL(file);
+}
+function deleteEntryPhoto() {
+  entryPhotoFile = null; entryCurrentPhotoUrl = null;
+  window._entryPhotoUrl = null;
+  setEntryPhotoPreview(null);
+  var inp = document.getElementById('entryPhotoInput'); if (inp) inp.value = '';
+}
+
 function showUploadProgress(pct, text) { var p=document.getElementById('personUploadProgress');if(p)p.style.display='block';var b=document.getElementById('personUploadBar');if(b)b.style.width=pct+'%';var t=document.getElementById('personUploadText');if(t)t.textContent=text; }
 function hideUploadProgress() { var p=document.getElementById('personUploadProgress');if(p)p.style.display='none'; }
 
@@ -14956,6 +15041,18 @@ async function syncEntryWithPersons() {
     conflicts.push({field: passportField, entryVal: entryPassportVal, personVal: personPassportVal});
   }
 
+  // Teilnehmerfoto (Datei-Upload, kein Textfeld) — gleiche Sonderbehandlung wie beim Ausweis.
+  var photoField = {entry: '__photo', person: 'photo_url', label: 'Teilnehmerfoto'};
+  var personPhotoVal = person.photo_url || '';
+  var entryPhotoVal = entryCurrentPhotoUrl || '';
+  if (personPhotoVal && !entryPhotoVal) {
+    missingInEntry.push({field: photoField, personVal: personPhotoVal});
+  } else if (entryPhotoVal && !personPhotoVal) {
+    missingInPersons.push({field: photoField, entryVal: entryPhotoVal});
+  } else if (entryPhotoVal && personPhotoVal && entryPhotoVal !== personPhotoVal) {
+    conflicts.push({field: photoField, entryVal: entryPhotoVal, personVal: personPhotoVal});
+  }
+
   // Show sync modal
   openEntrySyncModal(person, missingInEntry, missingInPersons, conflicts);
 }
@@ -14964,6 +15061,7 @@ var _entrySyncData = null;
 
 function syncDisplayVal(field, val) {
   if (field.entry === '__passport_doc') return val ? '📄 Dokument vorhanden' : '–';
+  if (field.entry === '__photo') return val ? '<img src="' + val + '" style="width:38px;height:38px;border-radius:50%;object-fit:cover;vertical-align:middle" />' : '–';
   return val;
 }
 
@@ -15038,6 +15136,13 @@ async function applyEntrySync() {
       if (delBtn) delBtn.style.display = 'block';
       return;
     }
+    if (cb.getAttribute('data-field') === '__photo') {
+      entryCurrentPhotoUrl = val;
+      entryPhotoFile = null;
+      window._entryPhotoUrl = val;
+      setEntryPhotoPreview(val);
+      return;
+    }
     var el = document.getElementById(cb.getAttribute('data-field'));
     if (!el) return;
     // Normalize gender values
@@ -15092,6 +15197,11 @@ async function applyEntrySync() {
                 : '<img src="'+item.personVal+'" style="width:100%;height:100%;object-fit:cover" />';
             }
             if (delBtn) delBtn.style.display = 'block';
+          } else if (item.field.entry === '__photo') {
+            entryCurrentPhotoUrl = item.personVal;
+            entryPhotoFile = null;
+            window._entryPhotoUrl = item.personVal;
+            setEntryPhotoPreview(item.personVal);
           } else {
             var el = document.getElementById(item.field.entry);
             if (el) el.value = item.personVal;
@@ -15124,7 +15234,8 @@ async function applyEntrySync() {
         'cl_place_of_birth':'visa_place_of_birth','cl_passport':'visa_passport_no',
         'cl_date_of_issue':'visa_issue_date','cl_date_of_expiry':'visa_expiry_date',
         'f_squashlevels_id':'squashlevels_id','f_squashlevels_rating':'squashlevels_rating',
-        '__passport_doc':'passport_doc_url'
+        '__passport_doc':'passport_doc_url',
+        '__photo':'photo_url'
       };
       var col = fieldMap[cb.getAttribute('data-field')];
       if (col) {
