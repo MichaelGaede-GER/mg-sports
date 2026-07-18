@@ -10472,6 +10472,7 @@ async function renderCertificateToBlob(opts) {
 
 async function generateCertificate(participantId) {
   if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  await loadCertificateSettings().catch(function(){});
   var pr = await db.from('participants').select('*').eq('id', participantId).single();
   var p = pr.data;
   if (!p) { toast('Teilnehmer nicht gefunden'); return; }
