@@ -262,6 +262,7 @@
               <label data-i18n="f_passport_picture">Passport picture</label>
               <div style="font-size:12px;color:#8a93a6;margin-bottom:6px" data-i18n="f_passport_picture_hint">Please upload your passport</div>
               <input type="file" id="r_passport_photo" accept="image/*,application/pdf" />
+              <div id="r_passport_existing" style="display:none;font-size:12px;color:#1e7a34;margin-top:6px"></div>
             </div>
           </div>
         </div>
@@ -939,14 +940,29 @@ function prefillFormForEdit(p) {
   setVal('r_arrival_date', p.arrival_date); setVal('r_arrival_time', p.arrival_time); setVal('r_flight_in', p.flight_in);
   setVal('r_departure_date', p.departure_date); setVal('r_departure_time', p.departure_time); setVal('r_flight_out', p.flight_out);
   setVal('r_visa', p.visa);
+  // WICHTIG: erst umschalten, dann füllen. Der Toggle blendet den Block ein und baut das
+  // Letter-Type-Dropdown auf — vorher gesetzte Werte gingen sonst verloren, weil die
+  // Auswahlliste noch leer war und der Block versteckt blieb.
+  if (typeof onConfirmationLetterToggle === 'function') onConfirmationLetterToggle();
   if (p.visa === 'Ja') {
     setVal('r_place_of_birth', p.place_of_birth);
     setVal('r_visa_passport_number', p.passport_id);
     setVal('r_date_of_issue', p.visa_date_of_issue);
     setVal('r_date_of_expiry', p.visa_date_of_expiry);
     setVal('r_letter_type', p.confirmation_letter_type);
+    renderPaymentSummary();
   } else {
     setVal('r_passport_id', p.passport_id);
+  }
+
+  // Bereits hochgeladenes Ausweisdokument anzeigen, damit klar ist, dass nichts fehlt
+  if (p.passport_doc_url) {
+    var passHint = document.getElementById('r_passport_existing');
+    if (passHint) {
+      passHint.style.display = 'block';
+      passHint.innerHTML = '✅ Bereits hochgeladen — <a href="' + p.passport_doc_url + '" target="_blank" style="color:#1e7a34">Dokument ansehen</a>. '
+        + 'Nur eine neue Datei wählen, wenn du es ersetzen möchtest.';
+    }
   }
   setVal('r_memo', p.memo);
 

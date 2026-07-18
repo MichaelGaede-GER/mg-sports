@@ -728,6 +728,7 @@ async function init() {
     try { ageClassesCache = JSON.parse(ageR.data[0].value); } catch (e) {}
   }
 
+  await checkGroupLeaderColumns();
   await loadPackages();
   await loadRoomAvailability();
   await loadHotels();
@@ -743,6 +744,7 @@ async function init() {
       groupEditMode = true;
       groupEditToken = editParam;
       existingGroupCode = editR.data[0].group_tp || null;
+      prefillGroupLeader(editR.data[0]);
       editR.data.forEach(function(p) {
         var domId = addParticipantRow();
         dbIdByParticipantId[domId] = p.id;
@@ -776,6 +778,7 @@ async function init() {
 // Teilnehmerfoto pro Gruppenmitglied: Vorschau, Komprimierung, Upload
 // ---------------------------------------------------------------------------
 var existingGroupPhotoUrl = {}; // DOM-participantId -> bereits gespeichertes Foto (Edit-Modus)
+var existingGroupPassportUrl = {}; // DOM-participantId -> bereits gespeichertes Ausweisdokument
 
 // Verkleinert das Bild auf max. 800px Kantenlaenge, damit Handyfotos nicht als
 // Mehr-Megabyte-Upload in den Storage wandern.
@@ -830,6 +833,47 @@ async function uploadGroupParticipantPhoto(id, participantId) {
   } catch (e) { return existingGroupPhotoUrl[id] || null; }
 }
 
+// Die Kontaktdaten des Gruppenleiters wurden bisher nirgends gespeichert — beim erneuten
+// Aufruf des Bearbeitungs-Links war der obere Block deshalb leer. Sie werden jetzt an jeder
+// Teilnehmerzeile mitgeführt. Falls die Spalten in der Datenbank noch fehlen, schaltet sich
+// die Funktion still ab, damit keine Anmeldung daran scheitert.
+var groupLeaderColumnsAvailable = false;
+
+async function checkGroupLeaderColumns() {
+  try {
+    var probe = await db.from('participants').select('group_leader_email').limit(1);
+    groupLeaderColumnsAvailable = !probe.error;
+  } catch (e) { groupLeaderColumnsAvailable = false; }
+}
+
+function groupLeaderFields() {
+  if (!groupLeaderColumnsAvailable) return {};
+  return {
+    group_leader_lastname: v('g_lastname') || null,
+    group_leader_firstname: v('g_firstname') || null,
+    group_leader_federation: v('g_federation') || null,
+    group_leader_mobile: v('g_mobile') || null,
+    group_leader_email: v('g_email') || null
+  };
+}
+
+function prefillGroupLeader(p) {
+  function setVal(fid, val) { var el = document.getElementById(fid); if (el && val !== null && val !== undefined) el.value = val; }
+  setVal('g_lastname', p.group_leader_lastname);
+  setVal('g_firstname', p.group_leader_firstname);
+  setVal('g_federation', p.group_leader_federation);
+  setVal('g_mobile', p.group_leader_mobile);
+  // Ohne gespeicherte Leader-Adresse wenigstens die Adresse der ersten Person vorschlagen
+  setVal('g_email', p.group_leader_email || p.email);
+
+  // Gruppen-Reisedaten aus der ersten Person übernehmen — sie gelten als Vorgabe für alle
+  setVal('g_arrival_date', p.arrival_date); setVal('g_arrival_time', p.arrival_time);
+  setVal('g_flight_in', p.flight_in);
+  setVal('g_departure_date', p.departure_date); setVal('g_departure_time', p.departure_time);
+  setVal('g_flight_out', p.flight_out);
+  setVal('g_airport_plus', p.airport_plus);
+}
+
 function prefillGroupParticipant(id, p) {
   function setVal(fid, val) { var el = document.getElementById(fid); if (el && val !== null && val !== undefined) el.value = val; }
 
@@ -846,12 +890,39 @@ function prefillGroupParticipant(id, p) {
   setVal('p_roomtype_' + id, p.room_type);
   setVal('p_hotel_' + id, p.hotel); setVal('p_checkin_' + id, p.checkin); setVal('p_checkout_' + id, p.checkout);
   var visaEl = document.getElementById('p_visa_' + id); if (visaEl) visaEl.value = p.visa || '';
+  // Erst umschalten (blendet den Block ein und baut das Letter-Type-Dropdown auf),
+  // dann füllen — sonst landen die Werte in einer noch leeren Auswahlliste.
+  if (typeof onConfirmationLetterToggle === 'function') onConfirmationLetterToggle(id);
   if (p.visa === 'Ja') {
     setVal('p_place_of_birth_' + id, p.place_of_birth);
     setVal('p_visa_passport_number_' + id, p.passport_id);
     setVal('p_date_of_issue_' + id, p.visa_date_of_issue);
     setVal('p_date_of_expiry_' + id, p.visa_date_of_expiry);
     setVal('p_letter_type_' + id, p.confirmation_letter_type);
+  }
+
+  // Reisedaten: wurden bisher gar nicht zurückgeladen und beim erneuten Speichern
+  // durch die (leeren) Gruppen-Reisedaten ersetzt.
+  setVal('p_arrival_date_' + id, p.arrival_date); setVal('p_arrival_time_' + id, p.arrival_time);
+  setVal('p_flight_in_' + id, p.flight_in);
+  setVal('p_departure_date_' + id, p.departure_date); setVal('p_departure_time_' + id, p.departure_time);
+  setVal('p_flight_out_' + id, p.flight_out);
+  if (p.arrival_date || p.arrival_time || p.flight_in || p.departure_date || p.departure_time || p.flight_out) {
+    var tf = document.getElementById('p_travelfields_' + id);
+    if (tf) tf.classList.add('open');
+  }
+
+  // Bereits hochgeladenes Ausweisdokument merken und anzeigen
+  if (p.passport_doc_url) {
+    existingGroupPassportUrl[id] = p.passport_doc_url;
+    var wrap = document.getElementById('p_passport_picture_wrap_' + id);
+    if (wrap && !document.getElementById('p_passport_existing_' + id)) {
+      var note = document.createElement('div');
+      note.id = 'p_passport_existing_' + id;
+      note.style.cssText = 'font-size:12px;color:#1e7a34;margin-top:6px';
+      note.innerHTML = '✅ Bereits hochgeladen — <a href="' + p.passport_doc_url + '" target="_blank" style="color:#1e7a34">Dokument ansehen</a>. Nur eine neue Datei wählen, wenn du es ersetzen möchtest.';
+      wrap.appendChild(note);
+    }
   }
 }
 
@@ -1893,7 +1964,7 @@ async function submitGroupRegistration() {
     // wurde). Jeder Teilnehmer bekommt vorab eine UUID, damit der Speicherpfad schon vor
     // dem gemeinsamen Bulk-Insert feststeht.
     var participantId = (groupEditMode && dbIdByParticipantId[id]) ? dbIdByParticipantId[id] : crypto.randomUUID();
-    var passportDocUrl = null;
+    var passportDocUrl = existingGroupPassportUrl[id] || null;
     var participantPhotoUrl = await uploadGroupParticipantPhoto(id, participantId);
     var passportFileInput = document.getElementById('p_passport_photo_' + id);
     if (needsLetter && passportFileInput && passportFileInput.files && passportFileInput.files[0]) {
@@ -2021,7 +2092,12 @@ async function submitGroupRegistration() {
   function slug(s) { return (s || 'GROUP').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'GROUP'; }
   var groupCode = (groupEditMode && existingGroupCode) || ('GRP-' + slug(v('g_lastname')) + '-' + Math.random().toString(16).slice(2, 6).toUpperCase());
   var sharedEditToken = groupEditToken || (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).replace(/-/g, '');
-  rows.forEach(function(r) { r.group_tp = groupCode; r.edit_token = sharedEditToken; });
+  var leaderData = groupLeaderFields();
+  rows.forEach(function(r) {
+    r.group_tp = groupCode;
+    r.edit_token = sharedEditToken;
+    Object.keys(leaderData).forEach(function(k) { r[k] = leaderData[k]; });
+  });
 
   var r;
   if (groupEditMode) {
