@@ -841,11 +841,17 @@ async function uploadGroupParticipantPhoto(id, participantId) {
 // die Funktion still ab, damit keine Anmeldung daran scheitert.
 var groupLeaderColumnsAvailable = false;
 
+var roomShareColumnAvailable = false;
+
 async function checkGroupLeaderColumns() {
   try {
     var probe = await db.from('participants').select('group_leader_email').limit(1);
     groupLeaderColumnsAvailable = !probe.error;
   } catch (e) { groupLeaderColumnsAvailable = false; }
+  try {
+    var probe2 = await db.from('participants').select('room_share_with').limit(1);
+    roomShareColumnAvailable = !probe2.error;
+  } catch (e) { roomShareColumnAvailable = false; }
 }
 
 function groupLeaderFields() {
@@ -863,6 +869,26 @@ function groupLeaderFields() {
 // Notiz im Memo („Teilt Zimmer mit: …"). Beim Öffnen des Bearbeitungs-Links wird die
 // Zuordnung daraus wieder aufgebaut, damit die Zimmer nicht auseinanderfallen.
 function restoreRoomShares(records) {
+  // Bevorzugt über die gespeicherte Referenz room_share_with — eindeutig, auch bei
+  // Namensgleichheit. Nur wenn dort nichts steht (Altmeldungen), wird das Memo ausgewertet.
+  var domByDbId = {};
+  participantIds.forEach(function(domId) {
+    if (dbIdByParticipantId[domId]) domByDbId[dbIdByParticipantId[domId]] = domId;
+  });
+  var restoredViaColumn = false;
+  records.forEach(function(rec, idx) {
+    var domId = participantIds[idx];
+    if (!domId || !rec.room_share_with) return;
+    var partner = domByDbId[rec.room_share_with];
+    if (!partner || partner === domId) return;
+    var sel = document.getElementById('p_shareroom_' + domId);
+    var wrap = document.getElementById('p_shareroom_wrap_' + domId);
+    if (!sel || (wrap && wrap.style.display === 'none')) return;
+    sel.value = String(partner);
+    if (sel.value === String(partner)) { onShareRoomChange(domId); restoredViaColumn = true; }
+  });
+  if (restoredViaColumn) return;
+
   // Namen aller geladenen Zeilen auf ihre DOM-ID abbilden
   var idByName = {};
   participantIds.forEach(function(domId) {
@@ -1899,6 +1925,15 @@ async function submitGroupRegistration() {
   // Requested room types (to re-check capacity right before insert)
   var requestedRoomCounts = {};
 
+  // Datenbank-IDs vorab festlegen: der Zimmerpartner wird als echte Referenz gespeichert,
+  // dafür muss die ID des Partners schon feststehen, bevor die Zeilen gebaut werden.
+  var dbIdForDom = {};
+  participantIds.forEach(function(pid) {
+    dbIdForDom[pid] = (groupEditMode && dbIdByParticipantId[pid])
+      ? dbIdByParticipantId[pid]
+      : (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+  });
+
   for (var _piIdx = 0; _piIdx < participantIds.length; _piIdx++) {
     var id = participantIds[_piIdx];
     var idx = _piIdx;
@@ -2025,7 +2060,7 @@ async function submitGroupRegistration() {
     // Passfoto-Upload (nur wenn Confirmation Letter benötigt wird und eine Datei gewählt
     // wurde). Jeder Teilnehmer bekommt vorab eine UUID, damit der Speicherpfad schon vor
     // dem gemeinsamen Bulk-Insert feststeht.
-    var participantId = (groupEditMode && dbIdByParticipantId[id]) ? dbIdByParticipantId[id] : crypto.randomUUID();
+    var participantId = dbIdForDom[id];
     var passportDocUrl = existingGroupPassportUrl[id] || null;
     var participantPhotoUrl = await uploadGroupParticipantPhoto(id, participantId);
     var passportFileInput = document.getElementById('p_passport_photo_' + id);
@@ -2058,6 +2093,9 @@ async function submitGroupRegistration() {
       id: participantId,
       passport_doc_url: passportDocUrl,
       photo_url: participantPhotoUrl,
+      // Zimmerpartner als echte Referenz (nur gesetzt, wenn die Spalte existiert).
+      // Der „Anker" eines Zimmers bekommt null, die Mitreisenden zeigen auf ihn.
+      room_share_with: roomShareColumnAvailable ? (roomShareOf[id] ? (dbIdForDom[roomShareOf[id]] || null) : null) : undefined,
       event_id: eventId,
       lastname: pLast, firstname: pFirst, country: pCountry,
       dob: pDob || null, gender: pGender, member_id: pEsid,
