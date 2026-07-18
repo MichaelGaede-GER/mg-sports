@@ -922,6 +922,35 @@ async function uploadParticipantPhoto(participantId) {
   } catch (e) { /* Upload-Fehler blockieren die Anmeldung nicht */ }
 }
 
+// Nach Meldeschluss wird room_type als "Warteliste" gespeichert; der gewünschte Typ steht
+// nur im Memo. Beim Bearbeiten wird daraus wieder die echte Auswahl hergestellt.
+function roomTypeFromLabel(label) {
+  if (!label) return null;
+  var needle = String(label).trim().toLowerCase();
+  if (ROOM_TYPES.indexOf(label) !== -1) return label;
+  var found = null;
+  Object.keys(ROOM_TYPE_LABELS).forEach(function(lang) {
+    Object.keys(ROOM_TYPE_LABELS[lang]).forEach(function(code) {
+      if (!found && String(ROOM_TYPE_LABELS[lang][code]).trim().toLowerCase() === needle) found = code;
+    });
+  });
+  return found;
+}
+
+function requestedRoomTypeFromMemo(memo) {
+  if (!memo) return null;
+  var text = String(memo);
+  var low = text.toLowerCase();
+  var prefixes = ['gewünschter zimmertyp:', 'gewuenschter zimmertyp:', 'requested room type:'];
+  var value = null;
+  prefixes.forEach(function(pre) {
+    if (value) return;
+    var at = low.indexOf(pre);
+    if (at >= 0) value = text.slice(at + pre.length).split('|')[0].trim();
+  });
+  return roomTypeFromLabel(value);
+}
+
 function prefillFormForEdit(p) {
   function setVal(id, val) { var el = document.getElementById(id); if (el && val !== null && val !== undefined) el.value = val; }
   function setChecked(id, val) { var el = document.getElementById(id); if (el) el.checked = !!val; }
@@ -936,18 +965,21 @@ function prefillFormForEdit(p) {
   setVal('r_package', p.package); onPackageSelectChange();
   // Zimmertyp: fehlende Option (z.B. „Warteliste" oder inzwischen ausgebucht) ergänzen,
   // sonst bleibt das Feld beim Wiederaufrufen leer.
-  if (p.room_type) {
+  var effectiveRoomTypeR = p.room_type === 'Warteliste'
+    ? (requestedRoomTypeFromMemo(p.memo) || p.room_type)
+    : p.room_type;
+  if (effectiveRoomTypeR) {
     var rtSelR = document.getElementById('r_roomtype');
     if (rtSelR) {
-      var hasOptR = Array.prototype.some.call(rtSelR.options, function(o) { return o.value === p.room_type; });
+      var hasOptR = Array.prototype.some.call(rtSelR.options, function(o) { return o.value === effectiveRoomTypeR; });
       if (!hasOptR) {
         var labelsRtR = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
         var optR = document.createElement('option');
-        optR.value = p.room_type;
-        optR.textContent = labelsRtR[p.room_type] || p.room_type;
+        optR.value = effectiveRoomTypeR;
+        optR.textContent = labelsRtR[effectiveRoomTypeR] || effectiveRoomTypeR;
         rtSelR.appendChild(optR);
       }
-      rtSelR.value = p.room_type;
+      rtSelR.value = effectiveRoomTypeR;
       if (typeof onRoomTypeChange === 'function') onRoomTypeChange();
     }
   }
@@ -1354,7 +1386,17 @@ function populateRoomTypeSelect() {
     var freeRooms = Math.max(0, totalRooms - usedRooms);
     return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + freeRooms + ' ' + t('ra_free_suffix') + ')') + '</option>';
   }).join('');
-  if (cur && availableTypes.indexOf(cur) !== -1) sel.value = cur;
+  if (cur && availableTypes.indexOf(cur) !== -1) {
+    sel.value = cur;
+  } else if (cur) {
+    // Gespeicherte Sonderwerte (z.B. „Warteliste") stehen nicht in ROOM_TYPES. Ohne diesen
+    // Zweig würde die Auswahl beim nächsten Neuaufbau der Liste stillschweigend geleert.
+    var extra = document.createElement('option');
+    extra.value = cur;
+    extra.textContent = labels[cur] || cur;
+    sel.appendChild(extra);
+    sel.value = cur;
+  }
 }
 
 function populateHotelSelect() {

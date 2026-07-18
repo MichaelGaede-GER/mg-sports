@@ -868,6 +868,36 @@ function groupLeaderFields() {
 // Wer mit wem im Zimmer liegt, wird nicht als eigene Spalte gespeichert, sondern nur als
 // Notiz im Memo („Teilt Zimmer mit: …"). Beim Öffnen des Bearbeitungs-Links wird die
 // Zuordnung daraus wieder aufgebaut, damit die Zimmer nicht auseinanderfallen.
+// Nach Meldeschluss speichert das Formular room_type = "Warteliste"; der tatsächlich
+// gewünschte Zimmertyp steht nur als Notiz im Memo. Beide werden hier wieder getrennt,
+// damit im Formular die echte Auswahl steht und die Zimmeraufteilung sichtbar bleibt.
+function roomTypeFromLabel(label) {
+  if (!label) return null;
+  var needle = String(label).trim().toLowerCase();
+  if (ROOM_TYPES.indexOf(label) !== -1) return label;
+  var found = null;
+  Object.keys(ROOM_TYPE_LABELS).forEach(function(lang) {
+    Object.keys(ROOM_TYPE_LABELS[lang]).forEach(function(code) {
+      if (!found && String(ROOM_TYPE_LABELS[lang][code]).trim().toLowerCase() === needle) found = code;
+    });
+  });
+  return found;
+}
+
+function requestedRoomTypeFromMemo(memo) {
+  if (!memo) return null;
+  var text = String(memo);
+  var low = text.toLowerCase();
+  var prefixes = ['gewünschter zimmertyp:', 'gewuenschter zimmertyp:', 'requested room type:'];
+  var value = null;
+  prefixes.forEach(function(pre) {
+    if (value) return;
+    var at = low.indexOf(pre);
+    if (at >= 0) value = text.slice(at + pre.length).split('|')[0].trim();
+  });
+  return roomTypeFromLabel(value);
+}
+
 function restoreRoomShares(records) {
   // Bevorzugt über die gespeicherte Referenz room_share_with — eindeutig, auch bei
   // Namensgleichheit. Nur wenn dort nichts steht (Altmeldungen), wird das Memo ausgewertet.
@@ -961,19 +991,33 @@ function prefillGroupParticipant(id, p) {
   // gespeicherte Wert danach gesetzt. Fehlt die Option in der Liste (z.B. „Warteliste" oder
   // ein inzwischen ausgebuchter Typ), wird sie ergänzt — sonst bleibt das Feld leer und
   // damit auch die Zimmeraufteilung unsichtbar.
-  if (p.room_type) {
+  var effectiveRoomType = p.room_type;
+  var waitlisted = p.room_type === 'Warteliste';
+  if (waitlisted) effectiveRoomType = requestedRoomTypeFromMemo(p.memo) || p.room_type;
+  if (effectiveRoomType) {
     var rtSel = document.getElementById('p_roomtype_' + id);
     if (rtSel) {
-      var hasOpt = Array.prototype.some.call(rtSel.options, function(o) { return o.value === p.room_type; });
+      var hasOpt = Array.prototype.some.call(rtSel.options, function(o) { return o.value === effectiveRoomType; });
       if (!hasOpt) {
         var labelsRt = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
         var opt = document.createElement('option');
-        opt.value = p.room_type;
-        opt.textContent = labelsRt[p.room_type] || p.room_type;
+        opt.value = effectiveRoomType;
+        opt.textContent = labelsRt[effectiveRoomType] || effectiveRoomType;
         rtSel.appendChild(opt);
       }
-      rtSel.value = p.room_type;
+      rtSel.value = effectiveRoomType;
       if (typeof onRoomTypeChange === 'function') onRoomTypeChange(id);
+      if (waitlisted) {
+        var wl = document.getElementById('p_roomtype_wrap_' + id);
+        if (wl && !document.getElementById('p_waitlist_note_' + id)) {
+          var note = document.createElement('div');
+          note.id = 'p_waitlist_note_' + id;
+          note.className = 'esid-hint';
+          note.style.color = '#b06a00';
+          note.textContent = '⏰ Anmeldung nach Meldeschluss — Zimmer steht auf der Warteliste und wird vom Veranstalter bestätigt.';
+          wl.appendChild(note);
+        }
+      }
     }
   }
   setVal('p_hotel_' + id, p.hotel); setVal('p_checkin_' + id, p.checkin); setVal('p_checkout_' + id, p.checkout);
@@ -1320,7 +1364,17 @@ function populateRoomTypeSelect(id) {
     var freeRooms = Math.max(0, totalRooms - usedRooms);
     return '<option value="' + rt + '"' + (disabled ? ' disabled' : '') + '>' + labels[rt] + (disabled ? ' – ' + t('ra_full') : ' (' + freeRooms + ' ' + t('ra_free_suffix') + ')') + '</option>';
   }).join('');
-  if (cur && availableTypes.indexOf(cur) !== -1) sel.value = cur;
+  if (cur && availableTypes.indexOf(cur) !== -1) {
+    sel.value = cur;
+  } else if (cur) {
+    // Gespeicherte Sonderwerte (z.B. „Warteliste") stehen nicht in ROOM_TYPES. Ohne diesen
+    // Zweig würde die Auswahl beim nächsten Neuaufbau der Liste stillschweigend geleert.
+    var extra = document.createElement('option');
+    extra.value = cur;
+    extra.textContent = labels[cur] || cur;
+    sel.appendChild(extra);
+    sel.value = cur;
+  }
 }
 
 function populateHotelSelect(id) {
