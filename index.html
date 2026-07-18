@@ -3874,6 +3874,42 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
   </div>
 </div>
 
+<div class="modal-overlay" id="distMailModal">
+  <div class="modal" style="width:640px;max-height:88vh;overflow-y:auto">
+    <button class="modal-close" onclick="closeModal('distMailModal')">×</button>
+    <h2 style="margin-bottom:4px">✉ Serien-E-Mail an Verteiler</h2>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px" id="distMailIntro"></p>
+
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group" style="grid-column:1/-1"><label>Betreff</label>
+        <input type="text" id="distMailSubject" value="MG Sports Event – Information" />
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Nachricht</label>
+        <textarea id="distMailBody" rows="5"></textarea>
+      </div>
+      <div class="form-group"><label>Empfänger pro E-Mail</label>
+        <select id="distMailBlockSize" onchange="renderDistMailBlocks()">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="75">75</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="distMailBlocks" style="margin-top:6px"></div>
+
+    <div style="font-size:11px;color:var(--text3);margin-top:14px;padding:10px 12px;background:var(--bg2);border-radius:var(--radius)">
+      💡 Outlook kürzt sehr lange mailto-Links (ca. 2.000 Zeichen). Fehlen im BCC-Feld Adressen, wähle
+      eine kleinere Blockgröße oder nutze „📋 Adressen kopieren" und füge sie direkt ins BCC-Feld ein.
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <button class="btn" onclick="closeModal('distMailModal')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="entrySyncModal">
   <div class="modal" style="width:580px;max-height:88vh;overflow-y:auto">
     <button class="modal-close" onclick="closeModal('entrySyncModal')">×</button>
@@ -14023,28 +14059,109 @@ async function loadMarketing() {
   renderCoachDist();
 }
 
+// Serien-E-Mail an einen Verteiler. Statt nur die ersten 50 Adressen zu verschicken,
+// wird die Liste in Blöcke aufgeteilt, die einzeln geöffnet werden können — analog zum
+// Blockdruck der Spielerpässe. Bereits geöffnete Blöcke werden abgehakt.
+var _distMailEmails = [];
+var _distMailType = '';
+var _distMailSent = {};
+
 function emailDistribution(type) {
-  var emails = type === 'players' ? (window._playerEmails||[]) : (window._coachEmails||[]);
+  var emails = type === 'players' ? (window._playerEmails || []) : (window._coachEmails || []);
+  // Doppelte Adressen entfernen — sonst bekommt jemand die Mail mehrfach
+  var seen = {};
+  emails = emails.filter(function(e) {
+    var k = (e || '').trim().toLowerCase();
+    if (!k || seen[k]) return false;
+    seen[k] = true; return true;
+  });
   if (!emails.length) { toast('Keine E-Mail-Adressen gefunden'); return; }
 
-  var subject = encodeURIComponent('MG Sports Event – Information');
-  var body = encodeURIComponent('Sehr geehrte Damen und Herren,\n\nhiermit möchten wir Sie über unser kommendes Event informieren.\n\nMit freundlichen Grüßen\nMG Sports & Eventmanagement');
+  _distMailEmails = emails;
+  _distMailType = type;
+  _distMailSent = {};
 
-  // Split into chunks of 50 (mailto BCC limit in most clients)
-  var chunk = emails.slice(0, 50);
-  var rest = emails.slice(50);
+  var label = type === 'players' ? 'Spieler' : 'Coaches';
+  document.getElementById('distMailIntro').innerHTML =
+    '<strong>' + emails.length + '</strong> Empfänger im Verteiler ' + label
+    + ' · alle Adressen stehen im BCC, die Empfänger sehen sich also gegenseitig nicht.';
+  var bodyEl = document.getElementById('distMailBody');
+  if (bodyEl && !bodyEl.value) {
+    bodyEl.value = 'Sehr geehrte Damen und Herren,\n\nhiermit möchten wir Sie über unser kommendes Event informieren.\n\nMit freundlichen Grüßen\nMG Sports & Eventmanagement';
+  }
+  renderDistMailBlocks();
+  document.getElementById('distMailModal').classList.add('open');
+}
 
-  var mailto = 'mailto:?bcc=' + encodeURIComponent(chunk.join(',')) + '&subject=' + subject + '&body=' + body;
-  window.open(mailto, '_blank');
+function renderDistMailBlocks() {
+  var el = document.getElementById('distMailBlocks');
+  if (!el) return;
+  var size = parseInt(document.getElementById('distMailBlockSize').value) || 50;
+  var total = _distMailEmails.length;
+  var blocks = Math.ceil(total / size);
+  var doneCount = Object.keys(_distMailSent).length;
 
-  if (rest.length > 0) {
-    setTimeout(function() {
-      toast('⚠️ ' + rest.length + ' weitere Adressen — bitte nochmals klicken (max. 50 pro E-Mail)');
-      window._playerEmailsRest = rest;
-    }, 1000);
+  var html = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">'
+    + blocks + ' E-Mail' + (blocks === 1 ? '' : 's') + ' à max. ' + size + ' Empfänger'
+    + (doneCount ? ' · <span style="color:var(--green)">' + doneCount + ' bereits geöffnet</span>' : '')
+    + '</div>';
+
+  for (var i = 0; i < blocks; i++) {
+    var start = i * size;
+    var end = Math.min(start + size, total);
+    var done = !!_distMailSent[i];
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;background:' + (done ? 'var(--green-bg)' : 'var(--bg2)') + '">'
+      + '<div style="flex:1;font-size:13px;font-weight:600">' + (done ? '✅ ' : '') + (start + 1) + '–' + end
+      + ' <span style="font-weight:400;color:var(--text3);font-size:11px">(' + (end - start) + ' Empfänger)</span></div>'
+      + '<button class="btn" style="font-size:11px;padding:4px 9px" onclick="copyDistBlock(' + i + ')" title="Adressen in die Zwischenablage kopieren">📋 Adressen kopieren</button>'
+      + '<button class="btn primary" style="font-size:11px;padding:4px 9px" onclick="openDistBlock(' + i + ')">✉ ' + (done ? 'Erneut öffnen' : 'E-Mail öffnen') + '</button>'
+      + '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function distBlockEmails(index) {
+  var size = parseInt(document.getElementById('distMailBlockSize').value) || 50;
+  return _distMailEmails.slice(index * size, (index + 1) * size);
+}
+
+function openDistBlock(index) {
+  var chunk = distBlockEmails(index);
+  if (!chunk.length) return;
+  var subject = document.getElementById('distMailSubject').value || '';
+  var body = document.getElementById('distMailBody').value || '';
+  // Empfängerliste NICHT encodieren (encodierte @ und Kommas kommen in Outlook nicht an),
+  // Betreff und Text dagegen schon.
+  var mailto = 'mailto:?bcc=' + chunk.join(',')
+    + '&subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+
+  if (mailto.length > 1900) {
+    // Outlook schneidet zu lange mailto-Links ab — Adressen zusätzlich in die Zwischenablage
+    if (navigator.clipboard) navigator.clipboard.writeText(chunk.join('; ')).catch(function(){});
+    toast('⚠️ Sehr langer Link — Adressen liegen zur Sicherheit auch in der Zwischenablage');
   }
 
-  toast('E-Mail-Programm wird geöffnet mit ' + chunk.length + ' BCC-Empfängern');
+  var a = document.createElement('a');
+  a.href = mailto; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+  _distMailSent[index] = true;
+  renderDistMailBlocks();
+  toast('E-Mail-Programm geöffnet mit ' + chunk.length + ' BCC-Empfängern');
+}
+
+function copyDistBlock(index) {
+  var chunk = distBlockEmails(index);
+  if (!chunk.length) return;
+  var txt = chunk.join('; ');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(txt).then(function() {
+      toast('📋 ' + chunk.length + ' Adressen kopiert — im Mailprogramm ins BCC-Feld einfügen');
+    }).catch(function() { toast('Kopieren nicht möglich'); });
+  } else {
+    toast('Kopieren wird von diesem Browser nicht unterstützt');
+  }
 }
 
 
