@@ -118,7 +118,7 @@
           <div class="form-group"><label data-i18n="f_firstname">First Name <span class="req">*</span></label><input type="text" id="g_firstname" data-i18n-ph="f_firstname_ph" placeholder="First name" /></div>
           <div class="form-group"><label data-i18n="gl_federation">Federation / Club</label><input type="text" id="g_federation" data-i18n-ph="gl_federation_ph" placeholder="e.g. German Squash Federation" /></div>
           <div class="form-group"><label data-i18n="f_mobile">Mobile <span class="req">*</span></label><input type="tel" id="g_mobile" placeholder="+49 151 …" /></div>
-          <div class="form-group full"><label data-i18n="f_email">E-Mail <span class="req">*</span></label><input type="email" id="g_email" data-i18n-ph="gl_email_ph" placeholder="contact@email.com" /></div>
+          <div class="form-group full"><label data-i18n="f_email">E-Mail <span class="req">*</span></label><input type="email" id="g_email" data-i18n-ph="gl_email_ph" placeholder="contact@email.com" /><div class="esid-hint" data-i18n="gl_email_hint">The confirmation for the whole group and the edit link are sent to this address only — individual participants do not receive a separate e-mail.</div></div>
           <div class="form-group full"><label data-i18n="gl_notes">Notes</label><textarea id="g_memo" rows="2" data-i18n-ph="gl_notes_ph" placeholder="Anything the organizer should know about this group"></textarea></div>
         </div>
       </div>
@@ -278,6 +278,7 @@ en: {
   no_event: "⚠️ No active tournament found. Please contact the organizer.",
   deadline_banner: "⏰ The registration deadline has passed. Your registration will be added to the waitlist and confirmed individually by the organizer.",
   gl_header: "👤 Group Leader / Contact",
+  gl_email_hint: "The confirmation for the whole group and the edit link are sent to this address only — individual participants do not receive a separate e-mail.",
   gl_federation: "Federation / Club",
   gl_federation_ph: "e.g. German Squash Federation",
   gl_email_ph: "contact@email.com",
@@ -428,6 +429,7 @@ de: {
   no_event: "⚠️ Kein aktives Turnier gefunden. Bitte den Veranstalter kontaktieren.",
   deadline_banner: "⏰ Der Meldeschluss ist bereits abgelaufen. Deine Anmeldung wird auf die Warteliste gesetzt und vom Veranstalter individuell bestätigt.",
   gl_header: "👤 Gruppenleiter / Kontakt",
+  gl_email_hint: "Die Bestätigung für die gesamte Gruppe und der Bearbeitungslink gehen ausschließlich an diese Adresse — die einzelnen Teilnehmer erhalten keine eigene E-Mail.",
   gl_federation: "Verband / Verein",
   gl_federation_ph: "z. B. Deutscher Squash-Verband",
   gl_email_ph: "kontakt@email.com",
@@ -2043,24 +2045,34 @@ async function submitGroupRegistration() {
     return;
   }
 
-  // Automatische Bestätigungsmail pro Teilnehmer per EmailJS (läuft direkt im Browser,
-  // kein Server nötig). Schlägt der Versand fehl (z.B. EmailJS noch nicht eingerichtet),
-  // wird die Anmeldung dadurch NICHT blockiert.
+  // Bestätigungsmail: EINE Mail an den Group Leader mit allen Teilnehmern der Gruppe.
+  // Die einzelnen Teilnehmer bekommen bewusst KEINE eigene Mail — bei Gruppenanmeldungen
+  // ist der Group Leader der Ansprechpartner, und viele Teilnehmer (z.B. Kinder) haben
+  // ohnehin nur die Adresse des Leaders angegeben.
   if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
-    var roomTypeLabelsMail = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
-    var groupEditLink = window.location.origin + window.location.pathname + '?event=' + eventId + '&edit=' + sharedEditToken;
-    for (var _mi = 0; _mi < rows.length; _mi++) {
-      var _mRow = rows[_mi];
-      if (!_mRow.email) continue;
+    var leaderEmail = v('g_email');
+    if (leaderEmail) {
+      var roomTypeLabelsMail = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+      var groupEditLink = window.location.origin + window.location.pathname + '?event=' + eventId + '&edit=' + sharedEditToken;
       try {
-        var _mPkg = packagesCache.find(function(pk) { return pk.code === _mRow.package; });
-        var _mTravelRelevant = !!(_mPkg && _mPkg.transport === 'Ja');
+        var groupSummary = rows.map(function(_mRow, _mi) {
+          var _mPkg = packagesCache.find(function(pk) { return pk.code === _mRow.package; });
+          var _mTravelRelevant = !!(_mPkg && _mPkg.transport === 'Ja');
+          var _mName = ((_mRow.firstname || '') + ' ' + (_mRow.lastname || '')).trim() || ('Teilnehmer ' + (_mi + 1));
+          return '========================================\n'
+            + 'TEILNEHMER ' + (_mi + 1) + ' / ' + rows.length + ': ' + _mName + '\n'
+            + '========================================\n'
+            + buildRegistrationSummaryText(_mRow, roomTypeLabelsMail[_mRow.room_type] || _mRow.room_type, _mTravelRelevant);
+        }).join('\n\n');
+
+        var leaderName = ((v('g_firstname') || '') + ' ' + (v('g_lastname') || '')).trim();
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          to_email: _mRow.email,
-          to_name: (( _mRow.firstname||'') + ' ' + (_mRow.lastname||'')).trim(),
+          to_email: leaderEmail,
+          to_name: leaderName,
           event_name: eventNameRaw || 'the tournament',
-          esid: _mRow.member_id || '-',
-          registration_summary: buildRegistrationSummaryText(_mRow, roomTypeLabelsMail[_mRow.room_type] || _mRow.room_type, _mTravelRelevant),
+          esid: groupCode,
+          registration_summary: 'Gruppenanmeldung mit ' + rows.length + ' Teilnehmer'
+            + (rows.length === 1 ? '' : 'n') + ' (Gruppencode: ' + groupCode + ')\n\n' + groupSummary,
           edit_link: groupEditLink
         });
       } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
