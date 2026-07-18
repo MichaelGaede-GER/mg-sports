@@ -483,6 +483,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="stat red"><div class="lbl" data-i18n="stat_withdraw">Absagen</div><div class="val" id="statWithdraw">–</div></div>
           <div class="stat"><div class="lbl" data-i18n="stat_hotel">Mit Hotelbuchung</div><div class="val" id="statHotel">–</div></div>
           <div class="stat green"><div class="lbl" data-i18n="stat_meal">Meal Packages</div><div class="val" id="statMeal">–</div><div class="sub" id="statMealSub"></div></div>
+          <div class="stat" style="border-left:3px solid #8a4fd3"><div class="lbl">Confirmation Letters</div><div class="val" id="statLetters">–</div><div class="sub" id="statLettersSub"></div></div>
         </div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
@@ -543,6 +544,11 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <select id="filterPackage" onchange="loadParticipants()" style="font-size:12px">
             <option value="">Alle Packages</option>
           </select>
+          <select id="filterLetter" onchange="loadParticipants()" style="font-size:12px">
+            <option value="">Alle (Letter)</option>
+            <option value="requested">📄 Letter beantragt</option>
+            <option value="open">📄 Letter offen</option>
+          </select>
           <select id="filterRole" onchange="loadParticipants()"><option value="">Alle Rollen</option><option>Player</option><option>Coach</option><option>Parent</option><option>ESF Official</option><option>Referee</option><option>Director</option><option>DSQV</option><option>Turnierstab</option></select>
         </div>
         <div class="card">
@@ -585,7 +591,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <button class="entry-tab" onclick="switchEntryTab('package',this)">📦 Package</button>
           <button class="entry-tab" onclick="switchEntryTab('meals',this)">🍽 Mahlzeiten</button>
           <button class="entry-tab" onclick="switchEntryTab('shirt',this)">👕 Shirt</button>
-          <button class="entry-tab" onclick="switchEntryTab('visa',this)">🛂 VISA</button>
+          <button class="entry-tab" onclick="switchEntryTab('visa',this)">📄 Confirmation Letter <span id="entryLetterTabDot" style="display:none;color:#8a4fd3;font-size:16px;line-height:1">●</span></button>
           <button class="entry-tab" onclick="switchEntryTab('hotel',this)">🏨 Hotel & Reise</button>
           <button class="entry-tab" onclick="switchEntryTab('payment',this)">💳 Zahlung</button>
           <button class="entry-tab" onclick="switchEntryTab('other',this)">⚙ Sonstiges</button>
@@ -978,15 +984,17 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         </div>
         <div id="entryTab-visa" class="entry-tab-content">
 <div class="card">
-          <div class="card-header"><h3>VISA</h3></div>
+          <div class="card-header"><h3>Confirmation Letter</h3></div>
           <div class="card-body">
-            <div class="tabs" style="margin-bottom:16px">
-              <div class="tab active" onclick="switchVisaTab('status',this)">VISA Status</div>
-              <div class="tab" onclick="switchVisaTab('confirmation',this)">Confirmation Letter</div>
-            </div>
+            <!-- Statusbanner: zeigt sofort, ob und welcher Letter beantragt wurde -->
+            <div id="entryLetterBanner" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:var(--radius);font-size:13px"></div>
 
-            <!-- VISA Status Tab -->
-            <div id="visaTab-status">
+            <!-- Alte VISA-Statusfelder: nur noch auf Wunsch sichtbar, damit bestehende
+                 Daten (Express-Aufschlag) nicht verloren gehen. -->
+            <div style="margin-bottom:14px">
+              <span onclick="toggleLegacyVisaFields()" id="legacyVisaToggle" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline">⚙ Alte VISA-Statusfelder anzeigen</span>
+            </div>
+            <div id="visaTab-status" style="display:none;margin-bottom:18px;padding:12px 14px;background:var(--bg2);border-radius:var(--radius)">
               <div class="form-grid">
                 <div class="form-group"><label>VISA Letter</label>
                   <select id="f_visa" onchange="updateVisaFee()">
@@ -1012,8 +1020,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               </div>
             </div>
 
-            <!-- Confirmation Letter Tab -->
-            <div id="visaTab-confirmation" style="display:none">
+            <!-- Confirmation Letter -->
+            <div id="visaTab-confirmation">
               <div style="background:var(--blue-bg);border:1px solid var(--blue);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:14px">
                 ℹ Felder werden automatisch aus den persönlichen Daten übernommen (auch aus Online-Anmeldungen). Bitte fehlende Angaben ergänzen.
               </div>
@@ -4490,6 +4498,7 @@ async function loadEntryFee() {
   const wdBadge = document.getElementById('withdrawActiveBadge'); if (wdBadge) wdBadge.style.display = 'none';
   const mfi = document.getElementById('mealFeeInfo'); if (mfi) mfi.textContent = '– wähle erst ein Package –';
   const visaEl = document.getElementById('f_visa'); if (visaEl) visaEl.value = 'Nicht erforderlich';
+  if (typeof updateLetterBanner === 'function') updateLetterBanner();
   const vd = document.getElementById('visaTotalDisplay'); if (vd) vd.textContent = '0,00 €';
   const vb = document.getElementById('visaTotalBreakdown'); if (vb) vb.textContent = '';
   const vl = document.getElementById('visaExpressFeeLabel'); if (vl) vl.style.display='none';
@@ -5732,6 +5741,16 @@ async function loadDashboard() {
     if (mealSubEl) mealSubEl.textContent = 'Lunch: ' + mealLunch + ' · Dinner: ' + mealDinner;
   }
 
+  // Confirmation Letters: beantragt gesamt / davon noch nicht ausgestellt
+  var letterAll = active.filter(letterRequested);
+  var letterOpen = letterAll.filter(function(p){ return (p.visa || '').toLowerCase() !== 'ausgestellt'; });
+  var letterEl = document.getElementById('statLetters');
+  if (letterEl) {
+    letterEl.textContent = letterAll.length;
+    var letterSubEl = document.getElementById('statLettersSub');
+    if (letterSubEl) letterSubEl.textContent = letterOpen.length + ' offen · ' + (letterAll.length - letterOpen.length) + ' ausgestellt';
+  }
+
   // Age grid - use dynamic age classes
   var ageList = ageClassesCache && ageClassesCache.length ? ageClassesCache : ['GU11','GU13','GU15','GU17','GU19','BU11','BU13','BU15','BU17','BU19'];
   // Also include any events not in ageList
@@ -5801,6 +5820,29 @@ function sortParticipants(field) {
   loadParticipants();
 }
 
+// Erkennt, ob ein Teilnehmer einen Confirmation Letter beantragt hat. Die Online-Formulare
+// schreiben visa='Ja'/'Nein', das Admin-Dropdown nutzt 'Beantragt'/'Ausgestellt' — beide
+// Schreibweisen werden hier berücksichtigt.
+function letterRequested(p) {
+  if (!p) return false;
+  if (p.confirmation_letter_type) return true;
+  var v = (p.visa || '').toLowerCase();
+  return v === 'ja' || v === 'beantragt' || v === 'ausgestellt';
+}
+
+// Badge für Listen: zeigt Letter-Typ und Preis
+function letterBadgeHtml(p) {
+  if (!letterRequested(p)) return '';
+  var label = p.confirmation_letter_type || 'Letter';
+  var price = (p.confirmation_letter_price !== null && p.confirmation_letter_price !== undefined && p.confirmation_letter_price !== '')
+    ? ' · ' + fmt(p.confirmation_letter_price) : '';
+  var issued = (p.visa || '').toLowerCase() === 'ausgestellt';
+  return '<div style="margin-top:3px"><span style="display:inline-block;background:' + (issued ? 'var(--green)' : '#8a4fd3')
+    + ';color:#fff;border-radius:10px;font-size:9px;padding:1px 6px;font-weight:700;cursor:pointer" data-id="' + p.id
+    + '" onclick="editEntry(this.dataset.id)" title="Confirmation Letter ' + (issued ? 'ausgestellt' : 'beantragt') + ' – Klick zum Bearbeiten">'
+    + (issued ? '📄 ' : '📄 ') + label + price + '</span></div>';
+}
+
 async function loadParticipants() {
   const search = document.getElementById('filterSearch').value.toLowerCase();
   const age = document.getElementById('filterAge').value;
@@ -5828,6 +5870,13 @@ async function loadParticipants() {
   }
   if (search) rows = rows.filter(function(p) {
     return (p.lastname+' '+p.firstname+' '+(p.country||'')+' '+(p.group_tp||'')+' '+(p.member_id||'')).toLowerCase().includes(search);
+  });
+
+  // Filter auf Confirmation Letter (Online-Anmeldungen schreiben visa='Ja')
+  var letterFilter = document.getElementById('filterLetter') && document.getElementById('filterLetter').value;
+  if (letterFilter === 'requested') rows = rows.filter(letterRequested);
+  else if (letterFilter === 'open') rows = rows.filter(function(p) {
+    return letterRequested(p) && (p.visa || '').toLowerCase() !== 'ausgestellt';
   });
 
   // Enrich participants with photos from persons DB (by member_id)
@@ -5906,6 +5955,7 @@ async function loadParticipants() {
         + '</div>'
         + (p.mahnung && p.mahnung !== 'Keine' ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700">'+p.mahnung+'</span></div>' : '')
         + (p.travel_amount ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--amber);color:#000;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:pointer" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)" title="Betrag wird bei Anreise bezahlt – Klick zum Bearbeiten">✈ Anreise</span></div>' : '')
+        + letterBadgeHtml(p)
         + '</td>'
       + '<td>' + p.lastname + '</td>'
       + '<td>' + p.firstname + '</td>'
@@ -6096,6 +6146,7 @@ function clearForm() {
   const wdBadge = document.getElementById('withdrawActiveBadge'); if (wdBadge) wdBadge.style.display = 'none';
   const mfi = document.getElementById('mealFeeInfo'); if (mfi) mfi.textContent = '– wähle erst ein Package –';
   const visaEl = document.getElementById('f_visa'); if (visaEl) visaEl.value = 'Nicht erforderlich';
+  if (typeof updateLetterBanner === 'function') updateLetterBanner();
   const vd = document.getElementById('visaTotalDisplay'); if (vd) vd.textContent = '0,00 €';
   const vb = document.getElementById('visaTotalBreakdown'); if (vb) vb.textContent = '';
   const vl = document.getElementById('visaExpressFeeLabel'); if (vl) vl.style.display='none';
@@ -6237,6 +6288,16 @@ async function editEntry(id) {
   });
   ['arrival_time','departure_time'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
   ['gender','role','events','shirt','payment_status','visa','mahnung','meal_plus','airport_plus','ams_bus','tp_check','room_type','airport_pickup_location'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
+  // Die Online-Formulare schreiben visa='Ja'/'Nein', das Dropdown hier kennt aber nur
+  // 'Nicht erforderlich'/'Beantragt'/'Ausgestellt'. Ohne diese Umsetzung stand das Feld
+  // bei Online-Anmeldungen auf dem ersten Eintrag und der Letter-Wunsch war unsichtbar.
+  var visaSel = document.getElementById('f_visa');
+  if (visaSel) {
+    var vRaw = (p.visa || '').toLowerCase();
+    if (vRaw === 'ja') visaSel.value = 'Beantragt';
+    else if (vRaw === 'nein' || vRaw === '') visaSel.value = 'Nicht erforderlich';
+    else if (!visaSel.value) visaSel.value = 'Nicht erforderlich';
+  }
   // Normalize gender if needed
   var gEl = document.getElementById('f_gender');
   if (gEl && p.gender) {
@@ -6283,6 +6344,7 @@ async function editEntry(id) {
   renderFederationLookup(p.country, 'entryFederationLookup').catch(function(){});
   const transpEl = document.getElementById('f_transport_booked'); if (transpEl) transpEl.checked = p.transport_booked === 'Ja';
   setTimeout(updateVisaFee, 100);
+  setTimeout(updateLetterBanner, 120);
   setTimeout(updateMealFee, 150);
   document.getElementById('f_package_price').value = p.package_price||'';
   const shirtQtyEl2 = document.getElementById('f_shirt_qty'); if (shirtQtyEl2) shirtQtyEl2.value = p.shirt_qty||1;
@@ -11157,6 +11219,59 @@ async function deleteParticipant(id, name) {
 }
 
 // VISA TABS
+// Setzt den Letter-Status, ohne dass die alten VISA-Felder aufgeklappt werden müssen.
+function setLetterStatus(val) {
+  var visaSel = document.getElementById('f_visa');
+  if (visaSel) visaSel.value = val;
+  updateVisaFee();
+  updateLetterBanner();
+  toast(val === 'Ausgestellt' ? 'Letter als ausgestellt markiert – bitte Teilnehmer speichern' : 'Letter wieder auf „beantragt" gesetzt');
+}
+
+function toggleLegacyVisaFields() {
+  var box = document.getElementById('visaTab-status');
+  var lnk = document.getElementById('legacyVisaToggle');
+  if (!box) return;
+  var show = box.style.display === 'none';
+  box.style.display = show ? '' : 'none';
+  if (lnk) lnk.textContent = show ? '⚙ Alte VISA-Statusfelder ausblenden' : '⚙ Alte VISA-Statusfelder anzeigen';
+}
+
+// Zeigt oben im Reiter (und als Punkt am Reiter-Button), ob ein Confirmation Letter
+// beantragt wurde. Wird nach jedem Laden und bei Änderung des Letter-Typs aufgerufen.
+function updateLetterBanner() {
+  var banner = document.getElementById('entryLetterBanner');
+  var dot = document.getElementById('entryLetterTabDot');
+  if (!banner) return;
+  var typeEl = document.getElementById('f_confirmation_letter_type');
+  var priceEl = document.getElementById('f_confirmation_letter_price');
+  var visaEl = document.getElementById('f_visa');
+  var type = typeEl ? typeEl.value : '';
+  var visaVal = visaEl ? (visaEl.value || '') : '';
+  var requested = !!type || (visaVal && visaVal !== 'Nicht erforderlich');
+  var issued = visaVal === 'Ausgestellt';
+
+  if (dot) dot.style.display = requested ? 'inline' : 'none';
+  if (!requested) {
+    banner.style.display = 'none';
+    return;
+  }
+  var price = priceEl && priceEl.value ? fmt(parseFloat(priceEl.value)) : null;
+  banner.style.display = 'block';
+  banner.style.background = issued ? 'var(--green-bg)' : '#f3ebff';
+  banner.style.border = '1px solid ' + (issued ? 'var(--green)' : '#8a4fd3');
+  banner.style.color = issued ? 'var(--green)' : '#6b32ad';
+  banner.innerHTML = (issued ? '✅ Confirmation Letter ausgestellt' : '📄 Confirmation Letter beantragt')
+    + (type ? ' — <strong>' + type + '</strong>' : '')
+    + (price ? ' · <strong>' + price + '</strong>' : '')
+    + '<div style="margin-top:8px">'
+      + (issued
+          ? '<button class="btn" style="font-size:11px;padding:3px 9px" onclick="setLetterStatus(\'Beantragt\')">↩ Doch noch offen</button>'
+          : '<button class="btn" style="font-size:11px;padding:3px 9px" onclick="setLetterStatus(\'Ausgestellt\')">✅ Als ausgestellt markieren</button>')
+    + '</div>'
+    + '<div style="font-size:11px;margin-top:6px;opacity:0.85">Angaben stammen aus der Online-Anmeldung. Der Status wird beim Speichern des Teilnehmers übernommen.</div>';
+}
+
 function switchVisaTab(tab, btn) {
   document.querySelectorAll('.tabs .tab').forEach(function(t){if(t.getAttribute('onclick')&&t.getAttribute('onclick').includes('switchVisaTab'))t.classList.remove('active');});
   btn.classList.add('active');
@@ -11182,6 +11297,11 @@ function updateConfirmationLetterPrice() {
   if (!sel || !priceEl) return;
   var opt = sel.selectedOptions[0];
   if (opt && opt.value) priceEl.value = parseFloat(opt.getAttribute('data-price')) || 0;
+  // Wird ein Letter-Typ gewählt, gilt der Letter als beantragt — Status mitziehen,
+  // damit Liste, Dashboard und Filter denselben Stand zeigen.
+  var visaSel = document.getElementById('f_visa');
+  if (visaSel && sel.value && visaSel.value === 'Nicht erforderlich') visaSel.value = 'Beantragt';
+  if (typeof updateLetterBanner === 'function') updateLetterBanner();
 }
 function prefillConfirmationLetter() {
   var fn=document.getElementById('f_firstname')&&document.getElementById('f_firstname').value||'';
@@ -12001,7 +12121,7 @@ function updateTotalBreakdown() {
   rows += '</div>';
   el.innerHTML = rows;
 }
-function updateVisaFee() { var isExp=document.getElementById('f_express')&&document.getElementById('f_express').checked; var visa3=document.getElementById('f_visa')&&document.getElementById('f_visa').value; var needsVisa=visa3&&visa3!=='Nicht erforderlich'; var lbl=document.getElementById('visaExpressFeeLabel'); var disp=document.getElementById('visaTotalDisplay'); var brd=document.getElementById('visaTotalBreakdown'); var total3=needsVisa&&isExp?visaExpressFee:0; if(lbl) lbl.style.display=needsVisa&&isExp&&visaExpressFee>0?'inline':'none'; if(lbl&&needsVisa&&isExp) lbl.textContent='+'+fmt(visaExpressFee)+' Aufschlag'; if(disp) disp.textContent=total3>0?fmt(total3):'0,00 EUR'; if(brd) brd.textContent=''; calcTotal(); }
+function updateVisaFee() { if (typeof updateLetterBanner === 'function') setTimeout(updateLetterBanner, 0); var isExp=document.getElementById('f_express')&&document.getElementById('f_express').checked; var visa3=document.getElementById('f_visa')&&document.getElementById('f_visa').value; var needsVisa=visa3&&visa3!=='Nicht erforderlich'; var lbl=document.getElementById('visaExpressFeeLabel'); var disp=document.getElementById('visaTotalDisplay'); var brd=document.getElementById('visaTotalBreakdown'); var total3=needsVisa&&isExp?visaExpressFee:0; if(lbl) lbl.style.display=needsVisa&&isExp&&visaExpressFee>0?'inline':'none'; if(lbl&&needsVisa&&isExp) lbl.textContent='+'+fmt(visaExpressFee)+' Aufschlag'; if(disp) disp.textContent=total3>0?fmt(total3):'0,00 EUR'; if(brd) brd.textContent=''; calcTotal(); }
 function updateMealFee() { var mealBooked=document.getElementById('f_meal_plus')&&document.getElementById('f_meal_plus').checked; var pkgCode=document.getElementById('f_package')&&document.getElementById('f_package').value; var infoEl=document.getElementById('mealFeeInfo'); if(!pkgCode){if(infoEl)infoEl.textContent='- waehle erst ein Package -';return;} var pkg=packagesData.find(function(p){return p.code===pkgCode;}); if(!pkg) return; var mealIncluded=pkg.meal_included==='Ja'; var mealPkg=packagesData.find(function(p){return p.code==='S';}); var mealPrice=mealPkg?parseFloat(mealPkg.price)||0:105; var basePrice=parseFloat(pkg.price)||0; var adjPrice=basePrice; var parts=[]; if(mealIncluded&&!mealBooked){adjPrice-=mealPrice;parts.push('Meal nicht gebucht: -'+fmt(mealPrice));}else if(mealIncluded&&mealBooked){parts.push('Meal inkludiert');}else if(!mealIncluded&&mealBooked){adjPrice+=mealPrice;parts.push('Meal hinzugefuegt: +'+fmt(mealPrice));} if(adjPrice<0){parts.push('(Preis auf 0 begrenzt)');adjPrice=0;} if(infoEl) infoEl.innerHTML=parts.join('<br>')+'<br><strong style="color:var(--blue);display:block;margin-top:4px">Preis: '+fmt(adjPrice)+'</strong>'; document.getElementById('f_package_price').value=adjPrice.toFixed(2); calcTotal(); }
 function calcWithdrawRefund() { var dateVal=document.getElementById('f_withdraw_date')&&document.getElementById('f_withdraw_date').value; var totalVal=parseFloat(document.getElementById('f_total')&&document.getElementById('f_total').value)||0; var receivedVal=parseFloat(document.getElementById('f_amount_received')&&document.getElementById('f_amount_received').value)||0; var disp=document.getElementById('withdrawRefundDisplay'); var ri=document.getElementById('f_withdraw_refund'); var di=document.getElementById('f_withdraw_refund_due'); if(!dateVal){if(disp)disp.textContent='- Datum waehlen -';return;} var wd=new Date(dateVal); var pct=wd<WITHDRAW_DATE_FULL?100:wd<=WITHDRAW_DATE_HALF?50:0;
     var label=pct===100?'100% Erstattung':pct===50?'50% Erstattung':'Keine Erstattung';
