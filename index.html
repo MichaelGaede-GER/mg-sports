@@ -1212,6 +1212,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <div class="form-group"><label>Coach ESID</label>
                 <input type="text" id="f_coach_esid" placeholder="wird automatisch eingetragen" readonly style="color:var(--text2);background:var(--bg2)" />
               </div>
+              <div class="form-group"><label>🏆 Platzierung / Endergebnis</label>
+                <input type="text" id="f_placement" placeholder="z.B. Champion, Finalist, Halbfinale…" />
+                <div style="font-size:11px;color:var(--text3);margin-top:4px">Erscheint automatisch auf dem Zertifikat, sobald ausgefüllt.</div>
+              </div>
 
               <div class="form-group"><label>TP-Check MG</label><select id="f_tp_check"><option>–</option><option>OK</option><option>Prüfen</option><option>Fehler</option></select></div>
 <input type="hidden" id="f_country_check" value="" />
@@ -6002,7 +6006,7 @@ function cancelEdit() {
 }
 
 function clearForm() {
-  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date'];
+  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','placement','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date'];
   const shirtQtyEl = document.getElementById('f_shirt_qty'); if (shirtQtyEl) shirtQtyEl.value = '0';
   fields.forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = ''; });
   /* f_entry_fee removed */
@@ -6307,7 +6311,7 @@ async function saveEntry() {
     confirmation_letter_price: parseFloat(document.getElementById('f_confirmation_letter_price')&&document.getElementById('f_confirmation_letter_price').value)||null,
     member_id: v('member_id'), role, events: v('events'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
-    shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'),
+    shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'), placement: v('placement') || null,
     payment_status: computedPaymentStatus, amount_received: n('amount_received'),
     payment_date: computedPaymentDate, total: n('total'),
     payment_link: v('payment_link'), penalty: n('penalty'),
@@ -10421,11 +10425,12 @@ function buildCertificateHtml(opts) {
       '<div style="position:absolute;left:18.5%;width:63.6%;top:50.3%;height:3.8%;display:flex;align-items:center;justify-content:center;color:#e9c46a;font-size:26px;font-weight:700;letter-spacing:1px;text-transform:uppercase">' + (opts.eventName || '') + '</div>' +
       // Player name
       '<div style="position:absolute;left:8%;width:84%;top:59.5%;height:5%;display:flex;align-items:center;justify-content:center;color:#0b1f3a;font-size:44px;font-weight:700">' + (opts.playerName || '').toUpperCase() + '</div>' +
-      // Paragraph: recognition + location + date/category
-      '<div style="position:absolute;left:13.3%;width:73.1%;top:65.2%;height:8.5%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#1c2f4a;font-size:17px;line-height:1.55;text-align:center">' +
+      // Paragraph: recognition + location + date/category (+ placement, falls gesetzt)
+      '<div style="position:absolute;left:13.3%;width:73.1%;top:65.2%;height:8.5%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#1c2f4a;font-size:' + (opts.placement ? '15px' : '17px') + ';line-height:' + (opts.placement ? '1.4' : '1.55') + ';text-align:center">' +
         '<div>in recognition of participation in the ' + (opts.eventName || '') + '</div>' +
         (opts.location ? '<div>held in ' + opts.location + '</div>' : '') +
         '<div>' + (opts.dateRange || '') + (opts.category ? ' &nbsp;—&nbsp; Category: <strong>' + opts.category + '</strong>' : '') + '</div>' +
+        (opts.placement ? '<div style="margin-top:4px;color:#9c7a2e;font-weight:700;font-size:1.15em;letter-spacing:0.5px">🏆 ' + opts.placement.toUpperCase() + '</div>' : '') +
       '</div>' +
       // Signature 1
       '<div style="position:absolute;left:4.7%;width:34.2%;top:83.2%;height:7%;display:flex;align-items:flex-end;justify-content:center;font-family:\'Brush Script MT\',\'Segoe Script\',cursive;font-size:32px;color:#111">' + (opts.sig1Name || '') + '</div>' +
@@ -10483,6 +10488,7 @@ async function generateCertificate(participantId) {
     dateRange: fmtCertDateRange(evData.date_from, evData.date_to),
     playerName: (p.firstname || '') + ' ' + (p.lastname || ''),
     category: p.events || '',
+    placement: p.placement || '',
     sig1Name: certConfig.sig1_name, sig1Title: certConfig.sig1_title,
     sig2Name: certConfig.sig2_name, sig2Title: certConfig.sig2_title
   });
@@ -10502,6 +10508,7 @@ async function previewCertificateSample() {
     dateRange: fmtCertDateRange(evData.date_from, evData.date_to),
     playerName: 'Max Mustermann',
     category: 'BU17',
+    placement: 'Champion',
     sig1Name: document.getElementById('cert_sig1_name').value.trim(), sig1Title: document.getElementById('cert_sig1_title').value.trim(),
     sig2Name: document.getElementById('cert_sig2_name').value.trim(), sig2Title: document.getElementById('cert_sig2_title').value.trim()
   });
@@ -11451,6 +11458,7 @@ async function importPersonToEntry(id) {
   var cnSel = document.getElementById('f_coach_name');
   if (cnSel && p.coach_name) { cnSel.value = p.coach_name; onEntryCoachSelect(); }
   if (p.coach_esid) { var ceEl = document.getElementById('f_coach_esid'); if (ceEl) ceEl.value = p.coach_esid; }
+  var placementEl = document.getElementById('f_placement'); if (placementEl) placementEl.value = p.placement || '';
   if(p.country) {
     // Gleiche robuste Zuordnung wie beim Bearbeiten eines Teilnehmers: manche Länder-Codes
     // in der Personendatenbank liegen im ISO2-Format vor (z.B. "de") statt im Squash-
