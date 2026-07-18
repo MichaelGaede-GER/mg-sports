@@ -1216,7 +1216,15 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <input type="text" id="f_coach_esid" placeholder="wird automatisch eingetragen" readonly style="color:var(--text2);background:var(--bg2)" />
               </div>
               <div class="form-group"><label>🏆 Platzierung / Endergebnis</label>
-                <input type="text" id="f_placement" placeholder="z.B. Champion, Finalist, Halbfinale…" />
+                <select id="f_placement_select" onchange="onPlacementSelectChange()">
+                  <option value="">– keine Auswahl –</option>
+                  <option value="Champion">Champion</option>
+                  <option value="Runner-up">Runner-up</option>
+                  <option value="3rd place">3rd place</option>
+                  <option value="4th place">4th place</option>
+                  <option value="__custom__">Sonstiges (Freitext unten)…</option>
+                </select>
+                <input type="text" id="f_placement_custom" placeholder="z.B. Halbfinale, Achtelfinale…" style="display:none;margin-top:8px" />
                 <div style="font-size:11px;color:var(--text3);margin-top:4px">Erscheint automatisch auf dem Zertifikat, sobald ausgefüllt.</div>
               </div>
 
@@ -6023,9 +6031,10 @@ function cancelEdit() {
 }
 
 function clearForm() {
-  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','placement','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date'];
+  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date'];
   const shirtQtyEl = document.getElementById('f_shirt_qty'); if (shirtQtyEl) shirtQtyEl.value = '0';
   fields.forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = ''; });
+  setPlacementValue('');
   /* f_entry_fee removed */
   const exprCb = document.getElementById('f_express'); if (exprCb) exprCb.checked = false;
   const mealCb = document.getElementById('f_meal_plus'); if (mealCb) mealCb.checked = false;
@@ -6061,6 +6070,38 @@ function clearForm() {
   ['cl_fullname','cl_dob','cl_place_of_birth','cl_passport','cl_date_of_issue','cl_date_of_expiry','f_confirmation_letter_price'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   deleteEntryPassportDoc();
   var clTypeEl = document.getElementById('f_confirmation_letter_type'); if (clTypeEl) { clTypeEl.value=''; clTypeEl.removeAttribute('data-pending-value'); }
+}
+
+function onPlacementSelectChange() {
+  var sel = document.getElementById('f_placement_select');
+  var custom = document.getElementById('f_placement_custom');
+  if (!sel || !custom) return;
+  custom.style.display = (sel.value === '__custom__') ? '' : 'none';
+  if (sel.value !== '__custom__') custom.value = '';
+}
+
+function getPlacementValue() {
+  var sel = document.getElementById('f_placement_select');
+  if (!sel) return null;
+  if (sel.value === '__custom__') {
+    var custom = document.getElementById('f_placement_custom');
+    return (custom && custom.value.trim()) || null;
+  }
+  return sel.value || null;
+}
+
+function setPlacementValue(val) {
+  var sel = document.getElementById('f_placement_select');
+  var custom = document.getElementById('f_placement_custom');
+  if (!sel) return;
+  var fixedOptions = ['Champion', 'Runner-up', '3rd place', '4th place'];
+  if (!val) {
+    sel.value = ''; if (custom) { custom.value = ''; custom.style.display = 'none'; }
+  } else if (fixedOptions.indexOf(val) !== -1) {
+    sel.value = val; if (custom) { custom.value = ''; custom.style.display = 'none'; }
+  } else {
+    sel.value = '__custom__'; if (custom) { custom.value = val; custom.style.display = ''; }
+  }
 }
 
 async function editEntry(id) {
@@ -6328,7 +6369,7 @@ async function saveEntry() {
     confirmation_letter_price: parseFloat(document.getElementById('f_confirmation_letter_price')&&document.getElementById('f_confirmation_letter_price').value)||null,
     member_id: v('member_id'), role, events: v('events'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
-    shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'), placement: v('placement') || null,
+    shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'), placement: getPlacementValue(),
     payment_status: computedPaymentStatus, amount_received: n('amount_received'),
     payment_date: computedPaymentDate, total: n('total'),
     payment_link: v('payment_link'), penalty: n('penalty'),
@@ -7719,7 +7760,7 @@ async function renderFederationLookup(country, containerId) {
 }
 
 // ================= ZERTIFIKATE-ÜBERSICHT (nach Altersklasse & Platzierung) =================
-var CERT_PLACEMENT_LABELS = ['Champion', 'Runner-up', '3rd Position', '4th Position'];
+var CERT_PLACEMENT_LABELS = ['Champion', 'Runner-up', '3rd place', '4th place'];
 
 async function loadCertificatesOverviewPage() {
   var container = document.getElementById('certificatesOverviewContainer');
@@ -11579,7 +11620,7 @@ async function importPersonToEntry(id) {
   var cnSel = document.getElementById('f_coach_name');
   if (cnSel && p.coach_name) { cnSel.value = p.coach_name; onEntryCoachSelect(); }
   if (p.coach_esid) { var ceEl = document.getElementById('f_coach_esid'); if (ceEl) ceEl.value = p.coach_esid; }
-  var placementEl = document.getElementById('f_placement'); if (placementEl) placementEl.value = p.placement || '';
+  setPlacementValue(p.placement || '');
   if(p.country) {
     // Gleiche robuste Zuordnung wie beim Bearbeiten eines Teilnehmers: manche Länder-Codes
     // in der Personendatenbank liegen im ISO2-Format vor (z.B. "de") statt im Squash-
