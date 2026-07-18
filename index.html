@@ -10530,13 +10530,13 @@ function buildCertificateHtml(opts) {
   var sponsors = (opts.sponsorLogos || []).filter(function(s) { return !!s; });
   var sponsorCol = function(list, leftPct) {
     if (!list.length) return '';
-    return '<div style="position:absolute;left:' + leftPct + '%;width:19.4%;top:73.8%;height:6.8%;display:flex;flex-direction:column;align-items:center;justify-content:center">'
+    return '<div style="position:absolute;left:' + leftPct + '%;width:31.5%;top:73.4%;height:11.8%;display:flex;flex-direction:column;align-items:center;justify-content:center">'
       + list.map(function(s, i) {
-          return '<img src="' + s + '" style="max-height:44px;max-width:100%;object-fit:contain;display:block' + (i === 0 && list.length > 1 ? ';margin-bottom:12px' : '') + '" />';
+          return '<img src="' + s + '" style="max-height:84px;max-width:100%;object-fit:contain;display:block' + (i === 0 && list.length > 1 ? ';margin-bottom:8px' : '') + '" />';
         }).join('')
       + '</div>';
   };
-  var sponsorHtml = sponsorCol(sponsors.slice(0, 2), 7.6) + sponsorCol(sponsors.slice(2, 4), 73);
+  var sponsorHtml = sponsorCol(sponsors.slice(0, 2), 7.1) + sponsorCol(sponsors.slice(2, 4), 61.3);
 
   return '' +
     '<div style="width:1054px;height:1492px;position:relative;font-family:Georgia,\'Times New Roman\',serif;background:#f8f4ec">' +
