@@ -10714,18 +10714,23 @@ function confirmCertSend(channel, fileUrl, fileName) {
   var body = document.getElementById('certSendBody').value;
   if (!to) { toast('Bitte ' + (channel === 'email' ? 'E-Mail-Adresse' : 'Mobilnummer') + ' eingeben'); return; }
 
-  // Zertifikat herunterladen, damit es direkt zum manuellen Anhängen bereitliegt
-  var a = document.createElement('a'); a.href = fileUrl; a.download = fileName; a.click();
-
   if (channel === 'email') {
     var subject = document.getElementById('certSendSubject').value;
-    window.open('mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
+    window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
     toast('✅ E-Mail-Programm geöffnet — Zertifikat wurde heruntergeladen, bitte anhängen');
   } else {
     var phoneDigits = to.replace(/[^0-9+]/g, '').replace(/^\+/, '');
     window.open('https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(body), '_blank');
     toast('✅ WhatsApp geöffnet — Zertifikat wurde heruntergeladen, bitte anhängen');
   }
+
+  // Zertifikat erst NACH dem Öffnen von Mail/WhatsApp herunterladen — direkt davor kann der
+  // Browser die Nutzerinteraktion sonst schon "verbraucht" haben, wodurch mailto: teils
+  // ohne Betreff/Empfänger ankam.
+  setTimeout(function() {
+    var a = document.createElement('a'); a.href = fileUrl; a.download = fileName; a.click();
+  }, 300);
+
   document.getElementById('certSendModal').remove();
 }
 
