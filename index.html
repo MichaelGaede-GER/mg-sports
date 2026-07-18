@@ -2235,15 +2235,16 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <div class="card-body">
             <div class="form-group">
               <label>Nachrichtenvorlage</label>
-              <select id="bc_template" onchange="applyBcTemplate()" style="margin-bottom:8px">
-                <option value="">– Vorlage wählen –</option>
-                <option value="payment">💰 Zahlungserinnerung</option>
-                <option value="welcome">👋 Willkommen</option>
-                <option value="info">ℹ️ Allgemeine Info</option>
-                <option value="custom">✏️ Eigener Text</option>
-              </select>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+                <select id="bc_template" onchange="applyBcTemplate()" style="flex:1;min-width:220px"></select>
+                <button class="btn" style="font-size:11px;padding:5px 10px" onclick="saveBcTemplate()">💾 Als Vorlage speichern</button>
+                <button class="btn danger" style="font-size:11px;padding:5px 10px" onclick="deleteBcTemplate()">🗑 Vorlage löschen</button>
+              </div>
+              <label style="font-size:12px">Betreff (nur E-Mail)</label>
+              <input type="text" id="bc_subject" placeholder="European Junior Open 2026 – Information" style="margin-bottom:8px" />
+              <label style="font-size:12px">Nachricht</label>
               <textarea id="bc_message" rows="5" placeholder="Nachricht eingeben…" style="width:100%;font-size:13px;padding:10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg2);color:var(--text);resize:vertical"></textarea>
-              <div style="font-size:11px;color:var(--text3);margin-top:4px">Verfügbare Variablen: {name}, {country}, {package}, {total}, {received}, {open}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">Verfügbare Variablen (nur WhatsApp): {name}, {country}, {package}, {total}, {received}, {open}</div>
             </div>
           </div>
         </div>
@@ -4619,15 +4620,128 @@ async function loadBroadcastRecipients() {
   toast(bcRecipients.length + ' Empfänger geladen');
 }
 
+// ---------------------------------------------------------------------------
+// Nachrichtenvorlagen: drei fest eingebaute plus beliebig viele eigene, die in
+// app_settings unter dem Schlüssel 'bc_templates' als JSON liegen.
+// ---------------------------------------------------------------------------
+var BC_BUILTIN_TEMPLATES = {
+  payment: {
+    label: '\ud83d\udcb0 Zahlungserinnerung',
+    subject: 'European Junior Open 2026 – Payment reminder',
+    text: 'Hello {name},\n\nThis is a friendly reminder that your payment for the European Junior Open 2026 is still outstanding.\n\nTotal: \u20ac{total}\nReceived: \u20ac{received}\nOpen: \u20ac{open}\n\nPlease transfer the outstanding amount as soon as possible.\n\nBest regards,\nMG Sports & Eventmanagement'
+  },
+  welcome: {
+    label: '\ud83d\udc4b Willkommen',
+    subject: 'Welcome to the European Junior Open 2026',
+    text: 'Hello {name},\n\nWelcome to the European Junior Open 2026! \ud83c\udf89\n\nWe are looking forward to seeing you in Hamburg.\n\nBest regards,\nMG Sports & Eventmanagement'
+  },
+  info: {
+    label: '\u2139\ufe0f Allgemeine Info',
+    subject: 'European Junior Open 2026 – Information',
+    text: 'Hello {name},\n\nWe have an important update regarding the European Junior Open 2026.\n\n[Your message here]\n\nBest regards,\nMG Sports & Eventmanagement'
+  }
+};
+
+var bcCustomTemplates = [];
+
+async function loadBcTemplates() {
+  try {
+    var r = await db.from('app_settings').select('value').eq('key', 'bc_templates').limit(1);
+    var row = r.data && r.data[0];
+    bcCustomTemplates = row && row.value ? (JSON.parse(row.value) || []) : [];
+  } catch (e) { bcCustomTemplates = []; }
+  renderBcTemplateSelect();
+}
+
+function renderBcTemplateSelect(keepValue) {
+  var sel = document.getElementById('bc_template');
+  if (!sel) return;
+  var cur = keepValue !== undefined ? keepValue : sel.value;
+  var html = '<option value="">– Vorlage wählen –</option>';
+  Object.keys(BC_BUILTIN_TEMPLATES).forEach(function(k) {
+    html += '<option value="' + k + '">' + BC_BUILTIN_TEMPLATES[k].label + '</option>';
+  });
+  if (bcCustomTemplates.length) {
+    html += '<optgroup label="Eigene Vorlagen">';
+    bcCustomTemplates.forEach(function(t, i) {
+      html += '<option value="custom:' + i + '">\u2605 ' + (t.name || ('Vorlage ' + (i + 1))) + '</option>';
+    });
+    html += '</optgroup>';
+  }
+  html += '<option value="blank">\u270f\ufe0f Leerer Text</option>';
+  sel.innerHTML = html;
+  if (cur) sel.value = cur;
+}
+
 function applyBcTemplate() {
-  var t = document.getElementById('bc_template').value;
-  var msgs = {
-    payment: 'Hello {name},\n\nThis is a friendly reminder that your payment for the European Junior Open 2026 is still outstanding.\n\nTotal: \u20ac{total}\nReceived: \u20ac{received}\nOpen: \u20ac{open}\n\nPlease transfer the outstanding amount as soon as possible.\n\nBest regards,\nMG Sports & Eventmanagement',
-    welcome: 'Hello {name},\n\nWelcome to the European Junior Open 2026! \ud83c\udf89\n\nWe are looking forward to seeing you in Hamburg.\n\nBest regards,\nMG Sports & Eventmanagement',
-    info: 'Hello {name},\n\nWe have an important update regarding the European Junior Open 2026.\n\n[Your message here]\n\nBest regards,\nMG Sports & Eventmanagement',
-    custom: ''
-  };
-  if (msgs[t] !== undefined) document.getElementById('bc_message').value = msgs[t];
+  var val = document.getElementById('bc_template').value;
+  var msgEl = document.getElementById('bc_message');
+  var subjEl = document.getElementById('bc_subject');
+  if (!val) return;
+  if (val === 'blank') { msgEl.value = ''; if (subjEl) subjEl.value = ''; return; }
+  if (val.indexOf('custom:') === 0) {
+    var tpl = bcCustomTemplates[parseInt(val.split(':')[1], 10)];
+    if (tpl) { msgEl.value = tpl.text || ''; if (subjEl) subjEl.value = tpl.subject || ''; }
+    return;
+  }
+  var b = BC_BUILTIN_TEMPLATES[val];
+  if (b) { msgEl.value = b.text; if (subjEl) subjEl.value = b.subject; }
+}
+
+async function saveBcTemplate() {
+  var msgEl = document.getElementById('bc_message');
+  var subjEl = document.getElementById('bc_subject');
+  if (!msgEl || !msgEl.value.trim()) { toast('Bitte zuerst eine Nachricht schreiben'); return; }
+
+  var sel = document.getElementById('bc_template');
+  var editingIdx = (sel && sel.value.indexOf('custom:') === 0) ? parseInt(sel.value.split(':')[1], 10) : -1;
+  var suggested = editingIdx >= 0 ? (bcCustomTemplates[editingIdx].name || '') : '';
+  var name = prompt('Name der Vorlage:', suggested);
+  if (name === null) return;
+  name = name.trim();
+  if (!name) { toast('Bitte einen Namen angeben'); return; }
+
+  var entry = { name: name, subject: subjEl ? subjEl.value : '', text: msgEl.value };
+  var existing = bcCustomTemplates.findIndex(function(t) { return (t.name || '').toLowerCase() === name.toLowerCase(); });
+  if (existing >= 0) {
+    if (!confirm('Eine Vorlage mit diesem Namen existiert bereits. Überschreiben?')) return;
+    bcCustomTemplates[existing] = entry;
+  } else {
+    bcCustomTemplates.push(entry);
+    existing = bcCustomTemplates.length - 1;
+  }
+
+  try {
+    await db.from('app_settings').delete().eq('key', 'bc_templates');
+    var r = await db.from('app_settings').insert({ key: 'bc_templates', value: JSON.stringify(bcCustomTemplates) });
+    if (r.error) throw r.error;
+    renderBcTemplateSelect('custom:' + existing);
+    toast('\u2705 Vorlage „' + name + '" gespeichert');
+  } catch (e) {
+    toast('Speichern fehlgeschlagen: ' + (e.message || e));
+  }
+}
+
+async function deleteBcTemplate() {
+  var sel = document.getElementById('bc_template');
+  if (!sel || sel.value.indexOf('custom:') !== 0) {
+    toast('Bitte zuerst eine eigene Vorlage auswählen (fest eingebaute lassen sich nicht löschen)');
+    return;
+  }
+  var idx = parseInt(sel.value.split(':')[1], 10);
+  var tpl = bcCustomTemplates[idx];
+  if (!tpl || !confirm('Vorlage „' + (tpl.name || '') + '" wirklich löschen?')) return;
+  bcCustomTemplates.splice(idx, 1);
+  try {
+    await db.from('app_settings').delete().eq('key', 'bc_templates');
+    if (bcCustomTemplates.length) {
+      await db.from('app_settings').insert({ key: 'bc_templates', value: JSON.stringify(bcCustomTemplates) });
+    }
+    renderBcTemplateSelect('');
+    toast('Vorlage gelöscht');
+  } catch (e) {
+    toast('Löschen fehlgeschlagen: ' + (e.message || e));
+  }
 }
 
 function buildWAMessage(p, template) {
@@ -4692,17 +4806,13 @@ function sendBroadcastEmail() {
   var hasVars = /\{name\}|\{country\}|\{package\}|\{total\}|\{received\}|\{open\}/.test(template);
   if (hasVars && !confirm('Die Nachricht enthält Platzhalter wie {name}. Bei E-Mail per BCC bekommt jeder den gleichen Text (Platzhalter werden NICHT ersetzt). Trotzdem fortfahren?')) return;
 
-  var subject = encodeURIComponent('European Junior Open 2026 – Information');
-  var body = encodeURIComponent(template);
-  var emails = selected.map(function(p){ return p.email; });
-  var chunk = emails.slice(0, 50);
-  var rest = emails.slice(50);
-  window.open('mailto:?bcc=' + encodeURIComponent(chunk.join(',')) + '&subject=' + subject + '&body=' + body, '_blank');
-  if (rest.length > 0) {
-    toast('⚠️ ' + rest.length + ' weitere Adressen — bitte "E-Mails öffnen" nochmals klicken (max. 50 pro Mail-Fenster)');
-  } else {
-    toast(chunk.length + ' Empfänger im E-Mail-Programm geöffnet');
-  }
+  // Versand in wählbaren Blöcken — dasselbe Fenster wie im Verteiler
+  var subjEl = document.getElementById('bc_subject');
+  openBlockMailModal(selected.map(function(p){ return p.email; }), {
+    label: 'Broadcast-Auswahl',
+    subject: (subjEl && subjEl.value) || 'European Junior Open 2026 – Information',
+    body: template
+  });
 }
 
 // ============================================================
@@ -5677,7 +5787,7 @@ function nav(page) {
   else if (page === 'idcard') { loadIdCards(); }
   else if (page === 'waitlist') loadWaitlist();
   else if (page === 'import') initImportPage();
-  else if (page === 'broadcast') { populateBcFilterOptions(); loadBroadcastRecipients(); }
+  else if (page === 'broadcast') { populateBcFilterOptions(); loadBcTemplates(); loadBroadcastRecipients(); }
   else if (page === 'checkin') loadCheckin();
   else if (page === 'mealcheck') loadMealCheck();
   else if (page === 'events') { loadEvents(); loadWithdrawPolicy().catch(function(){}); }
@@ -14066,11 +14176,12 @@ var _distMailEmails = [];
 var _distMailType = '';
 var _distMailSent = {};
 
-function emailDistribution(type) {
-  var emails = type === 'players' ? (window._playerEmails || []) : (window._coachEmails || []);
-  // Doppelte Adressen entfernen — sonst bekommt jemand die Mail mehrfach
+// Öffnet den Blockversand für eine beliebige Adressliste. Wird sowohl vom Verteiler als
+// auch vom Broadcast genutzt.
+function openBlockMailModal(emails, opts) {
+  opts = opts || {};
   var seen = {};
-  emails = emails.filter(function(e) {
+  emails = (emails || []).filter(function(e) {
     var k = (e || '').trim().toLowerCase();
     if (!k || seen[k]) return false;
     seen[k] = true; return true;
@@ -14078,19 +14189,29 @@ function emailDistribution(type) {
   if (!emails.length) { toast('Keine E-Mail-Adressen gefunden'); return; }
 
   _distMailEmails = emails;
-  _distMailType = type;
   _distMailSent = {};
 
-  var label = type === 'players' ? 'Spieler' : 'Coaches';
   document.getElementById('distMailIntro').innerHTML =
-    '<strong>' + emails.length + '</strong> Empfänger im Verteiler ' + label
+    '<strong>' + emails.length + '</strong> Empfänger' + (opts.label ? ' · ' + opts.label : '')
     + ' · alle Adressen stehen im BCC, die Empfänger sehen sich also gegenseitig nicht.';
+  var subjEl = document.getElementById('distMailSubject');
+  if (subjEl && opts.subject) subjEl.value = opts.subject;
   var bodyEl = document.getElementById('distMailBody');
-  if (bodyEl && !bodyEl.value) {
-    bodyEl.value = 'Sehr geehrte Damen und Herren,\n\nhiermit möchten wir Sie über unser kommendes Event informieren.\n\nMit freundlichen Grüßen\nMG Sports & Eventmanagement';
-  }
+  if (bodyEl && (opts.body || !bodyEl.value)) bodyEl.value = opts.body || bodyEl.value;
+
   renderDistMailBlocks();
   document.getElementById('distMailModal').classList.add('open');
+}
+
+function emailDistribution(type) {
+  var emails = type === 'players' ? (window._playerEmails || []) : (window._coachEmails || []);
+  _distMailType = type;
+  openBlockMailModal(emails, {
+    label: 'Verteiler ' + (type === 'players' ? 'Spieler' : 'Coaches'),
+    subject: 'MG Sports Event – Information',
+    body: document.getElementById('distMailBody').value
+      || 'Sehr geehrte Damen und Herren,\n\nhiermit möchten wir Sie über unser kommendes Event informieren.\n\nMit freundlichen Grüßen\nMG Sports & Eventmanagement'
+  });
 }
 
 function renderDistMailBlocks() {
