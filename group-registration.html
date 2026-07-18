@@ -759,6 +759,8 @@ async function init() {
       var btn = document.getElementById('submitBtn');
       if (btn) btn.textContent = 'Änderungen speichern';
       refreshAllShareSelects();
+      restoreRoomShares(editR.data);
+      refreshAllShareSelects();
       renderGroupPaymentSummary();
       return;
     } else {
@@ -857,6 +859,48 @@ function groupLeaderFields() {
   };
 }
 
+// Wer mit wem im Zimmer liegt, wird nicht als eigene Spalte gespeichert, sondern nur als
+// Notiz im Memo („Teilt Zimmer mit: …"). Beim Öffnen des Bearbeitungs-Links wird die
+// Zuordnung daraus wieder aufgebaut, damit die Zimmer nicht auseinanderfallen.
+function restoreRoomShares(records) {
+  // Namen aller geladenen Zeilen auf ihre DOM-ID abbilden
+  var idByName = {};
+  participantIds.forEach(function(domId) {
+    var key = participantLabel(domId).trim().toLowerCase();
+    if (key) idByName[key] = domId;
+  });
+
+  var prefixes = ['👥 teilt zimmer mit:', '👥 sharing room with:', 'teilt zimmer mit:', 'sharing room with:'];
+
+  records.forEach(function(rec, idx) {
+    var domId = participantIds[idx];
+    if (!domId || !rec.memo) return;
+    var memo = String(rec.memo).toLowerCase();
+    var hit = null;
+    prefixes.forEach(function(pre) {
+      if (hit) return;
+      var at = memo.indexOf(pre);
+      if (at >= 0) hit = String(rec.memo).slice(at + pre.length).split('|')[0];
+    });
+    if (!hit) return;
+
+    hit.split(',').forEach(function(nm) {
+      var partner = idByName[nm.trim().toLowerCase()];
+      if (!partner || partner === domId) return;
+      // Nur der Später-Eingetragene wählt den Partner aus, sonst heben sich die
+      // beiden Zuordnungen gegenseitig auf.
+      if (participantIds.indexOf(partner) >= participantIds.indexOf(domId)) return;
+      var sel = document.getElementById('p_shareroom_' + domId);
+      if (sel && !roomShareOf[domId]) {
+        var wrap = document.getElementById('p_shareroom_wrap_' + domId);
+        if (wrap && wrap.style.display === 'none') return;
+        sel.value = String(partner);
+        if (sel.value === String(partner)) onShareRoomChange(domId);
+      }
+    });
+  });
+}
+
 function prefillGroupLeader(p) {
   function setVal(fid, val) { var el = document.getElementById(fid); if (el && val !== null && val !== undefined) el.value = val; }
   setVal('g_lastname', p.group_leader_lastname);
@@ -887,7 +931,25 @@ function prefillGroupParticipant(id, p) {
   setVal('p_role_' + id, p.role); if (typeof onRoleChange === 'function') onRoleChange(id);
   setVal('p_events_' + id, p.events); setVal('p_shirt_' + id, p.shirt);
   setVal('p_package_' + id, p.package); if (typeof onPackageChange === 'function') onPackageChange(id);
-  setVal('p_roomtype_' + id, p.room_type);
+  // Zimmertyp: Das Package setzt beim Laden erst seinen eigenen Standard, deshalb wird der
+  // gespeicherte Wert danach gesetzt. Fehlt die Option in der Liste (z.B. „Warteliste" oder
+  // ein inzwischen ausgebuchter Typ), wird sie ergänzt — sonst bleibt das Feld leer und
+  // damit auch die Zimmeraufteilung unsichtbar.
+  if (p.room_type) {
+    var rtSel = document.getElementById('p_roomtype_' + id);
+    if (rtSel) {
+      var hasOpt = Array.prototype.some.call(rtSel.options, function(o) { return o.value === p.room_type; });
+      if (!hasOpt) {
+        var labelsRt = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+        var opt = document.createElement('option');
+        opt.value = p.room_type;
+        opt.textContent = labelsRt[p.room_type] || p.room_type;
+        rtSel.appendChild(opt);
+      }
+      rtSel.value = p.room_type;
+      if (typeof onRoomTypeChange === 'function') onRoomTypeChange(id);
+    }
+  }
   setVal('p_hotel_' + id, p.hotel); setVal('p_checkin_' + id, p.checkin); setVal('p_checkout_' + id, p.checkout);
   var visaEl = document.getElementById('p_visa_' + id); if (visaEl) visaEl.value = p.visa || '';
   // Erst umschalten (blendet den Block ein und baut das Letter-Type-Dropdown auf),

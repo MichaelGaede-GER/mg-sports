@@ -934,7 +934,23 @@ function prefillFormForEdit(p) {
   setVal('r_coach_name', p.coach_name); setVal('r_coach_esid', p.coach_esid);
   setVal('r_shirt', p.shirt);
   setVal('r_package', p.package); onPackageSelectChange();
-  setVal('r_roomtype', p.room_type);
+  // Zimmertyp: fehlende Option (z.B. „Warteliste" oder inzwischen ausgebucht) ergänzen,
+  // sonst bleibt das Feld beim Wiederaufrufen leer.
+  if (p.room_type) {
+    var rtSelR = document.getElementById('r_roomtype');
+    if (rtSelR) {
+      var hasOptR = Array.prototype.some.call(rtSelR.options, function(o) { return o.value === p.room_type; });
+      if (!hasOptR) {
+        var labelsRtR = ROOM_TYPE_LABELS[LANG] || ROOM_TYPE_LABELS.en;
+        var optR = document.createElement('option');
+        optR.value = p.room_type;
+        optR.textContent = labelsRtR[p.room_type] || p.room_type;
+        rtSelR.appendChild(optR);
+      }
+      rtSelR.value = p.room_type;
+      if (typeof onRoomTypeChange === 'function') onRoomTypeChange();
+    }
+  }
   setVal('r_hotel', p.hotel); setVal('r_checkin', p.checkin); setVal('r_checkout', p.checkout);
   setVal('r_ams_bus', p.ams_bus); setVal('r_airport_plus', p.airport_plus);
   setVal('r_arrival_date', p.arrival_date); setVal('r_arrival_time', p.arrival_time); setVal('r_flight_in', p.flight_in);
