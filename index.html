@@ -2691,6 +2691,8 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           <div class="card-header"><h3>🎓 Zertifikat (Certificate of Participation)</h3></div>
           <div class="card-body">
             <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+              Sponsorenlogos (aus den Sponsor-Einstellungen) und — falls hinterlegt — das Teilnehmerfoto
+              erscheinen automatisch mit auf dem Zertifikat.<br />
               Das Zertifikat wird komplett automatisch erstellt: Event-Logo, Eventname, Ort und Datum kommen direkt
               aus der Event-Verwaltung, Name und Kategorie aus dem jeweiligen Teilnehmer. Hier legst du nur noch die
               zwei Unterschriften fest — gilt nur für das aktuell aktive Event.
@@ -10514,6 +10516,28 @@ function buildCertificateHtml(opts) {
   var logoHtml = opts.logoUrl
     ? '<img src="' + opts.logoUrl + '" style="max-width:100%;max-height:100%;object-fit:contain" />'
     : '';
+
+  // Teilnehmerfoto (nur wenn hinterlegt): rundes Medaillon mit Goldrand direkt links
+  // neben dem Namen. Foto + Name werden als Gruppe gemeinsam zentriert.
+  var photoMedallion = opts.photoUrl
+    ? '<div style="flex:0 0 auto;width:96px;height:96px;border-radius:50%;overflow:hidden;background:#fffdf8;border:4px solid #c8a650;box-shadow:0 2px 6px rgba(0,0,0,0.18);margin-right:26px">'
+        + '<img src="' + opts.photoUrl + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
+      + '</div>'
+    : '';
+
+  // Sponsorenlogos: zwei links und zwei rechts vom Siegel, jeweils untereinander.
+  // Das Siegel der Vorlage liegt zwischen x 414 und 639 px — die Spalten bleiben davon frei.
+  var sponsors = (opts.sponsorLogos || []).filter(function(s) { return !!s; });
+  var sponsorCol = function(list, leftPct) {
+    if (!list.length) return '';
+    return '<div style="position:absolute;left:' + leftPct + '%;width:19.4%;top:73.8%;height:6.8%;display:flex;flex-direction:column;align-items:center;justify-content:center">'
+      + list.map(function(s, i) {
+          return '<img src="' + s + '" style="max-height:44px;max-width:100%;object-fit:contain;display:block' + (i === 0 && list.length > 1 ? ';margin-bottom:12px' : '') + '" />';
+        }).join('')
+      + '</div>';
+  };
+  var sponsorHtml = sponsorCol(sponsors.slice(0, 2), 7.6) + sponsorCol(sponsors.slice(2, 4), 73);
+
   return '' +
     '<div style="width:1054px;height:1492px;position:relative;font-family:Georgia,\'Times New Roman\',serif;background:#f8f4ec">' +
       '<img src="data:image/jpeg;base64,' + CERT_BACKGROUND_B64 + '" style="position:absolute;inset:0;width:100%;height:100%" />' +
@@ -10521,15 +10545,20 @@ function buildCertificateHtml(opts) {
       '<div style="position:absolute;left:15%;width:70%;top:4.5%;height:24%;display:flex;align-items:center;justify-content:center">' + logoHtml + '</div>' +
       // Event name in ribbon
       '<div style="position:absolute;left:18.5%;width:63.6%;top:50.3%;height:3.8%;display:flex;align-items:center;justify-content:center;color:#e9c46a;font-size:26px;font-weight:700;letter-spacing:1px;text-transform:uppercase">' + (opts.eventName || '') + '</div>' +
-      // Player name
-      '<div style="position:absolute;left:8%;width:84%;top:59.5%;height:5%;display:flex;align-items:center;justify-content:center;color:#0b1f3a;font-size:44px;font-weight:700">' + (opts.playerName || '').toUpperCase() + '</div>' +
+      // Player name (mit Foto links daneben, als Gruppe zentriert)
+      '<div style="position:absolute;left:6%;width:88%;top:58%;height:6.7%;display:flex;align-items:center;justify-content:center;color:#0b1f3a;font-size:44px;font-weight:700">'
+        + photoMedallion
+        + '<span style="white-space:nowrap">' + (opts.playerName || '').toUpperCase() + '</span>'
+      + '</div>' +
       // Paragraph: recognition + location + date/category (+ placement, falls gesetzt)
-      '<div style="position:absolute;left:10%;width:80%;top:63.8%;height:9.3%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#1c2f4a;font-size:' + (opts.placement ? '20px' : '23px') + ';line-height:' + (opts.placement ? '1.45' : '1.5') + ';text-align:center">' +
+      '<div style="position:absolute;left:10%;width:80%;top:64.8%;height:8.4%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#1c2f4a;font-size:' + (opts.placement ? '20px' : '23px') + ';line-height:' + (opts.placement ? '1.45' : '1.5') + ';text-align:center">' +
         '<div>in recognition of participation in the ' + (opts.eventName || '') + '</div>' +
         (opts.location ? '<div>held in ' + opts.location + '</div>' : '') +
         '<div>' + (opts.dateRange || '') + (opts.category ? ' &nbsp;—&nbsp; Category: <strong>' + opts.category + '</strong>' : '') + '</div>' +
         (opts.placement ? '<div style="margin-top:4px;color:#9c7a2e;font-weight:700;font-size:1.15em;letter-spacing:0.5px">🏆 ' + opts.placement.toUpperCase() + '</div>' : '') +
       '</div>' +
+      // Teilnehmerfoto + Sponsoren
+      sponsorHtml +
       // Signature 1
       '<div style="position:absolute;left:7.76%;width:34.2%;top:81%;height:9%;display:flex;align-items:flex-end;justify-content:center;font-family:\'Brush Script MT\',\'Segoe Script\',cursive;font-size:54px;color:#111">' + (opts.sig1Name || '') + '</div>' +
       '<div style="position:absolute;left:7.76%;width:34.2%;top:92.5%;height:3%;display:flex;align-items:center;justify-content:center;color:#1c2f4a;font-size:14px;text-align:center">' + (opts.sig1Title || '') + '</div>' +
@@ -10558,14 +10587,59 @@ async function renderCertificateToBlob(opts) {
   holder.innerHTML = buildCertificateHtml(opts);
   document.body.appendChild(holder);
   try {
-    // Warten bis das Hintergrundbild (Base64, daher praktisch sofort, aber sicherheitshalber) geladen ist
-    var bgImg = holder.querySelector('img');
-    if (bgImg && !bgImg.complete) { await new Promise(function(res){ bgImg.onload = res; bgImg.onerror = res; }); }
+    // Warten bis ALLE Bilder geladen sind (Hintergrund, Event-Logo, Teilnehmerfoto, Sponsorenlogos)
+    var imgs = Array.prototype.slice.call(holder.querySelectorAll('img'));
+    await Promise.all(imgs.map(function(img) {
+      if (img.complete) return Promise.resolve();
+      return new Promise(function(res) { img.onload = res; img.onerror = res; setTimeout(res, 5000); });
+    }));
     var canvas = await html2canvas(holder.firstElementChild, { scale: 2, backgroundColor: '#f8f4ec', useCORS: true, allowTaint: true });
     return await new Promise(function(resolve) { canvas.toBlob(function(blob) { resolve(blob); }, 'image/jpeg', 0.93); });
   } finally {
     document.body.removeChild(holder);
   }
+}
+
+// Wandelt eine Bild-URL (z.B. Supabase-Storage) in eine Data-URL um. html2canvas kann
+// externe Bilder sonst nicht sicher rendern (CORS/Tainting).
+async function certImageToDataUrl(url) {
+  if (!url) return null;
+  if (url.indexOf('data:') === 0) return url;
+  try {
+    var resp = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+    var blob = await resp.blob();
+    return await new Promise(function(resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function() { resolve(fr.result); };
+      fr.onerror = reject;
+      fr.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.warn('Foto konnte nicht als Data-URL geladen werden, nutze Original-URL:', e);
+    return url;
+  }
+}
+
+// Holt das Teilnehmerfoto: erst aus dem Teilnehmerdatensatz, sonst aus der Personen-DB
+// über die member_id (gleiche Logik wie bei den Ausweisen).
+async function certGetParticipantPhoto(p) {
+  var url = p.photo_url || null;
+  if (!url && p.member_id) {
+    try {
+      var r = await db.from('persons').select('photo_url').eq('member_id', p.member_id).maybeSingle();
+      if (r.data && r.data.photo_url) url = r.data.photo_url;
+    } catch (e) {}
+  }
+  return await certImageToDataUrl(url);
+}
+
+// Sponsorenlogos aus den Einstellungen (app_settings) als Data-URLs.
+async function certGetSponsorLogos() {
+  var any = [1,2,3,4].some(function(n) { return !!sponsorLogos[n]; });
+  if (!any) { try { await loadSponsorLogos(); } catch (e) {} }
+  return [1,2,3,4]
+    .map(function(n) { return sponsorLogos[n] ? 'data:image/png;base64,' + sponsorLogos[n] : ''; })
+    .filter(function(s) { return !!s; });
 }
 
 async function generateCertificate(participantId) {
@@ -10579,9 +10653,13 @@ async function generateCertificate(participantId) {
   var ev = await db.from('events').select('*').eq('id', currentEventId).single();
   var evData = ev.data || {};
   var logoUrl = evData.logo_url ? ('data:image/png;base64,' + evData.logo_url) : null;
+  var photoData = await certGetParticipantPhoto(p);
+  var sponsorArr = await certGetSponsorLogos();
 
   var blob = await renderCertificateToBlob({
     logoUrl: logoUrl,
+    photoUrl: photoData,
+    sponsorLogos: sponsorArr,
     eventName: evData.name || '',
     location: evData.location || '',
     dateRange: fmtCertDateRange(evData.date_from, evData.date_to),
@@ -10600,8 +10678,17 @@ async function previewCertificateSample() {
   var ev = await db.from('events').select('*').eq('id', currentEventId).single();
   var evData = ev.data || {};
   var logoUrl = evData.logo_url ? ('data:image/png;base64,' + evData.logo_url) : null;
+  var sampleSponsors = await certGetSponsorLogos();
+  // Platzhalter-Silhouette, damit man in der Vorschau sieht, wo das Foto landet
+  var samplePhoto = 'data:image/svg+xml;base64,' + btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">'
+    + '<rect width="200" height="200" fill="#cdd6e0"/>'
+    + '<circle cx="100" cy="72" r="38" fill="#7c8ca5"/>'
+    + '<ellipse cx="100" cy="200" rx="66" ry="72" fill="#7c8ca5"/></svg>');
   var blob = await renderCertificateToBlob({
     logoUrl: logoUrl,
+    photoUrl: samplePhoto,
+    sponsorLogos: sampleSponsors,
     eventName: evData.name || 'Your Tournament',
     location: evData.location || '',
     dateRange: fmtCertDateRange(evData.date_from, evData.date_to),
@@ -10716,8 +10803,39 @@ function confirmCertSend(channel, fileUrl, fileName) {
 
   if (channel === 'email') {
     var subject = document.getElementById('certSendSubject').value;
-    window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-    toast('✅ E-Mail-Programm geöffnet — Zertifikat wurde heruntergeladen, bitte anhängen');
+    // 1) Empfängeradresse NICHT encodieren — Outlook wertet ein encodiertes "@" (%40)
+    //    teilweise nicht aus, dadurch blieb das An-Feld leer.
+    var mailTo = to.replace(/\s+/g, '');
+    var buildMailto = function(b) {
+      return 'mailto:' + mailTo
+        + '?subject=' + encodeURIComponent(subject).replace(/%20/g, ' ')
+        + '&body=' + encodeURIComponent(b).replace(/%20/g, ' ');
+    };
+    var mailUrl = buildMailto(body);
+    var shortened = false;
+    // 2) Windows/Outlook begrenzt mailto: auf ca. 2000 Zeichen. War der Link länger,
+    //    hat Outlook den Rest (inkl. Betreff/Empfänger) verworfen -> Kurzfassung nutzen
+    //    und den vollständigen Text in die Zwischenablage legen.
+    if (mailUrl.length > 1800) {
+      var fn = (_certPreviewData && _certPreviewData.p && _certPreviewData.p.firstname) || '';
+      var shortBody = 'Dear ' + fn + ',\n\n'
+        + 'please find your official participation certificate attached to this email.\n\n'
+        + 'With kind regards,\nMichael Gäde';
+      try { navigator.clipboard.writeText(body); } catch (e) {}
+      mailUrl = buildMailto(shortBody);
+      shortened = true;
+    }
+    // 3) Anker-Klick statt window.location.href — das lädt die Seite nicht neu und
+    //    ist deutlich zuverlässiger beim Öffnen des Mailprogramms.
+    var a = document.createElement('a');
+    a.href = mailUrl;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { a.remove(); }, 200);
+    toast(shortened
+      ? 'ℹ️ Text zu lang für Outlook — Kurzfassung eingesetzt, Volltext liegt in der Zwischenablage (Strg+V)'
+      : '✅ E-Mail-Programm geöffnet — Zertifikat wurde heruntergeladen, bitte anhängen');
   } else {
     var phoneDigits = to.replace(/[^0-9+]/g, '').replace(/^\+/, '');
     window.open('https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(body), '_blank');
@@ -10728,8 +10846,8 @@ function confirmCertSend(channel, fileUrl, fileName) {
   // Browser die Nutzerinteraktion sonst schon "verbraucht" haben, wodurch mailto: teils
   // ohne Betreff/Empfänger ankam.
   setTimeout(function() {
-    var a = document.createElement('a'); a.href = fileUrl; a.download = fileName; a.click();
-  }, 300);
+    var dl = document.createElement('a'); dl.href = fileUrl; dl.download = fileName; dl.click();
+  }, 700);
 
   document.getElementById('certSendModal').remove();
 }
