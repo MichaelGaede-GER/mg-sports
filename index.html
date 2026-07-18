@@ -392,6 +392,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('physio')">
       <svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg><span>🩹 Physio</span>
     </div>
+    <div class="nav-item" onclick="nav('certificates')">
+      <svg viewBox="0 0 24 24"><path d="M12 15l-2 5l-3-2l-3 2l1.5-6"/><path d="M17 15l2 5l3-2l3 2l-1.5-6"/><circle cx="12" cy="8" r="6"/></svg><span>🎓 Zertifikate</span>
+    </div>
     <div class="nav-item" onclick="nav('mahnlog')">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="nav_mahnlog">Mahnungs-Log</span>
       <span class="nav-cnt" id="cntMahnlog" style="display:none">!</span>
@@ -1705,6 +1708,19 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             </table></div>
           </div>
         </div>
+      </div>
+
+      <!-- ZERTIFIKATE -->
+      <div class="page" id="page-certificates">
+        <div class="page-header"><h2>🎓 Zertifikate</h2>
+          <button class="btn" onclick="loadCertificatesOverviewPage()">🔄 Aktualisieren</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin:-8px 0 16px">
+          Für jede Altersklasse werden automatisch die Teilnehmer mit den Platzierungen "Champion", "Runner-up",
+          "3rd Position" und "4th Position" gesucht (Feld "🏆 Platzierung / Endergebnis" im Teilnehmer-Formular).
+          Wurde für eine Position noch niemand eingetragen, bleibt die Zeile leer.
+        </p>
+        <div id="certificatesOverviewContainer"><p class="loading">Lade…</p></div>
       </div>
 
       <!-- NATIONALE VERBÄNDE -->
@@ -5559,6 +5575,7 @@ function nav(page) {
   else if (page === 'tournamentwithdrawals') loadTournamentWithdrawals();
   else if (page === 'physio') loadPhysioPage();
   else if (page === 'nationalfeds') loadNationalFederationsPage();
+  else if (page === 'certificates') loadCertificatesOverviewPage();
   else if (page === 'refereepenalty') loadRefereePenalties();
   else if (page === 'withdrawals') loadWithdrawals();
   else if (page === 'airport') loadAirport();
@@ -7699,6 +7716,46 @@ async function renderFederationLookup(country, containerId) {
     + row('Präsident', f.president_name, f.president_mobile, f.president_email)
     + '<a href="#" onclick="nav(\'nationalfeds\');return false;" style="color:var(--blue);font-size:11px">✏️ Verband-Datenbank bearbeiten</a>'
     + '</div>';
+}
+
+// ================= ZERTIFIKATE-ÜBERSICHT (nach Altersklasse & Platzierung) =================
+var CERT_PLACEMENT_LABELS = ['Champion', 'Runner-up', '3rd Position', '4th Position'];
+
+async function loadCertificatesOverviewPage() {
+  var container = document.getElementById('certificatesOverviewContainer');
+  if (!container) return;
+  if (!currentEventId) { container.innerHTML = '<p class="empty">Bitte zuerst ein Event aktivieren</p>'; return; }
+  container.innerHTML = '<p class="loading">Lade…</p>';
+
+  await loadAgeClasses().catch(function(){});
+  if (!ageClassesCache.length) { container.innerHTML = '<p class="empty">Noch keine Altersklassen für dieses Event angelegt (Einstellungen → Altersklassen / Events).</p>'; return; }
+
+  // Alle Teilnehmer mit gesetzter Platzierung für dieses Event in einem Rutsch laden,
+  // statt pro Altersklasse einzeln nachzufragen.
+  var r = await db.from('participants').select('id,firstname,lastname,events,placement,mobile,email')
+    .eq('event_id', currentEventId).not('placement', 'is', null).neq('withdraw', 'Ja');
+  var placed = r.data || [];
+
+  function findFor(ageClass, label) {
+    return placed.find(function(p) {
+      return p.events === ageClass && (p.placement || '').trim().toLowerCase() === label.toLowerCase();
+    });
+  }
+
+  container.innerHTML = ageClassesCache.map(function(ageClass) {
+    var rows = CERT_PLACEMENT_LABELS.map(function(label, idx) {
+      var p = findFor(ageClass, label);
+      var nameCell = p ? ('<strong>' + p.lastname + ', ' + p.firstname + '</strong>') : '<span style="color:var(--text3)">–</span>';
+      var actionCell = p
+        ? ('<button class="btn primary" style="font-size:11px;padding:3px 8px" data-id="' + p.id + '" onclick="generateCertificate(this.dataset.id)">🎓 Zertifikat</button>')
+        : '';
+      return '<tr><td style="width:26px;text-align:center;color:var(--text3)">' + (idx + 1) + '.</td><td style="width:130px">' + label + '</td><td>' + nameCell + '</td><td>' + actionCell + '</td></tr>';
+    }).join('');
+    return '<div class="card" style="margin-bottom:16px">'
+      + '<div class="card-header"><h3>' + ageClass + '</h3></div>'
+      + '<div class="card-body" style="padding:0"><div class="table-wrap"><table><tbody>' + rows + '</tbody></table></div></div>'
+      + '</div>';
+  }).join('');
 }
 
 async function loadPhysioPage() {
@@ -16609,7 +16666,7 @@ var rolePermissions = {};
 var ALL_NAV_PAGES = ['dashboard','participants','entry','packages','hotel','shuttle',
   'payments','mahnlog','withdrawals','reports','airport',
   'persons','import','events','settings','marketing',
-  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats','tournamentwithdrawals','physio','nationalfeds'];
+  'idcard','waitlist','users','backup','mealcheck','costs','refereepenaltystats','tournamentwithdrawals','physio','nationalfeds','certificates'];
 
 async function loadRolePermissions() {
   // Load permissions from DB
