@@ -10618,12 +10618,12 @@ async function previewCertificateSample() {
 
 // Baut den persönlichen Anschreiben-Text für WhatsApp/E-Mail beim Zertifikat-Versand.
 function buildCertificateMessage(firstname, eventName, location) {
-  return 'Dear ' + (firstname || '') + ',\n'
-    + 'Thank you very much for taking part in the ' + (eventName || 'tournament') + ' in ' + (location || 'Hamburg') + '.\n'
-    + 'It was a great pleasure to welcome you to our tournament, and we sincerely hope that you enjoyed the event, the matches, and your time in Hamburg. Your participation helped make the tournament a truly special and memorable international junior squash event.\n'
-    + 'We hope you returned home with many positive memories, valuable experiences, and perhaps some new friendships from the squash community.\n'
-    + 'Please find your official participation certificate attached to this email.\n'
-    + 'We would be delighted to welcome you back to Hamburg for one of our future tournaments and hope to see you competing with us again soon.\n'
+  return 'Dear ' + (firstname || '') + ',\n\n'
+    + 'Thank you very much for taking part in the ' + (eventName || 'tournament') + ' in ' + (location || 'Hamburg') + '.\n\n'
+    + 'It was a great pleasure to welcome you to our tournament, and we sincerely hope that you enjoyed the event, the matches, and your time in Hamburg. Your participation helped make the tournament a truly special and memorable international junior squash event.\n\n'
+    + 'We hope you returned home with many positive memories, valuable experiences, and perhaps some new friendships from the squash community.\n\n'
+    + 'Please find your official participation certificate attached to this email.\n\n'
+    + 'We would be delighted to welcome you back to Hamburg for one of our future tournaments and hope to see you competing with us again soon.\n\n'
     + 'With kind regards,\n'
     + 'Michael Gäde\n'
     + 'President\n'
@@ -10694,7 +10694,7 @@ function openCertSendModal(channel, fileUrl, fileName) {
     ? '<div class="form-group" style="margin-bottom:10px"><label>An (E-Mail)</label><input type="text" id="certSendTo" value="' + (p.email||'') + '" /></div>'
     : '<div class="form-group" style="margin-bottom:10px"><label>An (Mobilnummer)</label><input type="text" id="certSendTo" value="' + (p.mobile||'') + '" /></div>';
   var subjectField = isEmail
-    ? '<div class="form-group" style="margin-bottom:10px"><label>Betreff</label><input type="text" id="certSendSubject" value="Your Certificate of Participation" /></div>'
+    ? '<div class="form-group" style="margin-bottom:10px"><label>Betreff</label><input type="text" id="certSendSubject" value="Your Certificate of Participation' + (evData.name ? ' (' + evData.name + ')' : '') + '" /></div>'
     : '';
 
   menu.innerHTML = '<div style="background:var(--bg2);border-radius:12px;padding:20px;width:520px;max-width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)">'
