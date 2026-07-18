@@ -814,6 +814,7 @@ async function init() {
     try { ageClassesCache = JSON.parse(ageR.data[0].value); } catch(e) {}
   }
 
+  await loadWithdrawalPolicyText();
   await loadPackages();
   await loadRoomAvailability();
   await loadHotels();
@@ -949,6 +950,52 @@ function requestedRoomTypeFromMemo(memo) {
     if (at >= 0) value = text.slice(at + pre.length).split('|')[0].trim();
   });
   return roomTypeFromLabel(value);
+}
+
+// ---------------------------------------------------------------------------
+// Withdrawal Policy für die Bestätigungsmail
+// Die drei Stichtage liegen in app_settings unter 'withdraw_policy_<eventId>'
+// (Fallback: die frühere globale Einstellung 'withdraw_policy').
+// ---------------------------------------------------------------------------
+var withdrawalPolicyText = '';
+
+async function loadWithdrawalPolicyText() {
+  try {
+    var row = null;
+    if (eventId) {
+      var r = await db.from('app_settings').select('value').eq('key', 'withdraw_policy_' + eventId).limit(1);
+      row = r.data && r.data[0];
+    }
+    if (!row) {
+      var legacy = await db.from('app_settings').select('value').eq('key', 'withdraw_policy').limit(1);
+      row = legacy.data && legacy.data[0];
+    }
+    if (!row || !row.value) return;
+    var pol = JSON.parse(row.value);
+    if (!pol.date_full || !pol.date_half || !pol.date_none) return;
+
+    function d(x) {
+      var dt = new Date(x);
+      return isNaN(dt.getTime()) ? x : dt.toLocaleDateString(LANG === 'de' ? 'de-DE' : 'en-GB');
+    }
+    // Ein Tag vor dem 100%-Stichtag ist der letzte Tag mit voller Erstattung
+    var dayBeforeFull = new Date(pol.date_full);
+    dayBeforeFull.setDate(dayBeforeFull.getDate() - 1);
+
+    if (LANG === 'de') {
+      withdrawalPolicyText =
+        'Rücktrittsbedingungen:\n'
+        + '• Abmeldung bis ' + d(dayBeforeFull) + ': 100 % Erstattung\n'
+        + '• Abmeldung vom ' + d(pol.date_full) + ' bis ' + d(pol.date_half) + ': 50 % Erstattung\n'
+        + '• Abmeldung ab ' + d(pol.date_none) + ': keine Erstattung';
+    } else {
+      withdrawalPolicyText =
+        'Withdrawal policy:\n'
+        + '• Withdrawal until ' + d(dayBeforeFull) + ': 100% refund\n'
+        + '• Withdrawal from ' + d(pol.date_full) + ' to ' + d(pol.date_half) + ': 50% refund\n'
+        + '• Withdrawal from ' + d(pol.date_none) + ': no refund';
+    }
+  } catch (e) { /* ohne Policy wird die Variable einfach leer übergeben */ }
 }
 
 function prefillFormForEdit(p) {
@@ -1847,6 +1894,7 @@ async function submitRegistration() {
       var tokenForLink = editToken || row.edit_token;
       var editLink = tokenForLink ? (window.location.origin + window.location.pathname + '?event=' + eventId + '&edit=' + tokenForLink) : '';
       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        withdrawal_policy: withdrawalPolicyText,
         to_email: v('r_email'),
         to_name: (v('r_firstname') + ' ' + v('r_lastname')).trim(),
         event_name: registeredEventName || 'the tournament',
