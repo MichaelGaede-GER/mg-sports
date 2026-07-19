@@ -82,6 +82,7 @@
     <h2 data-i18n="success_title">Registration Submitted!</h2>
     <p data-i18n-html="success_text">Thank you for your registration. Your entry has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
     <p style="margin-top:16px;font-size:12px;color:var(--text3)"><span data-i18n="success_regid">Registration ID:</span> <strong id="regId">–</strong></p>
+    <div id="successConfirmNote" style="display:none;margin-top:16px;background:#fff3cd;color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:14px 16px;font-size:14px;font-weight:600;text-align:left"></div>
     <div id="successDupNote" style="display:none;margin-top:14px;background:var(--amber-bg, #fff3cd);color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:12px 16px;font-size:13px;text-align:left"></div>
     <div id="successEditLinkBox" style="display:none;margin-top:16px;background:#eaf6ec;color:#1e7a34;border:1px solid #b6e0be;border-radius:8px;padding:14px 16px;font-size:13px;text-align:left">
       <span data-i18n="success_edit_hint">📌 Want to change something later? Save this link (it was also sent to you by email):</span><br>
@@ -344,6 +345,14 @@ async function checkPlayerBlocked() {
 const EMAILJS_PUBLIC_KEY = 'iTmRZnd2JRJc7KuFb';
 const EMAILJS_SERVICE_ID = 'service_o7rgokk';
 const EMAILJS_TEMPLATE_ID = 'template_xf7w9u8';
+// Landing-Page fuer Double-Opt-In (Bestaetigung / Rueckzug)
+const CONFIRM_PAGE = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'confirm.html';
+function randomToken() {
+  return (crypto.randomUUID
+    ? crypto.randomUUID()
+    : (Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2))
+  ).replace(/-/g, '');
+}
 if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
   emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
 }
@@ -1825,7 +1834,11 @@ async function submitRegistration() {
   if (!editingParticipantId) {
     // Neue Anmeldung: einmalig einen zufälligen, geheimen Bearbeitungs-Code erzeugen,
     // der später per Bearbeitungs-Link in der Bestätigungsmail wiederverwendet wird.
-    row.edit_token = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).replace(/-/g, '');
+    row.edit_token = randomToken();
+    // Double-Opt-In: Anmeldung gilt erst nach Klick auf den Bestätigungslink.
+    row.confirm_token  = randomToken();
+    row.withdraw_token = randomToken();
+    row.confirm_status = 'unconfirmed';
   }
 
   // Re-check room capacity right before insert (best-effort, not a hard lock)
@@ -1900,7 +1913,9 @@ async function submitRegistration() {
         event_name: registeredEventName || 'the tournament',
         esid: v('r_member_id') || '-',
         registration_summary: buildRegistrationSummaryText(row, roomTypeLabelsMail[row.room_type] || row.room_type),
-        edit_link: editLink
+        edit_link: editLink,
+        confirm_link: (r.data && r.data.confirm_token) ? (CONFIRM_PAGE + '?confirm=' + r.data.confirm_token) : '',
+        withdraw_link: (r.data && r.data.withdraw_token) ? (CONFIRM_PAGE + '?withdraw=' + r.data.withdraw_token) : ''
       });
     } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
   }
@@ -1909,6 +1924,13 @@ async function submitRegistration() {
   var sb = document.getElementById('successBox');
   sb.style.display = 'block';
   document.getElementById('regId').textContent = r.data ? r.data.id.slice(0,8).toUpperCase() : '–';
+  var confNote = document.getElementById('successConfirmNote');
+  if (confNote && !editingParticipantId) {
+    confNote.style.display = 'block';
+    confNote.innerHTML = LANG === 'de'
+      ? '📧 <u>Wichtig:</u> Die Anmeldung ist noch <u>nicht</u> abgeschlossen. Wir haben eine E-Mail an <strong>' + v('r_email') + '</strong> geschickt – bitte klicke den Bestätigungslink darin innerhalb von 7 Tagen. Bitte auch den Spam-Ordner prüfen.'
+      : '📧 <u>Important:</u> Your registration is <u>not</u> complete yet. We have sent an email to <strong>' + v('r_email') + '</strong> – please click the confirmation link inside within 7 days. Please also check your spam folder.';
+  }
   var dupNoteBox = document.getElementById('successDupNote');
   if (dupInfo && dupNoteBox) {
     dupNoteBox.style.display = 'block';

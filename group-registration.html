@@ -97,6 +97,7 @@
     <h2 data-i18n="success_title">Group Registration Submitted!</h2>
     <p data-i18n-html="success_text">Thank you. Your group has been received and is now <strong>pending confirmation</strong>.<br>You will be contacted by the tournament organizer shortly.</p>
     <p style="margin-top:16px;font-size:12px;color:var(--text3)"><span data-i18n="success_groupcode">Group Code:</span> <strong id="groupCodeOut">–</strong> · <span id="groupCountOut"></span> <span data-i18n="success_participants_suffix">participant(s)</span></p>
+    <div id="successConfirmNote" style="display:none;margin-top:16px;background:#fff3cd;color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:14px 16px;font-size:14px;font-weight:600;text-align:left"></div>
     <div id="successDupNote" style="display:none;margin-top:14px;background:var(--amber-bg, #fff3cd);color:#7a5c00;border:1px solid #ffe08a;border-radius:8px;padding:12px 16px;font-size:13px;text-align:left"></div>
     <div id="successEditLinkBox" style="display:none;margin-top:16px;background:#eaf6ec;color:#1e7a34;border:1px solid #b6e0be;border-radius:8px;padding:14px 16px;font-size:13px;text-align:left">
       <span data-i18n="success_edit_hint">📌 Want to change something later? Save this link (it was also sent to every stored email address):</span><br>
@@ -220,6 +221,14 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 const EMAILJS_PUBLIC_KEY = 'iTmRZnd2JRJc7KuFb';
 const EMAILJS_SERVICE_ID = 'service_o7rgokk';
 const EMAILJS_TEMPLATE_ID = 'template_xf7w9u8';
+// Landing-Page fuer Double-Opt-In (Bestaetigung / Rueckzug)
+const CONFIRM_PAGE = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'confirm.html';
+function randomToken() {
+  return (crypto.randomUUID
+    ? crypto.randomUUID()
+    : (Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2))
+  ).replace(/-/g, '');
+}
 if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'DEIN_PUBLIC_KEY') {
   emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
 }
@@ -2292,11 +2301,20 @@ async function submitGroupRegistration() {
   // der ersten Person wiederverwenden, damit die Gruppe verknüpft bleibt).
   function slug(s) { return (s || 'GROUP').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'GROUP'; }
   var groupCode = (groupEditMode && existingGroupCode) || ('GRP-' + slug(v('g_lastname')) + '-' + Math.random().toString(16).slice(2, 6).toUpperCase());
-  var sharedEditToken = groupEditToken || (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).replace(/-/g, '');
+  var sharedEditToken = groupEditToken || randomToken();
+  // Double-Opt-In: EIN gemeinsames Token pro Gruppe — ein Klick des Group Leaders
+  // bestaetigt bzw. zieht die komplette Gruppe zurueck.
+  var sharedConfirmToken  = groupEditMode ? null : randomToken();
+  var sharedWithdrawToken = groupEditMode ? null : randomToken();
   var leaderData = groupLeaderFields();
   rows.forEach(function(r) {
     r.group_tp = groupCode;
     r.edit_token = sharedEditToken;
+    if (!groupEditMode) {
+      r.confirm_token  = sharedConfirmToken;
+      r.withdraw_token = sharedWithdrawToken;
+      r.confirm_status = 'unconfirmed';
+    }
     Object.keys(leaderData).forEach(function(k) { r[k] = leaderData[k]; });
   });
 
@@ -2351,7 +2369,9 @@ async function submitGroupRegistration() {
           esid: groupCode,
           registration_summary: 'Gruppenanmeldung mit ' + rows.length + ' Teilnehmer'
             + (rows.length === 1 ? '' : 'n') + ' (Gruppencode: ' + groupCode + ')\n\n' + groupSummary,
-          edit_link: groupEditLink
+          edit_link: groupEditLink,
+          confirm_link: sharedConfirmToken ? (CONFIRM_PAGE + '?confirm=' + sharedConfirmToken) : '',
+          withdraw_link: sharedWithdrawToken ? (CONFIRM_PAGE + '?withdraw=' + sharedWithdrawToken) : ''
         });
       } catch (e) { /* Bestätigungsmail ist optional, kein Blocker */ }
     }
@@ -2361,6 +2381,14 @@ async function submitGroupRegistration() {
   document.getElementById('successBox').style.display = 'block';
   document.getElementById('groupCodeOut').textContent = groupCode;
   document.getElementById('groupCountOut').textContent = rows.length;
+  var confNote = document.getElementById('successConfirmNote');
+  if (confNote && sharedConfirmToken) {
+    var _leaderMail = v('g_email') || '';
+    confNote.style.display = 'block';
+    confNote.innerHTML = LANG === 'de'
+      ? '📧 <u>Wichtig:</u> Die Gruppenanmeldung ist noch <u>nicht</u> abgeschlossen. Wir haben eine E-Mail an <strong>' + _leaderMail + '</strong> geschickt – bitte klicke den Bestätigungslink darin innerhalb von 7 Tagen. Bitte auch den Spam-Ordner prüfen.'
+      : '📧 <u>Important:</u> Your group registration is <u>not</u> complete yet. We have sent an email to <strong>' + _leaderMail + '</strong> – please click the confirmation link inside within 7 days. Please also check your spam folder.';
+  }
   var dupNoteBox = document.getElementById('successDupNote');
   if (typeof dupNames !== 'undefined' && dupNames.length && dupNoteBox) {
     dupNoteBox.style.display = 'block';

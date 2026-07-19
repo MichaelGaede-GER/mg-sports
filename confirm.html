@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registration Confirmation</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+       background:#f1f5f9;color:#0f172a;display:flex;align-items:center;justify-content:center;
+       min-height:100vh;padding:20px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);
+        max-width:540px;width:100%;padding:36px 32px;text-align:center}
+  .icon{font-size:56px;line-height:1;margin-bottom:14px}
+  h1{font-size:22px;margin:0 0 10px}
+  p{font-size:15px;line-height:1.6;color:#475569;margin:0 0 14px}
+  .name{font-weight:600;color:#0f172a}
+  button{border:0;border-radius:10px;padding:13px 26px;font-size:15px;font-weight:600;
+         cursor:pointer;margin:6px 4px;font-family:inherit}
+  .btn-danger{background:#dc2626;color:#fff}
+  .btn-danger:hover{background:#b91c1c}
+  .btn-ghost{background:#e2e8f0;color:#334155}
+  .btn-ghost:hover{background:#cbd5e1}
+  .spinner{width:34px;height:34px;border:4px solid #e2e8f0;border-top-color:#2563eb;
+           border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .muted{font-size:13px;color:#94a3b8;margin-top:22px}
+  .lang{position:fixed;top:14px;right:16px;font-size:13px}
+  .lang a{color:#64748b;text-decoration:none;padding:4px 8px;border-radius:6px;cursor:pointer}
+  .lang a.active{background:#e2e8f0;color:#0f172a;font-weight:600}
+</style>
+</head>
+<body>
+<div class="lang"><a id="lEn">EN</a><a id="lDe">DE</a></div>
+<div class="card" id="card"><div class="spinner"></div><p>Please wait …</p></div>
+
+<script>
+// ===== KONFIGURATION =================================================
+const SUPABASE_URL     = 'https://xngiyfqbjyhnmgukhanj.supabase.co';
+const SUPABASE_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZ2l5ZnFianlobm1ndWtoYW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDEwMzksImV4cCI6MjA5NzgxNzAzOX0.CjzN8HH9cxJRtc9wrBPwTsw2ayPf7em_LeCM7HBQLxQ';
+const EMAILJS_PUBLIC   = 'iTmRZnd2JRJc7KuFb';
+const EMAILJS_SERVICE  = 'service_o7rgokk';
+const EMAILJS_TPL_WD   = 'template_withdraw_confirm';
+const BASE_URL = window.location.origin + window.location.pathname;
+// =====================================================================
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+try { emailjs.init({ publicKey: EMAILJS_PUBLIC }); } catch (e) {}
+
+var LANG = 'en';
+try { var sl = localStorage.getItem('regFormLang'); if (sl) LANG = sl; } catch (e) {}
+
+var TX = {
+  en: {
+    wait: 'Please wait \u2026', confirming: 'Confirming your registration \u2026',
+    processing: 'Processing your request \u2026', withdrawing: 'Withdrawing your registration \u2026',
+    err_t: 'Something went wrong', err_p: 'Your request could not be processed. Please contact the tournament office.',
+    ok_t: 'Registration confirmed!',
+    ok_p: 'Thank you{NAME} \u2014 your registration is now binding and complete. All further information will be sent by email.',
+    ok_p_group: 'Thank you \u2014 the group registration ({N} participants) is now binding and complete. All further information will be sent by email.',
+    al_t: 'Already confirmed', al_p: 'This registration has already been confirmed. Nothing further to do.',
+    ex_t: 'Link expired', ex_p: 'The confirmation link was valid for 7 days only. Please simply register again.',
+    wd_t: 'Already withdrawn', wd_p: 'This registration has already been withdrawn and can no longer be confirmed.',
+    inv_t: 'Invalid link', inv_p: 'This link is unknown. Please check that you copied the full address from the email.',
+    wp_t: 'Withdraw registration?',
+    wp_p: 'Do you really want to withdraw this registration? For security we will send you a confirmation email \u2014 only the link inside it will finally withdraw the registration.',
+    wp_p_group: 'Do you really want to withdraw this group registration ({N} participants)? For security we will send you a confirmation email \u2014 only the link inside it will finally withdraw the registration.',
+    wp_yes: 'Yes, withdraw', wp_no: 'Cancel',
+    np_t: 'Not possible',
+    e_nf: 'This link is unknown or no longer valid.',
+    e_aw: 'This registration has already been withdrawn.',
+    e_nc: 'This registration was never confirmed \u2014 there is nothing to withdraw.',
+    ml_t: 'Email sent',
+    ml_p: 'We have sent a confirmation email to <span class="name">{MAIL}</span>. Please click the link inside within 24 hours to finally withdraw the registration.',
+    mf_t: 'Email failed', mf_p: 'The confirmation email could not be sent. Please contact the tournament office directly.',
+    fin_t: 'Registration withdrawn', fin_p: 'The registration{NAME} has been withdrawn. The tournament office has been informed.',
+    wex_t: 'Link expired', wex_p: 'The confirmation link was valid for 24 hours only. Please start again using the link from your registration email.',
+    home_t: 'MG Sports &amp; Eventmanagement', home_p: 'This page is only opened via the links in our emails.'
+  },
+  de: {
+    wait: 'Einen Moment bitte \u2026', confirming: 'Anmeldung wird best\u00e4tigt \u2026',
+    processing: 'Anfrage wird verarbeitet \u2026', withdrawing: 'Anmeldung wird zur\u00fcckgezogen \u2026',
+    err_t: 'Es ist ein Fehler aufgetreten', err_p: 'Die Anfrage konnte nicht verarbeitet werden. Bitte wende dich an das Turnierb\u00fcro.',
+    ok_t: 'Anmeldung best\u00e4tigt!',
+    ok_p: 'Vielen Dank{NAME} \u2014 die Anmeldung ist jetzt verbindlich eingegangen. Alle weiteren Informationen kommen per E-Mail.',
+    ok_p_group: 'Vielen Dank \u2014 die Gruppenanmeldung ({N} Teilnehmer) ist jetzt verbindlich eingegangen. Alle weiteren Informationen kommen per E-Mail.',
+    al_t: 'Bereits best\u00e4tigt', al_p: 'Diese Anmeldung wurde bereits best\u00e4tigt. Es ist nichts weiter zu tun.',
+    ex_t: 'Link abgelaufen', ex_p: 'Der Best\u00e4tigungslink war nur 7 Tage g\u00fcltig. Bitte melde dich einfach erneut an.',
+    wd_t: 'Bereits zur\u00fcckgezogen', wd_p: 'Diese Anmeldung wurde bereits zur\u00fcckgezogen und kann nicht mehr best\u00e4tigt werden.',
+    inv_t: 'Link ung\u00fcltig', inv_p: 'Dieser Link ist unbekannt. Bitte pr\u00fcfe, ob du die vollst\u00e4ndige Adresse aus der E-Mail kopiert hast.',
+    wp_t: 'Anmeldung zur\u00fcckziehen?',
+    wp_p: 'M\u00f6chtest du diese Anmeldung wirklich zur\u00fcckziehen? Zur Sicherheit senden wir dir eine Best\u00e4tigungs-E-Mail \u2014 erst der Klick darin zieht die Anmeldung endg\u00fcltig zur\u00fcck.',
+    wp_p_group: 'M\u00f6chtest du diese Gruppenanmeldung ({N} Teilnehmer) wirklich zur\u00fcckziehen? Zur Sicherheit senden wir dir eine Best\u00e4tigungs-E-Mail \u2014 erst der Klick darin zieht die Anmeldung endg\u00fcltig zur\u00fcck.',
+    wp_yes: 'Ja, zur\u00fcckziehen', wp_no: 'Abbrechen',
+    np_t: 'Nicht m\u00f6glich',
+    e_nf: 'Dieser Link ist unbekannt oder nicht mehr g\u00fcltig.',
+    e_aw: 'Diese Anmeldung wurde bereits zur\u00fcckgezogen.',
+    e_nc: 'Diese Anmeldung wurde nie best\u00e4tigt \u2014 es gibt nichts zur\u00fcckzuziehen.',
+    ml_t: 'E-Mail versendet',
+    ml_p: 'Wir haben eine Best\u00e4tigungs-E-Mail an <span class="name">{MAIL}</span> geschickt. Bitte klicke den Link darin innerhalb von 24 Stunden, um die Anmeldung endg\u00fcltig zur\u00fcckzuziehen.',
+    mf_t: 'E-Mail fehlgeschlagen', mf_p: 'Die Best\u00e4tigungs-E-Mail konnte nicht versendet werden. Bitte wende dich direkt an das Turnierb\u00fcro.',
+    fin_t: 'Anmeldung zur\u00fcckgezogen', fin_p: 'Die Anmeldung{NAME} wurde zur\u00fcckgezogen. Das Turnierb\u00fcro wurde informiert.',
+    wex_t: 'Link abgelaufen', wex_p: 'Der Best\u00e4tigungslink war nur 24 Stunden g\u00fcltig. Bitte starte den Vorgang erneut \u00fcber den Link aus deiner Anmeldebest\u00e4tigung.',
+    home_t: 'MG Sports &amp; Eventmanagement', home_p: 'Diese Seite wird nur \u00fcber die Links aus unseren E-Mails aufgerufen.'
+  }
+};
+function t(k) { return (TX[LANG] && TX[LANG][k]) || TX.en[k] || k; }
+
+var card = document.getElementById('card');
+var qs   = new URLSearchParams(window.location.search);
+var esc  = function (s) { return String(s == null ? '' : s).replace(/[<>&]/g, function (c) {
+  return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); };
+
+function render(icon, title, text, buttonsHtml) {
+  card.innerHTML = '<div class="icon">' + icon + '</div><h1>' + title + '</h1><p>' + text + '</p>'
+    + (buttonsHtml || '') + '<div class="muted">MG Sports &amp; Eventmanagement</div>';
+}
+function busy(text) { card.innerHTML = '<div class="spinner"></div><p>' + text + '</p>'; }
+
+function setLang(l) {
+  LANG = l === 'de' ? 'de' : 'en';
+  try { localStorage.setItem('regFormLang', LANG); } catch (e) {}
+  document.getElementById('lEn').className = LANG === 'en' ? 'active' : '';
+  document.getElementById('lDe').className = LANG === 'de' ? 'active' : '';
+  route();
+}
+document.getElementById('lEn').onclick = function () { setLang('en'); };
+document.getElementById('lDe').onclick = function () { setLang('de'); };
+
+// ---------- Modus 1: Anmeldung bestaetigen --------------------------
+async function doConfirm(token) {
+  busy(t('confirming'));
+  var res = await db.rpc('confirm_registration', { p_token: token });
+  if (res.error) return render('\u26a0\ufe0f', t('err_t'), t('err_p'));
+  var d = res.data || {};
+  var name = esc((d.name || '').trim());
+  var n = d.count || 1;
+
+  if (d.code === 'confirmed') {
+    var txt = n > 1
+      ? t('ok_p_group').replace('{N}', n)
+      : t('ok_p').replace('{NAME}', name ? ', <span class="name">' + name + '</span>' : '');
+    render('\u2705', t('ok_t'), txt);
+  } else if (d.code === 'already') {
+    render('\u2139\ufe0f', t('al_t'), t('al_p'));
+  } else if (d.code === 'expired') {
+    render('\u23f0', t('ex_t'), t('ex_p'));
+  } else if (d.code === 'withdrawn') {
+    render('\ud83d\udeab', t('wd_t'), t('wd_p'));
+  } else {
+    render('\u274c', t('inv_t'), t('inv_p'));
+  }
+}
+
+// ---------- Modus 2: Withdraw anfordern -----------------------------
+function withdrawPrompt(token, n) {
+  var txt = n > 1 ? t('wp_p_group').replace('{N}', n) : t('wp_p');
+  render('\u26a0\ufe0f', t('wp_t'), txt,
+    '<button class="btn-danger" id="wdYes">' + t('wp_yes') + '</button>'
+    + '<button class="btn-ghost" id="wdNo">' + t('wp_no') + '</button>');
+  document.getElementById('wdYes').onclick = function () { doWithdrawRequest(token); };
+  document.getElementById('wdNo').onclick  = function () { window.location.href = BASE_URL; };
+}
+
+async function doWithdrawRequest(token) {
+  busy(t('processing'));
+  var res = await db.rpc('request_withdraw', { p_token: token });
+  if (res.error) return render('\u26a0\ufe0f', t('err_t'), t('err_p'));
+  var d = res.data || {};
+
+  if (!d.ok) {
+    var msg = d.code === 'not_found' ? t('e_nf')
+            : d.code === 'already_withdrawn' ? t('e_aw')
+            : d.code === 'not_confirmed' ? t('e_nc') : t('err_p');
+    return render('\u2139\ufe0f', t('np_t'), msg);
+  }
+
+  try {
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TPL_WD, {
+      to_email: d.email,
+      to_name: d.name,
+      confirm_url: BASE_URL + '?wdc=' + encodeURIComponent(token)
+    });
+    render('\ud83d\udce7', t('ml_t'), t('ml_p').replace('{MAIL}', esc(d.email)));
+  } catch (e) {
+    render('\u26a0\ufe0f', t('mf_t'), t('mf_p'));
+  }
+}
+
+// ---------- Modus 3: Withdraw ausfuehren ----------------------------
+async function doWithdrawConfirm(token) {
+  busy(t('withdrawing'));
+  var res = await db.rpc('confirm_withdraw', { p_token: token });
+  if (res.error) return render('\u26a0\ufe0f', t('err_t'), t('err_p'));
+  var d = res.data || {};
+  var name = esc((d.name || '').trim());
+
+  if (d.code === 'withdrawn' || d.code === 'already_withdrawn') {
+    render('\u2705', t('fin_t'),
+      t('fin_p').replace('{NAME}', (name && (d.count || 1) === 1) ? ' <span class="name">' + name + '</span>' : ''));
+  } else if (d.code === 'expired') {
+    render('\u23f0', t('wex_t'), t('wex_p'));
+  } else {
+    render('\u274c', t('inv_t'), t('inv_p'));
+  }
+}
+
+// ---------- Router --------------------------------------------------
+function route() {
+  var c = qs.get('confirm'), wd = qs.get('withdraw'), wdc = qs.get('wdc');
+  if (c)        doConfirm(c);
+  else if (wdc) doWithdrawConfirm(wdc);
+  else if (wd)  withdrawPrompt(wd, 1);
+  else          render('\ud83c\udfc6', t('home_t'), t('home_p'));
+}
+setLang(LANG);
+</script>
+</body>
+</html>
