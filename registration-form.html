@@ -1083,6 +1083,29 @@ function prefillFormForEdit(p) {
   if (btn) btn.textContent = 'Änderungen speichern';
 }
 
+
+// Liefert die Mahlzeiten-Felder eines Teilnehmers auf Basis der Package-Definition
+// (pkg_breakfast_days / pkg_lunch_days / pkg_dinner_days, z.B. "fr,sa,so").
+// So steht im Admin-Tool direkt, welche Mahlzeiten an welchen Tagen gebucht sind.
+function packageMealFields(pkgList, code) {
+  var out = {
+    meal_breakfast: 'Nein', meal_breakfast_days: '',
+    meal_lunch: 'Nein',     meal_lunch_days: '',
+    meal_dinner: 'Nein',    meal_dinner_days: ''
+  };
+  var pkg = (pkgList || []).find(function (x) { return x.code === code; });
+  if (!pkg) return out;
+  [['breakfast', 'pkg_breakfast_days'], ['lunch', 'pkg_lunch_days'], ['dinner', 'pkg_dinner_days']]
+    .forEach(function (pair) {
+      var days = String(pkg[pair[1]] || '').split(',')
+        .map(function (d) { return d.trim(); }).filter(Boolean);
+      if (!days.length) return;
+      out['meal_' + pair[0]] = 'Ja';
+      out['meal_' + pair[0] + '_days'] = days.join(',');
+    });
+  return out;
+}
+
 async function loadPackages() {
   var pkgQ = db.from('packages').select('*').order('sort_order').order('code');
   if (eventId) pkgQ = pkgQ.or('event_id.eq.' + eventId + ',event_id.is.null');
@@ -1837,6 +1860,9 @@ async function submitRegistration() {
     payment_status: 'Pending',
     updated_at: new Date().toISOString(),
   };
+  // Mahlzeiten-Tage aus der Package-Definition uebernehmen.
+  Object.assign(row, packageMealFields(packagesData, selectedPackage));
+
   if (!editingParticipantId) {
     // Neue Anmeldung: einmalig einen zufälligen, geheimen Bearbeitungs-Code erzeugen,
     // der später per Bearbeitungs-Link in der Bestätigungsmail wiederverwendet wird.

@@ -895,6 +895,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <input type="number" id="f_meal_option_price" placeholder="0.00" step="0.01" style="background:var(--bg2);color:var(--text2)" />
               </div>
 <input type="hidden" id="f_transport_booked" value="Nein" />
+              <div class="form-group" style="grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <button type="button" class="btn" style="font-size:12px" onclick="applyPackageMealDefaults(null, true)" title="Breakfast/Lunch/Dinner samt Wochentagen aus der Package-Definition uebernehmen (ueberschreibt die aktuelle Auswahl)">🍽 Mahlzeiten aus Package übernehmen</button>
+                <span id="pkgMealHint" style="font-size:11px;color:var(--text3)"></span>
+              </div>
               <div class="form-group" style="grid-column:1/-1">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
                   <input type="checkbox" id="f_meal_breakfast" style="width:16px;height:16px;accent-color:var(--blue)" onchange="toggleMealDays('breakfast')" />
@@ -6282,6 +6286,7 @@ function updatePackagePrice(forceTransportDefault) {
     if (transpEl) transpEl.checked = pkg.transport === 'Ja';
   }
   updateMealFee();
+  applyPackageMealDefaults(null, false);
 }
 
 function calcTotal() {
@@ -6600,6 +6605,9 @@ async function editEntry(id) {
   // Meal-Info erst ganz am Schluss berechnen — vorher lief das per setTimeout(150)
   // und traf gelegentlich auf ein noch leeres Package-Dropdown, wodurch im Reiter
   // "Mahlzeiten" dauerhaft "- waehle erst ein Package -" stehen blieb.
+  // Zusaetzlich die im Package hinterlegten Mahlzeiten-Tage vorbelegen, falls
+  // der Teilnehmer selbst noch keine Auswahl hat (z.B. aeltere Online-Anmeldungen).
+  applyPackageMealDefaults(p, false);
   updateMealFee();
 }
 
@@ -12249,6 +12257,56 @@ async function runImport() {
 // MISC FORM HELPERS
 function updateShirtQty() { var s=document.getElementById('f_shirt')&&document.getElementById('f_shirt').value; var q=document.getElementById('f_shirt_qty'); if(!q) return; if(!s) q.value=0; else if(parseInt(q.value)===0) q.value=1; }
 function toggleFlightFields() { /* Flight fields always visible */ }
+// Uebertraegt die im Package hinterlegten Mahlzeiten-Tage (pkg_breakfast_days,
+// pkg_lunch_days, pkg_dinner_days) auf die Teilnehmer-Checkboxen.
+// force=false: nur fuellen, wenn der Teilnehmer noch keine eigene Auswahl hat.
+// force=true : Auswahl komplett aus dem Package neu setzen (Button im Reiter Mahlzeiten).
+var MEAL_DAYS_ALL = ['mo','di','mi','do','fr','sa','so'];
+var MEAL_PKG_FIELDS = { breakfast:'pkg_breakfast_days', lunch:'pkg_lunch_days', dinner:'pkg_dinner_days' };
+function applyPackageMealDefaults(p, force) {
+  var sel = document.getElementById('f_package');
+  var pkgCode = sel && sel.value;
+  var hintEl = document.getElementById('pkgMealHint');
+  if (!pkgCode || !packagesData || !packagesData.length) {
+    if (hintEl) hintEl.textContent = '';
+    return;
+  }
+  var pkg = packagesData.find(function(x) { return x.code === pkgCode; });
+  if (!pkg) { if (hintEl) hintEl.textContent = ''; return; }
+
+  var labels = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner' };
+  var summary = [];
+  var changed = false;
+
+  Object.keys(MEAL_PKG_FIELDS).forEach(function(meal) {
+    var days = String(pkg[MEAL_PKG_FIELDS[meal]] || '').split(',')
+                 .map(function(d){ return d.trim(); }).filter(Boolean);
+    if (days.length) summary.push(labels[meal] + ': ' + days.join('/'));
+    if (!days.length) return;
+
+    if (!force) {
+      // Teilnehmer hat bereits eine eigene Tagesauswahl -> nicht ueberschreiben.
+      var own = String((p && p['meal_' + meal + '_days']) || '').split(',').filter(Boolean);
+      if (own.length) return;
+    }
+
+    var cb = document.getElementById('f_meal_' + meal);
+    if (cb) { cb.checked = true; toggleMealDays(meal); }
+    MEAL_DAYS_ALL.forEach(function(d) {
+      var el = document.getElementById('f_meal_' + meal + '_' + d);
+      if (el) el.checked = days.indexOf(d) >= 0;
+    });
+    changed = true;
+  });
+
+  if (hintEl) {
+    hintEl.textContent = summary.length
+      ? ('Package ' + pkgCode + ' \u2013 ' + summary.join('  \u00b7  '))
+      : ('Package ' + pkgCode + ' \u2013 keine Mahlzeiten-Tage hinterlegt');
+  }
+  if (force && changed) { toast('\ud83c\udf7d Mahlzeiten aus Package ' + pkgCode + ' uebernommen'); calcTotal(); }
+}
+
 function toggleMealDays(mealId) { var cb=document.getElementById('f_meal_'+mealId); var dd=document.getElementById('meal_'+mealId+'_days'); if(!dd) return; dd.style.display=cb&&cb.checked?'block':'none'; if(!cb||!cb.checked){['mo','di','mi','do','fr','sa','so'].forEach(function(d){var el=document.getElementById('f_meal_'+mealId+'_'+d);if(el)el.checked=false;});} }
 // Quick-Button: trägt den vollen Gesamtbetrag als "Betrag erhalten" ein und setzt das Zahlungsdatum auf heute.
 function fillFullPayment() {

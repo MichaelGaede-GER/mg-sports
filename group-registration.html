@@ -1120,6 +1120,29 @@ async function loadLetterTypesData() {
   letterTypesData = r.data || [];
 }
 
+
+// Liefert die Mahlzeiten-Felder eines Teilnehmers auf Basis der Package-Definition
+// (pkg_breakfast_days / pkg_lunch_days / pkg_dinner_days, z.B. "fr,sa,so").
+// So steht im Admin-Tool direkt, welche Mahlzeiten an welchen Tagen gebucht sind.
+function packageMealFields(pkgList, code) {
+  var out = {
+    meal_breakfast: 'Nein', meal_breakfast_days: '',
+    meal_lunch: 'Nein',     meal_lunch_days: '',
+    meal_dinner: 'Nein',    meal_dinner_days: ''
+  };
+  var pkg = (pkgList || []).find(function (x) { return x.code === code; });
+  if (!pkg) return out;
+  [['breakfast', 'pkg_breakfast_days'], ['lunch', 'pkg_lunch_days'], ['dinner', 'pkg_dinner_days']]
+    .forEach(function (pair) {
+      var days = String(pkg[pair[1]] || '').split(',')
+        .map(function (d) { return d.trim(); }).filter(Boolean);
+      if (!days.length) return;
+      out['meal_' + pair[0]] = 'Ja';
+      out['meal_' + pair[0] + '_days'] = days.join(',');
+    });
+  return out;
+}
+
 async function loadPackages() {
   var q = db.from('packages').select('*').order('sort_order').order('code');
   if (eventId) q = q.or('event_id.eq.' + eventId + ',event_id.is.null');
@@ -2315,6 +2338,8 @@ async function submitGroupRegistration() {
   rows.forEach(function(r) {
     r.group_tp = groupCode;
     r.edit_token = sharedEditToken;
+    // Mahlzeiten-Tage je Teilnehmer aus dessen Package uebernehmen.
+    Object.assign(r, packageMealFields(packagesCache, r.package));
     if (!groupEditMode) {
       r.confirm_token  = sharedConfirmToken;
       r.withdraw_token = sharedWithdrawToken;
