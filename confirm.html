@@ -42,7 +42,7 @@ const SUPABASE_URL     = 'https://xngiyfqbjyhnmgukhanj.supabase.co';
 const SUPABASE_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZ2l5ZnFianlobm1ndWtoYW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDEwMzksImV4cCI6MjA5NzgxNzAzOX0.CjzN8HH9cxJRtc9wrBPwTsw2ayPf7em_LeCM7HBQLxQ';
 const EMAILJS_PUBLIC   = 'iTmRZnd2JRJc7KuFb';
 const EMAILJS_SERVICE  = 'service_o7rgokk';
-const EMAILJS_TPL_WD   = 'template_withdraw_confirm';
+const EMAILJS_TPL_WD   = 'template_withdraw';   // EmailJS erlaubt max. 24 Zeichen
 const BASE_URL = window.location.origin + window.location.pathname;
 // =====================================================================
 
@@ -68,6 +68,9 @@ var TX = {
     wp_p: 'Do you really want to withdraw this registration? For security we will send you a confirmation email \u2014 only the link inside it will finally withdraw the registration.',
     wp_p_group: 'Do you really want to withdraw this group registration ({N} participants)? For security we will send you a confirmation email \u2014 only the link inside it will finally withdraw the registration.',
     wp_yes: 'Yes, withdraw', wp_no: 'Cancel',
+    wp_check: 'Please check carefully that this is the correct registration:',
+    mf_detail: 'Technical detail: ',
+    mf_note: 'Your registration has NOT been withdrawn and remains active.',
     np_t: 'Not possible',
     e_nf: 'This link is unknown or no longer valid.',
     e_aw: 'This registration has already been withdrawn.',
@@ -94,6 +97,9 @@ var TX = {
     wp_p: 'M\u00f6chtest du diese Anmeldung wirklich zur\u00fcckziehen? Zur Sicherheit senden wir dir eine Best\u00e4tigungs-E-Mail \u2014 erst der Klick darin zieht die Anmeldung endg\u00fcltig zur\u00fcck.',
     wp_p_group: 'M\u00f6chtest du diese Gruppenanmeldung ({N} Teilnehmer) wirklich zur\u00fcckziehen? Zur Sicherheit senden wir dir eine Best\u00e4tigungs-E-Mail \u2014 erst der Klick darin zieht die Anmeldung endg\u00fcltig zur\u00fcck.',
     wp_yes: 'Ja, zur\u00fcckziehen', wp_no: 'Abbrechen',
+    wp_check: 'Bitte pr\u00fcfe genau, ob es sich um die richtige Anmeldung handelt:',
+    mf_detail: 'Technisches Detail: ',
+    mf_note: 'Die Anmeldung wurde NICHT zur\u00fcckgezogen und bleibt aktiv.',
     np_t: 'Nicht m\u00f6glich',
     e_nf: 'Dieser Link ist unbekannt oder nicht mehr g\u00fcltig.',
     e_aw: 'Diese Anmeldung wurde bereits zur\u00fcckgezogen.',
@@ -155,8 +161,38 @@ async function doConfirm(token) {
 }
 
 // ---------- Modus 2: Withdraw anfordern -----------------------------
-function withdrawPrompt(token, n) {
-  var txt = n > 1 ? t('wp_p_group').replace('{N}', n) : t('wp_p');
+// Zuerst eine Vorschau laden (Name + Altersklasse), damit der Teilnehmer
+// visuell pruefen kann, dass er die richtige Anmeldung zurueckzieht.
+async function withdrawPrompt(token) {
+  busy(t('wait'));
+  var res = await db.rpc('withdraw_preview', { p_token: token });
+  var d = (res && res.data) || {};
+
+  if (res.error || !d.ok) {
+    var msg = d.code === 'not_found' ? t('e_nf') : t('err_p');
+    return render('\u2139\ufe0f', t('np_t'), msg);
+  }
+  if (d.status === 'withdrawn') return render('\u2139\ufe0f', t('np_t'), t('e_aw'));
+
+  var items = d.items || [];
+  var n = d.count || items.length || 1;
+
+  var listHtml = '<div style="text-align:left;background:#f8fafc;border:1px solid #e2e8f0;'
+    + 'border-radius:10px;padding:14px 16px;margin:4px 0 18px">'
+    + '<div style="font-size:13px;color:#64748b;margin-bottom:10px">' + t('wp_check') + '</div>'
+    + items.map(function (it) {
+        var meta = [it.category, it.role, it.country].filter(Boolean).join(' \u00b7 ');
+        return '<div style="padding:6px 0;border-top:1px solid #e2e8f0">'
+          + '<div class="name" style="font-size:15px">' + esc(it.name || '\u2013') + '</div>'
+          + (meta ? '<div style="font-size:13px;color:#64748b">' + esc(meta) + '</div>' : '')
+          + '</div>';
+      }).join('')
+    + (d.event_name ? '<div style="font-size:12px;color:#94a3b8;margin-top:10px">'
+        + esc(d.event_name) + '</div>' : '')
+    + '</div>';
+
+  var txt = (n > 1 ? t('wp_p_group').replace('{N}', n) : t('wp_p')) + '</p>' + listHtml + '<p>';
+
   render('\u26a0\ufe0f', t('wp_t'), txt,
     '<button class="btn-danger" id="wdYes">' + t('wp_yes') + '</button>'
     + '<button class="btn-ghost" id="wdNo">' + t('wp_no') + '</button>');
@@ -185,7 +221,13 @@ async function doWithdrawRequest(token) {
     });
     render('\ud83d\udce7', t('ml_t'), t('ml_p').replace('{MAIL}', esc(d.email)));
   } catch (e) {
-    render('\u26a0\ufe0f', t('mf_t'), t('mf_p'));
+    // Mailversand fehlgeschlagen -> Anfrage zuruecknehmen, damit die Anmeldung
+    // nicht dauerhaft im Zustand "withdraw_pending" haengen bleibt.
+    try { await db.rpc('cancel_withdraw_request', { p_token: token }); } catch (e2) {}
+    var detail = (e && (e.text || e.message)) ? String(e.text || e.message) : '';
+    render('\u26a0\ufe0f', t('mf_t'),
+      t('mf_p') + '<br><br><strong>' + t('mf_note') + '</strong>'
+      + (detail ? '<br><span style="font-size:12px;color:#94a3b8">' + t('mf_detail') + esc(detail) + '</span>' : ''));
   }
 }
 
@@ -212,7 +254,7 @@ function route() {
   var c = qs.get('confirm'), wd = qs.get('withdraw'), wdc = qs.get('wdc');
   if (c)        doConfirm(c);
   else if (wdc) doWithdrawConfirm(wdc);
-  else if (wd)  withdrawPrompt(wd, 1);
+  else if (wd)  withdrawPrompt(wd);
   else          render('\ud83c\udfc6', t('home_t'), t('home_p'));
 }
 setLang(LANG);
