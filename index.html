@@ -549,6 +549,13 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <option value="requested">📄 Letter beantragt</option>
             <option value="open">📄 Letter offen</option>
           </select>
+          <select id="filterConfirm" onchange="loadParticipants()" style="font-size:12px">
+            <option value="">Alle (Bestätigung)</option>
+            <option value="unconfirmed">⏳ Unbestätigt</option>
+            <option value="confirmed">✅ Bestätigt</option>
+            <option value="withdraw_pending">⚠️ Rückzug angefordert</option>
+            <option value="withdrawn">🚫 Zurückgezogen</option>
+          </select>
           <select id="filterRole" onchange="loadParticipants()"><option value="">Alle Rollen</option><option>Player</option><option>Coach</option><option>Parent</option><option>ESF Official</option><option>Referee</option><option>Director</option><option>DSQV</option><option>Turnierstab</option></select>
         </div>
         <div class="card">
@@ -5989,6 +5996,47 @@ function letterBadgeHtml(p) {
     + (issued ? '📄 ' : '📄 ') + label + price + '</span></div>';
 }
 
+// ===== Double-Opt-In: Anzeige-Helfer =================================
+// Bestandsdaten ohne confirm_status gelten als bestaetigt (siehe SQL-Migration).
+function confirmStatusOf(p) {
+  if (!p.confirm_status) return 'confirmed';
+  return p.confirm_status;
+}
+function confirmBadgeHtml(p) {
+  var st = confirmStatusOf(p);
+  if (st === 'confirmed') return '';
+  var cfg = {
+    unconfirmed:      { bg: '#9e9e9e', txt: '\u23f3 Unbest\u00e4tigt',   tip: 'Double-Opt-In: Der Best\u00e4tigungslink aus der Anmeldemail wurde noch nicht geklickt.' },
+    withdraw_pending: { bg: '#ef9f27', txt: '\u26a0 R\u00fcckzug angefragt', tip: 'R\u00fcckzug wurde angefordert, aber noch nicht per E-Mail best\u00e4tigt.' },
+    withdrawn:        { bg: '#e53935', txt: '\u{1f6ab} Zur\u00fcckgezogen',  tip: 'Anmeldung wurde vom Teilnehmer online zur\u00fcckgezogen.' }
+  }[st];
+  if (!cfg) return '';
+  var extra = '';
+  if (st === 'unconfirmed') {
+    extra = ' <button class="btn" style="font-size:9px;padding:0 4px;line-height:14px"'
+      + ' data-token="' + (p.confirm_token || '') + '"'
+      + ' onclick="adminConfirmRegistration(this.dataset.token)"'
+      + ' title="Manuell best\u00e4tigen (z.B. wenn der Teilnehmer die Mail nicht findet)">\u2713</button>';
+  }
+  return '<div style="margin-top:3px"><span title="' + cfg.tip + '" style="display:inline-block;background:'
+    + cfg.bg + ';color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:help">'
+    + cfg.txt + '</span>' + extra + '</div>';
+}
+function confirmRowAttr(p) {
+  return confirmStatusOf(p) === 'unconfirmed'
+    ? ' style="opacity:0.62;background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(158,158,158,0.10) 6px,rgba(158,158,158,0.10) 12px)"'
+    : '';
+}
+async function adminConfirmRegistration(token) {
+  if (!token) { alert('Kein Bestaetigungs-Token vorhanden (Anmeldung stammt aus der Zeit vor dem Double-Opt-In).'); return; }
+  if (!confirm('Diese Anmeldung manuell als bestaetigt markieren?\n\nNur nutzen, wenn der Teilnehmer den Bestaetigungslink nachweislich nicht erhalten hat.')) return;
+  var r = await db.rpc('confirm_registration', { p_token: token });
+  if (r.error) { alert('Fehler: ' + r.error.message); return; }
+  var n = (r.data && r.data.count) || 1;
+  alert(n > 1 ? (n + ' Anmeldungen der Gruppe wurden bestaetigt.') : 'Anmeldung wurde bestaetigt.');
+  loadParticipants();
+}
+
 async function loadParticipants() {
   const search = document.getElementById('filterSearch').value.toLowerCase();
   const age = document.getElementById('filterAge').value;
@@ -6025,6 +6073,10 @@ async function loadParticipants() {
     return letterRequested(p) && (p.visa || '').toLowerCase() !== 'ausgestellt';
   });
 
+  // Filter auf Bestaetigungsstatus (Double-Opt-In)
+  var confFilter = document.getElementById('filterConfirm') && document.getElementById('filterConfirm').value;
+  if (confFilter) rows = rows.filter(function(p) { return confirmStatusOf(p) === confFilter; });
+
   // Enrich participants with photos from persons DB (by member_id)
   var memberIds = rows.filter(function(p){ return p.member_id && !p.photo_url; }).map(function(p){ return p.member_id; });
   if (memberIds.length > 0) {
@@ -6043,7 +6095,11 @@ async function loadParticipants() {
   var withdrawn = rows.filter(function(p){ return p.withdraw === 'Ja'; });
   var active = rows.filter(function(p){ return p.withdraw !== 'Ja'; });
 
-  document.getElementById('partCount').textContent = rows.length + ' Eintraege';
+  var unconfCount = rows.filter(function(p){ return confirmStatusOf(p) === 'unconfirmed'; }).length;
+  var wdPendCount = rows.filter(function(p){ return confirmStatusOf(p) === 'withdraw_pending'; }).length;
+  document.getElementById('partCount').textContent = rows.length + ' Eintraege'
+    + (unconfCount ? '  \u00b7  \u23f3 ' + unconfCount + ' unbest\u00e4tigt' : '')
+    + (wdPendCount ? '  \u00b7  \u26a0 ' + wdPendCount + ' R\u00fcckzug offen' : '');
   // Populate package filter from packagesData
   var pkgSel = document.getElementById('filterPackage');
   if (pkgSel && packagesData && packagesData.length) {
@@ -6080,7 +6136,7 @@ async function loadParticipants() {
       + ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassEmail(this.dataset.id)" title="Per E-Mail senden">✉️</button>'
       + (p.digital_pass_sent_at ? ' <span style="font-size:12px;color:var(--green)" title="Digitaler Pass gesendet am '+new Date(p.digital_pass_sent_at).toLocaleString('de-DE')+'">✅</span>' : '');
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
-    return '<tr>'
+    return '<tr' + confirmRowAttr(p) + '>'
 + '<td style="white-space:nowrap">'
         + eb + ' ' + vb + ' ' + certBtn + ' ' + sendBtns
         + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Kostenlos' && p.payment_status !== 'Pending'
@@ -6102,6 +6158,7 @@ async function loadParticipants() {
         + (p.mahnung && p.mahnung !== 'Keine' ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700">'+p.mahnung+'</span></div>' : '')
         + (p.travel_amount ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--amber);color:#000;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:pointer" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)" title="Betrag wird bei Anreise bezahlt – Klick zum Bearbeiten">✈ Anreise</span></div>' : '')
         + letterBadgeHtml(p)
+        + confirmBadgeHtml(p)
         + '</td>'
       + '<td>' + p.lastname + '</td>'
       + '<td>' + p.firstname + '</td>'
