@@ -2219,7 +2219,12 @@ async function submitGroupRegistration() {
       hotel: v('p_hotel_' + id) || null,
       checkin: v('p_checkin_' + id) || null,
       checkout: v('p_checkout_' + id) || null,
-      meal_plus: 'Nein',
+      // Package mit meal_included='Ja' bedeutet: Verpflegung ist gebucht.
+      // Ohne dieses Flag zieht updateMealFee() im Admin-Tool den Meal-Preis wieder ab.
+      meal_plus: (function () {
+        var _pk = packagesCache.find(function (x) { return x.code === pPackage; });
+        return (_pk && _pk.meal_included === 'Ja') ? 'Ja' : 'Nein';
+      })(),
       ams_bus: travel.ams_bus, airport_plus: travel.airport_plus,
       arrival_date: travel.arrival_date, arrival_time: travel.arrival_time, flight_in: travel.flight_in,
       departure_date: travel.departure_date, departure_time: travel.departure_time, flight_out: travel.flight_out,

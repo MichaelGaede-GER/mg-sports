@@ -1814,7 +1814,13 @@ async function submitRegistration() {
     hotel: v('r_hotel') || null,
     checkin: v('r_checkin') || null,
     checkout: v('r_checkout') || null,
-    meal_plus: 'Nein',
+    // Ist im gewaehlten Package bereits Verpflegung enthalten (meal_included='Ja'),
+    // muss meal_plus ebenfalls 'Ja' sein. Sonst zieht updateMealFee() im Admin-Tool
+    // den Meal-Preis vom Package-Preis ab (z.B. 185 - 105 = 80).
+    meal_plus: (function () {
+      var _pk = packagesData.find(function (x) { return x.code === selectedPackage; });
+      return (_pk && _pk.meal_included === 'Ja') ? 'Ja' : 'Nein';
+    })(),
     ams_bus: v('r_ams_bus') || null,
     airport_plus: v('r_airport_plus') || null,
     arrival_date: v('r_arrival_date') || null, arrival_time: v('r_arrival_time') || null,

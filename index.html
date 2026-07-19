@@ -6548,7 +6548,6 @@ async function editEntry(id) {
   const transpEl = document.getElementById('f_transport_booked'); if (transpEl) transpEl.checked = p.transport_booked === 'Ja';
   setTimeout(updateVisaFee, 100);
   setTimeout(updateLetterBanner, 120);
-  setTimeout(updateMealFee, 150);
   document.getElementById('f_package_price').value = p.package_price||'';
   const shirtQtyEl2 = document.getElementById('f_shirt_qty'); if (shirtQtyEl2) shirtQtyEl2.value = p.shirt_qty||1;
 
@@ -6597,6 +6596,11 @@ async function editEntry(id) {
   await populateHotelDropdowns();
   const hotelSel = document.getElementById('f_hotel');
   if (hotelSel && p.hotel) hotelSel.value = p.hotel;
+
+  // Meal-Info erst ganz am Schluss berechnen — vorher lief das per setTimeout(150)
+  // und traf gelegentlich auf ein noch leeres Package-Dropdown, wodurch im Reiter
+  // "Mahlzeiten" dauerhaft "- waehle erst ein Package -" stehen blieb.
+  updateMealFee();
 }
 
 async function saveEntry() {
@@ -12325,7 +12329,7 @@ function updateTotalBreakdown() {
   el.innerHTML = rows;
 }
 function updateVisaFee() { if (typeof updateLetterBanner === 'function') setTimeout(updateLetterBanner, 0); var isExp=document.getElementById('f_express')&&document.getElementById('f_express').checked; var visa3=document.getElementById('f_visa')&&document.getElementById('f_visa').value; var needsVisa=visa3&&visa3!=='Nicht erforderlich'; var lbl=document.getElementById('visaExpressFeeLabel'); var disp=document.getElementById('visaTotalDisplay'); var brd=document.getElementById('visaTotalBreakdown'); var total3=needsVisa&&isExp?visaExpressFee:0; if(lbl) lbl.style.display=needsVisa&&isExp&&visaExpressFee>0?'inline':'none'; if(lbl&&needsVisa&&isExp) lbl.textContent='+'+fmt(visaExpressFee)+' Aufschlag'; if(disp) disp.textContent=total3>0?fmt(total3):'0,00 EUR'; if(brd) brd.textContent=''; calcTotal(); }
-function updateMealFee() { var mealBooked=document.getElementById('f_meal_plus')&&document.getElementById('f_meal_plus').checked; var pkgCode=document.getElementById('f_package')&&document.getElementById('f_package').value; var infoEl=document.getElementById('mealFeeInfo'); if(!pkgCode){if(infoEl)infoEl.textContent='- waehle erst ein Package -';return;} var pkg=packagesData.find(function(p){return p.code===pkgCode;}); if(!pkg) return; var mealIncluded=pkg.meal_included==='Ja'; var mealPkg=packagesData.find(function(p){return p.code==='S';}); var mealPrice=mealPkg?parseFloat(mealPkg.price)||0:105; var basePrice=parseFloat(pkg.price)||0; var adjPrice=basePrice; var parts=[]; if(mealIncluded&&!mealBooked){adjPrice-=mealPrice;parts.push('Meal nicht gebucht: -'+fmt(mealPrice));}else if(mealIncluded&&mealBooked){parts.push('Meal inkludiert');}else if(!mealIncluded&&mealBooked){adjPrice+=mealPrice;parts.push('Meal hinzugefuegt: +'+fmt(mealPrice));} if(adjPrice<0){parts.push('(Preis auf 0 begrenzt)');adjPrice=0;} if(infoEl) infoEl.innerHTML=parts.join('<br>')+'<br><strong style="color:var(--blue);display:block;margin-top:4px">Preis: '+fmt(adjPrice)+'</strong>'; document.getElementById('f_package_price').value=adjPrice.toFixed(2); calcTotal(); }
+function updateMealFee() { var mealBooked=document.getElementById('f_meal_plus')&&document.getElementById('f_meal_plus').checked; var pkgCode=document.getElementById('f_package')&&document.getElementById('f_package').value; var infoEl=document.getElementById('mealFeeInfo'); if(!packagesData||!packagesData.length){return;} if(!pkgCode){if(infoEl)infoEl.textContent='- waehle erst ein Package -';return;} var pkg=packagesData.find(function(p){return p.code===pkgCode;}); if(!pkg) return; var mealIncluded=pkg.meal_included==='Ja'; var mealPkg=packagesData.find(function(p){return p.code==='S';}); var mealPrice=mealPkg?parseFloat(mealPkg.price)||0:105; var basePrice=parseFloat(pkg.price)||0; var adjPrice=basePrice; var parts=[]; if(mealIncluded&&!mealBooked){adjPrice-=mealPrice;parts.push('Meal nicht gebucht: -'+fmt(mealPrice));}else if(mealIncluded&&mealBooked){parts.push('Meal inkludiert');}else if(!mealIncluded&&mealBooked){adjPrice+=mealPrice;parts.push('Meal hinzugefuegt: +'+fmt(mealPrice));} if(adjPrice<0){parts.push('(Preis auf 0 begrenzt)');adjPrice=0;} if(infoEl) infoEl.innerHTML=parts.join('<br>')+'<br><strong style="color:var(--blue);display:block;margin-top:4px">Preis: '+fmt(adjPrice)+'</strong>'; document.getElementById('f_package_price').value=adjPrice.toFixed(2); calcTotal(); }
 function calcWithdrawRefund() { var dateVal=document.getElementById('f_withdraw_date')&&document.getElementById('f_withdraw_date').value; var totalVal=parseFloat(document.getElementById('f_total')&&document.getElementById('f_total').value)||0; var receivedVal=parseFloat(document.getElementById('f_amount_received')&&document.getElementById('f_amount_received').value)||0; var disp=document.getElementById('withdrawRefundDisplay'); var ri=document.getElementById('f_withdraw_refund'); var di=document.getElementById('f_withdraw_refund_due'); if(!dateVal){if(disp)disp.textContent='- Datum waehlen -';return;} var wd=new Date(dateVal); var pct=wd<WITHDRAW_DATE_FULL?100:wd<=WITHDRAW_DATE_HALF?50:0;
     var label=pct===100?'100% Erstattung':pct===50?'50% Erstattung':'Keine Erstattung';
     var wePayBack=Math.max(0, receivedVal * pct / 100);
