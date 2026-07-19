@@ -170,7 +170,12 @@ async function withdrawPrompt(token) {
 
   if (res.error || !d.ok) {
     var msg = d.code === 'not_found' ? t('e_nf') : t('err_p');
-    return render('\u2139\ufe0f', t('np_t'), msg);
+    // Technische Meldung mit anzeigen — haeufigste Ursache: die SQL-Funktion
+    // withdraw_preview() wurde in Supabase noch nicht angelegt.
+    var det = res.error ? (res.error.message || res.error.hint || '') : '';
+    return render('\u2139\ufe0f', t('np_t'),
+      msg + (det ? '<br><span style="font-size:12px;color:#94a3b8">'
+        + t('mf_detail') + esc(det) + '</span>' : ''));
   }
   if (d.status === 'withdrawn') return render('\u2139\ufe0f', t('np_t'), t('e_aw'));
 
