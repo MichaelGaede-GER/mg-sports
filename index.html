@@ -7990,6 +7990,22 @@ var PHYSIO_URGENCY_LEVELS = [
 // ================= NATIONALE VERBÄNDE (zentrale Kontakt-Datenbank pro Land) =================
 var nationalFedsCache = [];
 
+// Baut aus den Einzelfeldern eine Anschrift. sep = '\n' fuer Briefe, '<br>' fuer HTML.
+function fedAddressLines(f) {
+  if (!f) return [];
+  var lines = [];
+  if (f.street)   lines.push(f.street);
+  if (f.address2) lines.push(f.address2);
+  var cityLine = [f.zip, f.city].filter(Boolean).join(' ');
+  if (cityLine)   lines.push(cityLine);
+  if (f.region)   lines.push(f.region);
+  if (f.address_country) lines.push(f.address_country);
+  return lines;
+}
+function fedAddressText(f, sep) {
+  return fedAddressLines(f).join(sep || ', ');
+}
+
 async function loadNationalFederationsPage() {
   var tb = document.getElementById('nationalFedsTable');
   if (!tb) return;
@@ -8001,7 +8017,11 @@ async function loadNationalFederationsPage() {
   tb.innerHTML = nationalFedsCache.map(function(f) {
     return '<tr>'
       + '<td><strong>' + f.country + '</strong></td>'
-      + '<td>' + (f.federation_name || '–') + '</td>'
+      + '<td>' + (f.federation_name || '–')
+        + (f.website ? '<br><a href="' + esc(f.website) + '" target="_blank" rel="noopener" style="color:var(--blue);font-size:11px">🌐 Webseite</a>' : '')
+        + (fedAddressLines(f).length ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">'
+            + fedAddressLines(f).map(esc).join('<br>') + '</div>' : '')
+        + '</td>'
       + '<td style="font-size:12px">' + (f.office_contact_name ? f.office_contact_name + '<br>' : '') + (f.office_mobile || '') + (f.office_email ? ' · ' + f.office_email : '') + '</td>'
       + '<td style="font-size:12px">' + (f.trainer_name ? f.trainer_name + '<br>' : '') + (f.trainer_mobile || '') + (f.trainer_email ? ' · ' + f.trainer_email : '') + '</td>'
       + '<td style="font-size:12px">' + (f.president_name ? f.president_name + '<br>' : '') + (f.president_mobile || '') + (f.president_email ? ' · ' + f.president_email : '') + '</td>'
@@ -8032,6 +8052,14 @@ function openNationalFedModal(id) {
     + '<div class="form-grid" style="gap:10px">'
     + '<div class="form-group" style="grid-column:1/-1"><label>Land</label><select id="nf_country">' + countryOpts + '</select></div>'
     + '<div class="form-group" style="grid-column:1/-1"><label>Name des Verbands</label><input type="text" id="nf_name" placeholder="z.B. Egyptian Squash Federation" value="' + (f && f.federation_name || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label>Webseite</label><input type="url" id="nf_website" placeholder="https://www.example.org" value="' + esc(f && f.website || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label style="color:var(--blue);font-weight:600">Anschrift</label></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label>Straße und Hausnummer</label><input type="text" id="nf_street" value="' + esc(f && f.street || '') + '" /></div>'
+    + '<div class="form-group" style="grid-column:1/-1"><label>Adresszusatz</label><input type="text" id="nf_address2" placeholder="Gebäude, Postfach, c/o …" value="' + esc(f && f.address2 || '') + '" /></div>'
+    + '<div class="form-group"><label>PLZ</label><input type="text" id="nf_zip" value="' + esc(f && f.zip || '') + '" /></div>'
+    + '<div class="form-group"><label>Ort</label><input type="text" id="nf_city" value="' + esc(f && f.city || '') + '" /></div>'
+    + '<div class="form-group"><label>Region / Bundesland</label><input type="text" id="nf_region" value="' + esc(f && f.region || '') + '" /></div>'
+    + '<div class="form-group"><label>Land (Anschrift)</label><input type="text" id="nf_address_country" placeholder="wie im Briefkopf" value="' + esc(f && f.address_country || '') + '" /></div>'
     + '<div class="form-group" style="grid-column:1/-1"><label style="color:var(--blue);font-weight:600">Büro</label></div>'
     + '<div class="form-group"><label>Ansprechpartner</label><input type="text" id="nf_office_name" value="' + (f && f.office_contact_name || '') + '" /></div>'
     + '<div class="form-group"><label>Mobil</label><input type="text" id="nf_office_mobile" value="' + (f && f.office_mobile || '') + '" /></div>'
@@ -8060,6 +8088,18 @@ async function saveNationalFed() {
   var row = {
     country: country,
     federation_name: document.getElementById('nf_name').value.trim() || null,
+    website: (function () {
+      var w = document.getElementById('nf_website').value.trim();
+      if (!w) return null;
+      // Ohne Protokoll waere der Link im Browser relativ zur App -> https ergaenzen.
+      return /^https?:\/\//i.test(w) ? w : 'https://' + w;
+    })(),
+    street: document.getElementById('nf_street').value.trim() || null,
+    address2: document.getElementById('nf_address2').value.trim() || null,
+    zip: document.getElementById('nf_zip').value.trim() || null,
+    city: document.getElementById('nf_city').value.trim() || null,
+    region: document.getElementById('nf_region').value.trim() || null,
+    address_country: document.getElementById('nf_address_country').value.trim() || null,
     office_contact_name: document.getElementById('nf_office_name').value.trim() || null,
     office_mobile: document.getElementById('nf_office_mobile').value.trim() || null,
     office_email: document.getElementById('nf_office_email').value.trim() || null,
@@ -8101,8 +8141,11 @@ async function renderFederationLookup(country, containerId) {
     if (!name && !mobile && !email) return '';
     return '<div style="margin-bottom:6px"><strong>' + label + ':</strong> ' + (name || '–') + (mobile ? ' · 📱 ' + mobile : '') + (email ? ' · ✉️ ' + email : '') + '</div>';
   }
+  var addr = fedAddressLines(f);
   box.innerHTML = '<div style="font-size:12px;line-height:1.5">'
     + (f.federation_name ? '<div style="font-weight:600;margin-bottom:6px">' + f.federation_name + '</div>' : '')
+    + (f.website ? '<div style="margin-bottom:6px">🌐 <a href="' + esc(f.website) + '" target="_blank" rel="noopener" style="color:var(--blue)">' + esc(f.website.replace(/^https?:\/\//i, '')) + '</a></div>' : '')
+    + (addr.length ? '<div style="margin-bottom:8px;color:var(--text2)">📍 ' + addr.map(esc).join('<br>&nbsp;&nbsp;&nbsp;') + '</div>' : '')
     + row('Büro', f.office_contact_name, f.office_mobile, f.office_email)
     + row('Trainer', f.trainer_name, f.trainer_mobile, f.trainer_email)
     + row('Präsident', f.president_name, f.president_mobile, f.president_email)
