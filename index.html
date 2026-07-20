@@ -1452,6 +1452,21 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <!-- ZAHLUNGEN -->
       <div class="page" id="page-payments">
         <div class="page-header"><h2>Zahlungen</h2></div>
+
+        <!-- ===== SCHNELLERFASSUNG ZAHLUNGSEINGANG ===== -->
+        <div class="card" style="margin-bottom:16px;border:1px solid var(--blue)">
+          <div class="card-header"><h3>⚡ Zahlungseingang erfassen</h3>
+            <span style="font-size:11px;color:var(--text3)">Name tippen · Enter · Betrag · Speichern</span>
+          </div>
+          <div class="card-body">
+            <input type="text" id="payQuickSearch" placeholder="Teilnehmer suchen (Name, Land, Verein, ESID)…"
+                   autocomplete="off" oninput="payQuickSearch()" onkeydown="payQuickKey(event)"
+                   style="width:100%;font-size:15px;padding:10px 12px" />
+            <div id="payQuickResults" style="margin-top:8px"></div>
+            <div id="payQuickCard" style="display:none;margin-top:12px"></div>
+          </div>
+        </div>
+
         <div class="stats-grid">
           <div class="stat green"><div class="lbl">Eingegangen</div><div class="val" id="payIn">–</div></div>
           <div class="stat amber"><div class="lbl">Ausstehend</div><div class="val" id="payOut">–</div></div>
@@ -9071,13 +9086,233 @@ async function printInvoicePDF(id) {
   setTimeout(function(){ w.print(); }, 300);
 }
 
+
+// ===================== SCHNELLERFASSUNG ZAHLUNGEN =====================
+// Kleiner HTML-Escaper (in index.html bisher nicht vorhanden).
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+var payQuickCache = [];      // Teilnehmer des aktuellen Events
+var payQuickHits  = [];      // aktuelle Suchtreffer
+var payQuickIdx   = -1;      // Tastatur-Navigation
+var payQuickSel   = null;    // ausgewaehlter Teilnehmer
+
+function payOpen(p) {
+  return (parseFloat(p.total) || 0) - (parseFloat(p.amount_received) || 0);
+}
+
+function payQuickSearch() {
+  var q = (document.getElementById('payQuickSearch').value || '').trim().toLowerCase();
+  var box = document.getElementById('payQuickResults');
+  payQuickIdx = -1;
+  if (q.length < 2) { box.innerHTML = ''; payQuickHits = []; return; }
+
+  payQuickHits = payQuickCache.filter(function (p) {
+    return [p.lastname, p.firstname, p.country, p.club, p.esid, p.member_id]
+      .some(function (f) { return String(f || '').toLowerCase().indexOf(q) >= 0; });
+  }).slice(0, 8);
+
+  if (!payQuickHits.length) {
+    box.innerHTML = '<div style="padding:10px;color:var(--text3);font-size:13px">Kein Treffer</div>';
+    return;
+  }
+
+  box.innerHTML = payQuickHits.map(function (p, i) {
+    var open = payOpen(p);
+    var col  = open > 0.005 ? 'var(--red)' : 'var(--green)';
+    return '<div class="payhit" data-i="' + i + '" onclick="payQuickSelect(' + i + ')"'
+      + ' style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;'
+      + 'cursor:pointer;border:1px solid var(--border)">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div style="font-weight:600">' + esc(p.lastname + ', ' + p.firstname) + '</div>'
+        + '<div style="font-size:11px;color:var(--text3)">'
+          + [p.country, p.package, p.events].filter(Boolean).map(esc).join(' · ') + '</div>'
+      + '</div>'
+      + '<div style="text-align:right;font-size:12px;white-space:nowrap">'
+        + '<div style="color:var(--text3)">Gesamt ' + fmt(p.total) + '</div>'
+        + '<div style="color:' + col + ';font-weight:700">Offen ' + fmt(open) + '</div>'
+      + '</div></div>';
+  }).join('');
+  payQuickMark();
+}
+
+function payQuickMark() {
+  document.querySelectorAll('#payQuickResults .payhit').forEach(function (el, i) {
+    el.style.background = (i === payQuickIdx) ? 'var(--bg3)' : 'transparent';
+  });
+}
+
+function payQuickKey(e) {
+  if (!payQuickHits.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); payQuickIdx = Math.min(payQuickIdx + 1, payQuickHits.length - 1); payQuickMark(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); payQuickIdx = Math.max(payQuickIdx - 1, 0); payQuickMark(); }
+  else if (e.key === 'Enter') { e.preventDefault(); payQuickSelect(payQuickIdx < 0 ? 0 : payQuickIdx); }
+  else if (e.key === 'Escape') { payQuickReset(); }
+}
+
+async function payQuickSelect(i) {
+  var p = payQuickHits[i];
+  if (!p) return;
+  payQuickSel = p;
+  document.getElementById('payQuickResults').innerHTML = '';
+  document.getElementById('payQuickSearch').value = p.lastname + ', ' + p.firstname;
+
+  var open = payOpen(p);
+  var card = document.getElementById('payQuickCard');
+  card.style.display = 'block';
+  card.innerHTML =
+    '<div style="background:var(--bg3);border-radius:10px;padding:14px 16px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
+      + '<div><div style="font-size:16px;font-weight:700">' + esc(p.lastname + ', ' + p.firstname) + '</div>'
+      + '<div style="font-size:12px;color:var(--text3)">'
+        + [p.country, p.package, p.events, p.club].filter(Boolean).map(esc).join(' · ') + '</div></div>'
+      + '<div style="display:flex;gap:18px;font-size:12px;text-align:right">'
+        + '<div><div style="color:var(--text3)">Gesamt</div><div style="font-weight:700;font-size:15px">' + fmt(p.total) + '</div></div>'
+        + '<div><div style="color:var(--text3)">Erhalten</div><div style="font-weight:700;font-size:15px">' + fmt(p.amount_received) + '</div></div>'
+        + '<div><div style="color:var(--text3)">Offen</div><div style="font-weight:700;font-size:15px;color:'
+          + (open > 0.005 ? 'var(--red)' : 'var(--green)') + '">' + fmt(open) + '</div></div>'
+      + '</div>'
+    + '</div>'
+
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">'
+      + '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Betrag (€)</label>'
+        + '<input type="number" id="payQuickAmount" step="0.01" value="' + (open > 0.005 ? open.toFixed(2) : '') + '"'
+        + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();payQuickSave();}"'
+        + ' style="width:120px;font-size:16px;font-weight:600;padding:8px 10px" /></div>'
+      + '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Datum</label>'
+        + '<input type="date" id="payQuickDate" value="' + new Date().toISOString().slice(0, 10) + '" style="padding:8px 10px" /></div>'
+      + '<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Art</label>'
+        + '<select id="payQuickMethod" style="padding:8px 10px">'
+          + '<option>Ueberweisung</option><option>Bar</option><option>PayPal</option>'
+          + '<option>Kreditkarte</option><option>Sonstiges</option></select></div>'
+      + '<div style="flex:1;min-width:160px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Verwendungszweck / Notiz</label>'
+        + '<input type="text" id="payQuickRef" placeholder="optional" style="width:100%;padding:8px 10px" /></div>'
+    + '</div>'
+
+    + '<div style="display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap">'
+      + '<label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer">'
+        + '<input type="radio" name="payQuickMode" value="add" checked /> Betrag <strong>hinzubuchen</strong></label>'
+      + '<label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer">'
+        + '<input type="radio" name="payQuickMode" value="set" /> Gesamtsumme auf diesen Wert <strong>setzen</strong></label>'
+      + '<div style="flex:1"></div>'
+      + '<button class="btn" onclick="payQuickReset()">Abbrechen</button>'
+      + '<button class="btn primary" onclick="payQuickSave()">💾 Zahlung buchen</button>'
+    + '</div>'
+
+    + '<div id="payQuickHistory" style="margin-top:14px"></div>'
+    + '</div>';
+
+  var amt = document.getElementById('payQuickAmount');
+  if (amt) { amt.focus(); amt.select(); }
+  payQuickHistory(p.id);
+}
+
+async function payQuickHistory(participantId) {
+  var box = document.getElementById('payQuickHistory');
+  if (!box) return;
+  var res = await db.from('payments').select('*')
+    .eq('participant_id', participantId).order('payment_date', { ascending: false });
+  if (res.error) { box.innerHTML = '<div style="font-size:11px;color:var(--red)">Journal: ' + esc(res.error.message) + '</div>'; return; }
+  var rows = res.data || [];
+  if (!rows.length) { box.innerHTML = '<div style="font-size:11px;color:var(--text3)">Noch keine Buchungen erfasst.</div>'; return; }
+
+  box.innerHTML = '<div style="font-size:11px;color:var(--text3);margin-bottom:5px">Buchungen (' + rows.length + ')</div>'
+    + rows.map(function (r) {
+        return '<div style="display:flex;align-items:center;gap:10px;font-size:12px;padding:4px 0;border-top:1px solid var(--border)">'
+          + '<span style="width:82px;color:var(--text3)">' + fmtDate(r.payment_date) + '</span>'
+          + '<span style="width:80px;font-weight:700;text-align:right">' + fmt(r.amount) + '</span>'
+          + '<span style="width:100px;color:var(--text3)">' + esc(r.method || '') + '</span>'
+          + '<span style="flex:1;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+            + esc([r.reference, r.note].filter(Boolean).join(' · ')) + '</span>'
+          + '<button class="btn danger" style="font-size:10px;padding:1px 7px"'
+            + ' onclick="payQuickDelete(\'' + r.id + '\')" title="Buchung stornieren">✕</button>'
+          + '</div>';
+      }).join('');
+}
+
+async function payQuickDelete(paymentId) {
+  if (!confirm('Diese Buchung wirklich stornieren?\n\nDer erhaltene Betrag wird automatisch neu berechnet.')) return;
+  var res = await db.from('payments').delete().eq('id', paymentId);
+  if (res.error) { toast('Fehler: ' + res.error.message); return; }
+  toast('Buchung storniert');
+  await payQuickRefresh();
+}
+
+async function payQuickSave() {
+  if (!payQuickSel) return;
+  var amount = parseFloat(document.getElementById('payQuickAmount').value);
+  if (isNaN(amount)) { toast('Bitte einen Betrag eingeben'); return; }
+
+  var mode = (document.querySelector('input[name="payQuickMode"]:checked') || {}).value || 'add';
+  var already = parseFloat(payQuickSel.amount_received) || 0;
+  var toBook = amount;
+  var note = document.getElementById('payQuickRef').value || null;
+
+  if (mode === 'set') {
+    toBook = Math.round((amount - already) * 100) / 100;
+    if (Math.abs(toBook) < 0.005) { toast('Betrag entspricht bereits der Summe'); return; }
+    note = 'Korrektur auf ' + amount.toFixed(2) + ' EUR' + (note ? ' · ' + note : '');
+  }
+  if (Math.abs(toBook) < 0.005) { toast('Betrag ist 0 – nichts zu buchen'); return; }
+
+  var res = await db.from('payments').insert({
+    participant_id: payQuickSel.id,
+    event_id: payQuickSel.event_id || currentEventId || null,
+    amount: toBook,
+    payment_date: document.getElementById('payQuickDate').value || null,
+    method: mode === 'set' ? 'Korrektur' : document.getElementById('payQuickMethod').value,
+    reference: mode === 'set' ? null : (document.getElementById('payQuickRef').value || null),
+    note: note
+  });
+  if (res.error) { toast('Fehler: ' + res.error.message); return; }
+
+  // Mahnstufe zuruecksetzen, wenn jetzt vollstaendig bezahlt ist.
+  var newSum = already + toBook;
+  var total  = parseFloat(payQuickSel.total) || 0;
+  if (total > 0 && newSum + 0.009 >= total && payQuickSel.mahnung && payQuickSel.mahnung !== 'Keine') {
+    await db.from('participants').update({ mahnung: 'Keine' }).eq('id', payQuickSel.id);
+  }
+
+  toast('✅ ' + fmt(toBook) + ' gebucht für ' + payQuickSel.lastname);
+  payQuickReset();
+  await loadPayments();
+  var sf = document.getElementById('payQuickSearch');
+  if (sf) sf.focus();
+}
+
+async function payQuickRefresh() {
+  var id = payQuickSel && payQuickSel.id;
+  await loadPayments();
+  if (!id) return;
+  var fresh = payQuickCache.find(function (x) { return x.id === id; });
+  if (!fresh) { payQuickReset(); return; }
+  var idx = payQuickHits.findIndex(function (x) { return x.id === id; });
+  payQuickHits = [fresh];
+  payQuickSelect(0);
+}
+
+function payQuickReset() {
+  payQuickSel = null;
+  payQuickHits = [];
+  payQuickIdx = -1;
+  var sf = document.getElementById('payQuickSearch');
+  if (sf) sf.value = '';
+  var rb = document.getElementById('payQuickResults'); if (rb) rb.innerHTML = '';
+  var cb = document.getElementById('payQuickCard'); if (cb) { cb.style.display = 'none'; cb.innerHTML = ''; }
+}
+
 async function loadPayments() {
   let q = db.from('participants').select('*').order('lastname');
   if (currentEventId) q = q.eq('event_id', currentEventId);
   const { data } = await q;
   const all = (data||[]).filter(p => p.withdraw !== 'Ja');
+  payQuickCache = all;
   const received = all.reduce((s,p)=>s+(parseFloat(p.amount_received)||0),0);
-  const totalOwed = all.reduce((s,p)=>s+(parseFloat(p.package_price)||0),0);
+  // Vorher wurde hier package_price verwendet, in der Tabellenspalte "Offen"
+  // aber total — dadurch wichen Kachel und Zeilensumme voneinander ab.
+  const totalOwed = all.reduce((s,p)=>s+(parseFloat(p.total)||0),0);
   const outstanding = totalOwed - received;
   const mahnungen = all.filter(p=>p.mahnung && p.mahnung !== 'Keine').length;
   document.getElementById('payIn').textContent = fmtK(received);
