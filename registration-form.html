@@ -46,6 +46,9 @@
   .checkbox-row { display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; }
   .checkbox-row input { width:18px; height:18px; accent-color: var(--blue); flex-shrink:0; }
   .esid-hint { font-size:11px; color:#888; margin-top:3px; }
+  .travel-toggle { font-size:13px; color:var(--blue,#2563eb); cursor:pointer; text-decoration:underline; display:inline-block; }
+  .travel-fields { display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #d7dce6; }
+  .travel-fields.open { display:block; }
   .room-badges { display:flex; flex-wrap:wrap; gap:10px; }
   .room-badge { flex:1; min-width:140px; border:1.5px solid var(--border); border-radius:var(--radius); padding:10px 14px; }
   .room-badge .rb-type { font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.3px; }
@@ -239,6 +242,25 @@
           <div class="form-group"><label data-i18n="f_departure_date">Departure Date</label><input type="date" id="r_departure_date" oninput="updateAirportTransfer()" /></div>
           <div class="form-group"><label data-i18n="f_departure_time">Departure Time</label><input type="time" id="r_departure_time" oninput="updateAirportTransfer()" /></div>
           <div class="form-group"><label data-i18n="f_flight_out">Outgoing Flight No.</label><input type="text" id="r_flight_out" data-i18n-ph="flight_out_ph" placeholder="e.g. LH5678" /></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMERGENCY CONTACT & MEDICAL -->
+    <div class="card">
+      <div class="card-header" data-i18n="em_header">🚨 Emergency Contact & Medical Info</div>
+      <div class="card-body">
+        <div class="esid-hint" data-i18n="em_hint" style="margin-bottom:12px">Optional, but strongly recommended. This information is only visible to the tournament organizer.</div>
+        <span class="travel-toggle" onclick="toggleEmergencyFields()" id="r_emergencytoggle" data-i18n="em_toggle">🚨 Add emergency contact & medical details</span>
+        <div class="travel-fields" id="r_emergencyfields">
+          <div class="form-grid">
+            <div class="form-group full"><label data-i18n="f_emergency_name">Emergency Contact – Name</label><input type="text" id="r_emergency_name" data-i18n-ph="em_name_ph" placeholder="e.g. Anna Miller (mother)" /></div>
+            <div class="form-group"><label data-i18n="f_emergency_phone">Phone</label><input type="tel" id="r_emergency_phone" placeholder="+49 151 …" /></div>
+            <div class="form-group"><label data-i18n="f_emergency_email">E-Mail</label><input type="email" id="r_emergency_email" placeholder="contact@email.com" /></div>
+            <div class="form-group full"><label data-i18n="f_medical_allergies">Relevant Allergies</label><textarea id="r_medical_allergies" data-i18n-ph="em_allergies_ph" placeholder="e.g. penicillin, bee sting, nuts…" style="height:60px"></textarea></div>
+            <div class="form-group full"><label data-i18n="f_medical_medications">Required Medication</label><textarea id="r_medical_medications" data-i18n-ph="em_medications_ph" placeholder="e.g. asthma spray, insulin…" style="height:60px"></textarea></div>
+            <div class="form-group full"><label data-i18n="f_medical_notes">Special Medical Notes</label><textarea id="r_medical_notes" data-i18n-ph="em_notes_ph" placeholder="e.g. type 1 diabetes, epilepsy…" style="height:60px"></textarea></div>
+          </div>
         </div>
       </div>
     </div>
@@ -485,6 +507,19 @@ en: {
   f_departure_time: "Departure Time",
   f_flight_out: "Outgoing Flight No.",
   flight_out_ph: "e.g. LH5678",
+  em_header: "🚨 Emergency Contact & Medical Info",
+  em_hint: "Optional, but strongly recommended. This information is only visible to the tournament organizer.",
+  em_toggle: "🚨 Add emergency contact & medical details",
+  f_emergency_name: "Emergency Contact – Name",
+  f_emergency_phone: "Phone",
+  f_emergency_email: "E-Mail",
+  f_medical_allergies: "Relevant Allergies",
+  f_medical_medications: "Required Medication",
+  f_medical_notes: "Special Medical Notes",
+  em_name_ph: "e.g. Anna Miller (mother)",
+  em_allergies_ph: "e.g. penicillin, bee sting, nuts…",
+  em_medications_ph: "e.g. asthma spray, insulin…",
+  em_notes_ph: "e.g. type 1 diabetes, epilepsy…",
   visa_header: "📄 Confirmation Letter & Additional Info",
   f_visa: "Confirmation Letter required?",
   f_memo: "Notes / Special Requests",
@@ -616,6 +651,19 @@ de: {
   f_departure_time: "Abreisezeit",
   f_flight_out: "Abflug Nr.",
   flight_out_ph: "z. B. LH5678",
+  em_header: "🚨 Notfallkontakt & Medizinische Hinweise",
+  em_hint: "Optional, aber dringend empfohlen. Diese Angaben sind nur für die Turnierorganisation sichtbar.",
+  em_toggle: "🚨 Notfallkontakt & medizinische Angaben hinzufügen",
+  f_emergency_name: "Notfallkontakt – Name",
+  f_emergency_phone: "Telefon",
+  f_emergency_email: "E-Mail",
+  f_medical_allergies: "Relevante Allergien",
+  f_medical_medications: "Notwendige Medikamente",
+  f_medical_notes: "Besondere medizinische Hinweise",
+  em_name_ph: "z. B. Anna Müller (Mutter)",
+  em_allergies_ph: "z. B. Penicillin, Wespenstich, Nüsse…",
+  em_medications_ph: "z. B. Asthmaspray, Insulin…",
+  em_notes_ph: "z. B. Diabetes Typ 1, Epilepsie…",
   visa_header: "📄 Bestätigungsschreiben & weitere Angaben",
   f_visa: "Bestätigungsschreiben erforderlich?",
   f_memo: "Notizen / Besondere Wünsche",
@@ -752,6 +800,7 @@ function toast(msg) {
   setTimeout(function() { elx.style.display = 'none'; }, 3000);
 }
 function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function toggleEmergencyFields() { var f = document.getElementById('r_emergencyfields'); if (f) f.classList.toggle('open'); }
 
 function computeAirportTransfer(arrivalTime, departureTime) {
   var hasArr = !!arrivalTime, hasDep = !!departureTime;
@@ -1043,6 +1092,11 @@ function prefillFormForEdit(p) {
   setVal('r_ams_bus', p.ams_bus); setVal('r_airport_plus', p.airport_plus);
   setVal('r_arrival_date', p.arrival_date); setVal('r_arrival_time', p.arrival_time); setVal('r_flight_in', p.flight_in);
   setVal('r_departure_date', p.departure_date); setVal('r_departure_time', p.departure_time); setVal('r_flight_out', p.flight_out);
+  setVal('r_emergency_name', p.emergency_name); setVal('r_emergency_phone', p.emergency_phone); setVal('r_emergency_email', p.emergency_email);
+  setVal('r_medical_allergies', p.medical_allergies); setVal('r_medical_medications', p.medical_medications); setVal('r_medical_notes', p.medical_notes);
+  if (p.emergency_name || p.emergency_phone || p.emergency_email || p.medical_allergies || p.medical_medications || p.medical_notes) {
+    var emf = document.getElementById('r_emergencyfields'); if (emf) emf.classList.add('open');
+  }
   setVal('r_visa', p.visa);
   // WICHTIG: erst umschalten, dann füllen. Der Toggle blendet den Block ein und baut das
   // Letter-Type-Dropdown auf — vorher gesetzte Werte gingen sonst verloren, weil die
@@ -1850,6 +1904,12 @@ async function submitRegistration() {
     flight_in: v('r_flight_in') || null,
     departure_date: v('r_departure_date') || null, departure_time: v('r_departure_time') || null,
     flight_out: v('r_flight_out') || null,
+    emergency_name: v('r_emergency_name') || null,
+    emergency_phone: v('r_emergency_phone') || null,
+    emergency_email: v('r_emergency_email') || null,
+    medical_allergies: v('r_medical_allergies') || null,
+    medical_medications: v('r_medical_medications') || null,
+    medical_notes: v('r_medical_notes') || null,
     visa: v('r_visa') || null,
     place_of_birth: needsLetter ? (v('r_place_of_birth') || null) : null,
     visa_date_of_issue: needsLetter ? (v('r_date_of_issue') || null) : null,

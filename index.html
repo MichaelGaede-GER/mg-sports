@@ -1238,6 +1238,19 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <div style="font-size:11px;color:var(--text3);margin-top:4px">Erscheint automatisch auf dem Zertifikat, sobald ausgefüllt.</div>
               </div>
 
+              <div class="form-group" style="grid-column:1/-1;margin-top:4px">
+                <div style="padding:12px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2)">
+                  <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">🚨 Notfallkontakt & Medizinische Hinweise</div>
+                  <div class="form-grid">
+                    <div class="form-group" style="grid-column:1/-1"><label>Notfallkontakt – Name</label><input type="text" id="f_emergency_name" placeholder="z.B. Anna Müller (Mutter)" /></div>
+                    <div class="form-group"><label>Telefon</label><input type="tel" id="f_emergency_phone" placeholder="+49 151 …" /></div>
+                    <div class="form-group"><label>E-Mail</label><input type="email" id="f_emergency_email" placeholder="kontakt@email.com" /></div>
+                    <div class="form-group" style="grid-column:1/-1"><label>Relevante Allergien</label><textarea id="f_medical_allergies" placeholder="z.B. Penicillin, Wespenstich, Nüsse…" style="height:55px"></textarea></div>
+                    <div class="form-group" style="grid-column:1/-1"><label>Notwendige Medikamente</label><textarea id="f_medical_medications" placeholder="z.B. Asthmaspray, Insulin…" style="height:55px"></textarea></div>
+                    <div class="form-group" style="grid-column:1/-1"><label>Besondere medizinische Hinweise</label><textarea id="f_medical_notes" placeholder="z.B. Diabetes Typ 1, Epilepsie…" style="height:55px"></textarea></div>
+                  </div>
+                </div>
+              </div>
               <div class="form-group"><label>TP-Check MG</label><select id="f_tp_check"><option>–</option><option>OK</option><option>Prüfen</option><option>Fehler</option></select></div>
 <input type="hidden" id="f_country_check" value="" />
               
@@ -3114,6 +3127,7 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
       <button class="person-tab" onclick="switchPersonTab('squash',this)" style="font-size:11px;padding:6px 10px">🏆 Ranking</button>
       <button class="person-tab" onclick="switchPersonTab('visa',this)" style="font-size:11px;padding:6px 10px">🛂 VISA</button>
       <button class="person-tab" onclick="switchPersonTab('nationalfed',this)" style="font-size:11px;padding:6px 10px">🏳 National Federation</button>
+      <button class="person-tab" onclick="switchPersonTab('emergency',this)" style="font-size:11px;padding:6px 10px">🚨 Notfallkontakte</button>
       </div>
     </div><!-- end header -->
     <div style="flex:1;overflow-y:auto;padding:16px 24px">
@@ -3615,6 +3629,28 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         </div>
       </div>
     </div></div><!-- end scrollable content -->
+
+    <!-- TAB: NOTFALLKONTAKTE -->
+    <div id="personTab-emergency" class="person-tab-content" style="display:none;background:var(--bg);min-height:200px">
+      <div style="padding:16px 0;display:flex;flex-direction:column;gap:14px">
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em">🚨 Notfallkontakt</div>
+          <div class="form-grid two" style="gap:12px">
+            <div class="form-group" style="grid-column:1/-1"><label>Name</label><input type="text" id="personEmergencyName" placeholder="z.B. Anna Müller (Mutter)" /></div>
+            <div class="form-group"><label>Telefonnummer</label><input type="tel" id="personEmergencyPhone" placeholder="+49 151 …" /></div>
+            <div class="form-group"><label>E-Mail-Adresse</label><input type="email" id="personEmergencyEmail" placeholder="kontakt@email.com" /></div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em">🩺 Medizinische Hinweise</div>
+          <div class="form-grid" style="gap:12px">
+            <div class="form-group" style="grid-column:1/-1"><label>Relevante Allergien</label><textarea id="personMedicalAllergies" placeholder="z.B. Penicillin, Wespenstich, Nüsse…" style="height:70px"></textarea></div>
+            <div class="form-group" style="grid-column:1/-1"><label>Notwendige Medikamente</label><textarea id="personMedicalMedications" placeholder="z.B. Asthmaspray, Insulin…" style="height:70px"></textarea></div>
+            <div class="form-group" style="grid-column:1/-1"><label>Besondere medizinische Hinweise</label><textarea id="personMedicalNotes" placeholder="z.B. Diabetes Typ 1, Epilepsie, Notfallmedikation im Rucksack…" style="height:70px"></textarea></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /personTab-emergency -->
     </div>
     <div style="padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;background:var(--bg)">
       <button class="btn" onclick="closeModal('personModal')">Abbrechen</button>
@@ -6345,7 +6381,7 @@ function cancelEdit() {
 }
 
 function clearForm() {
-  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date'];
+  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date','emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes'];
   const shirtQtyEl = document.getElementById('f_shirt_qty'); if (shirtQtyEl) shirtQtyEl.value = '0';
   fields.forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = ''; });
   setPlacementValue('');
@@ -6424,7 +6460,7 @@ async function editEntry(id) {
   if (!p) return;
   document.getElementById('editingId').value = id;
   document.getElementById('entryFormTitle').textContent = `Bearbeiten: ${p.lastname}, ${p.firstname}`;
-  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email'};
+  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes'};
   Object.entries(map).forEach(([k,v]) => {
     const el = document.getElementById('f_'+k);
     if (!el) return;
@@ -6756,6 +6792,8 @@ async function saveEntry() {
     nf_federation: v('nf_federation'),
     nf_trainer_name: v('nf_trainer_name'), nf_trainer_phone: v('nf_trainer_phone'), nf_trainer_mobile: v('nf_trainer_mobile'), nf_trainer_email: v('nf_trainer_email'),
     nf_office_phone: v('nf_office_phone'), nf_office_mobile: v('nf_office_mobile'), nf_office_email: v('nf_office_email'),
+    emergency_name: v('emergency_name')||null, emergency_phone: v('emergency_phone')||null, emergency_email: v('emergency_email')||null,
+    medical_allergies: v('medical_allergies')||null, medical_medications: v('medical_medications')||null, medical_notes: v('medical_notes')||null,
   };
 
   let error;
@@ -11961,6 +11999,14 @@ async function openPersonModal(person) {
     if(el) el.value = (person && person[f]) || '';
   });
 
+  // Load Notfallkontakt / medizinische Felder
+  var emFields = ['emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes'];
+  var emEls = ['personEmergencyName','personEmergencyPhone','personEmergencyEmail','personMedicalAllergies','personMedicalMedications','personMedicalNotes'];
+  emFields.forEach(function(f,i){
+    var el = document.getElementById(emEls[i]);
+    if(el) el.value = (person && person[f]) || '';
+  });
+
   // Load ranking fields
   var rankFields = ['rank_world','rank_euro_masters','rank_national','rank_national_fed'];
   var rankEls = ['personRankWorld','personRankEuroMasters','personRankNational','personRankNationalFed'];
@@ -12274,6 +12320,12 @@ async function savePerson() {
     nf_office_phone: document.getElementById('personNfOfficePhone')&&document.getElementById('personNfOfficePhone').value.trim()||null,
     nf_office_mobile: document.getElementById('personNfOfficeMobile')&&document.getElementById('personNfOfficeMobile').value.trim()||null,
     nf_office_email: document.getElementById('personNfOfficeEmail')&&document.getElementById('personNfOfficeEmail').value.trim()||null,
+    emergency_name: document.getElementById('personEmergencyName')&&document.getElementById('personEmergencyName').value.trim()||null,
+    emergency_phone: document.getElementById('personEmergencyPhone')&&document.getElementById('personEmergencyPhone').value.trim()||null,
+    emergency_email: document.getElementById('personEmergencyEmail')&&document.getElementById('personEmergencyEmail').value.trim()||null,
+    medical_allergies: document.getElementById('personMedicalAllergies')&&document.getElementById('personMedicalAllergies').value.trim()||null,
+    medical_medications: document.getElementById('personMedicalMedications')&&document.getElementById('personMedicalMedications').value.trim()||null,
+    medical_notes: document.getElementById('personMedicalNotes')&&document.getElementById('personMedicalNotes').value.trim()||null,
     squashlevels_id:document.getElementById('personSquashlevelId')&&document.getElementById('personSquashlevelId').value.trim()||null,
     squashlevels_rating:parseInt(document.getElementById('personSquashlevelRating')&&document.getElementById('personSquashlevelRating').value)||null,
     photo_url:photoUrl||null,passport_doc_url:passportUrl||null,updated_at:new Date().toISOString()
@@ -12373,7 +12425,7 @@ async function savePersonFromEntry() {
   var ln=document.getElementById('f_lastname')&&document.getElementById('f_lastname').value.trim();
   var fn=document.getElementById('f_firstname')&&document.getElementById('f_firstname').value.trim();
   if(!ln||!fn){toast('Bitte zuerst Name eingeben');return;}
-  var row={lastname:ln,firstname:fn,country:document.getElementById('f_country')&&document.getElementById('f_country').value||null,dob:document.getElementById('f_dob')&&document.getElementById('f_dob').value||null,gender:document.getElementById('f_gender')&&document.getElementById('f_gender').value||null,role:document.getElementById('f_role')&&document.getElementById('f_role').value||null,member_id:document.getElementById('f_member_id')&&document.getElementById('f_member_id').value.trim()||null,passport_id:document.getElementById('f_passport_id')&&document.getElementById('f_passport_id').value.trim()||null,email:document.getElementById('f_email')&&document.getElementById('f_email').value.trim()||null,mobile:document.getElementById('f_mobile')&&document.getElementById('f_mobile').value.trim()||null,updated_at:new Date().toISOString()};
+  var row={lastname:ln,firstname:fn,country:document.getElementById('f_country')&&document.getElementById('f_country').value||null,dob:document.getElementById('f_dob')&&document.getElementById('f_dob').value||null,gender:document.getElementById('f_gender')&&document.getElementById('f_gender').value||null,role:document.getElementById('f_role')&&document.getElementById('f_role').value||null,member_id:document.getElementById('f_member_id')&&document.getElementById('f_member_id').value.trim()||null,passport_id:document.getElementById('f_passport_id')&&document.getElementById('f_passport_id').value.trim()||null,email:document.getElementById('f_email')&&document.getElementById('f_email').value.trim()||null,mobile:document.getElementById('f_mobile')&&document.getElementById('f_mobile').value.trim()||null,emergency_name:document.getElementById('f_emergency_name')&&document.getElementById('f_emergency_name').value.trim()||null,emergency_phone:document.getElementById('f_emergency_phone')&&document.getElementById('f_emergency_phone').value.trim()||null,emergency_email:document.getElementById('f_emergency_email')&&document.getElementById('f_emergency_email').value.trim()||null,medical_allergies:document.getElementById('f_medical_allergies')&&document.getElementById('f_medical_allergies').value.trim()||null,medical_medications:document.getElementById('f_medical_medications')&&document.getElementById('f_medical_medications').value.trim()||null,medical_notes:document.getElementById('f_medical_notes')&&document.getElementById('f_medical_notes').value.trim()||null,updated_at:new Date().toISOString()};
   var ex=await db.from('persons').select('id').eq('lastname',ln).eq('firstname',fn).limit(1);
   var r=(ex.data&&ex.data.length)?await db.from('persons').update(row).eq('id',ex.data[0].id):await db.from('persons').insert(row);
   if(r.error){toast('Fehler: '+r.error.message);return;}
@@ -12419,6 +12471,7 @@ async function importPersonToEntry(id) {
   if(p.mobile) document.getElementById('f_mobile').value=p.mobile;
   if(p.member_id) document.getElementById('f_member_id').value=p.member_id;
   if(p.passport_id) document.getElementById('f_passport_id').value=p.passport_id;
+  [['f_emergency_name',p.emergency_name],['f_emergency_phone',p.emergency_phone],['f_emergency_email',p.emergency_email],['f_medical_allergies',p.medical_allergies],['f_medical_medications',p.medical_medications],['f_medical_notes',p.medical_notes]].forEach(function(pair){var el=document.getElementById(pair[0]);if(el&&pair[1])el.value=pair[1];});
   // Normalize gender value (handle both umlauts and ASCII versions)
   var genderVal = p.gender || '';
   if (genderVal === 'Maennlich' || genderVal === 'maennlich') genderVal = 'Männlich';
@@ -15757,6 +15810,12 @@ async function syncEntryWithPersons() {
     {entry:'cl_date_of_expiry',   person:'visa_expiry_date',    label:'VISA Expiry Date'},
     {entry:'f_squashlevels_id',   person:'squashlevels_id',    label:'Squash Level ID'},
     {entry:'f_squashlevels_rating',person:'squashlevels_rating',label:'Squash Rating'},
+    {entry:'f_emergency_name',    person:'emergency_name',      label:'Notfallkontakt – Name'},
+    {entry:'f_emergency_phone',   person:'emergency_phone',     label:'Notfallkontakt – Telefon'},
+    {entry:'f_emergency_email',   person:'emergency_email',     label:'Notfallkontakt – E-Mail'},
+    {entry:'f_medical_allergies', person:'medical_allergies',   label:'Allergien (medizinisch)'},
+    {entry:'f_medical_medications',person:'medical_medications',label:'Medikamente'},
+    {entry:'f_medical_notes',     person:'medical_notes',       label:'Medizinische Hinweise'},
   ];
 
   // Compare values
@@ -15989,6 +16048,8 @@ async function applyEntrySync() {
         'cl_place_of_birth':'visa_place_of_birth','cl_passport':'visa_passport_no',
         'cl_date_of_issue':'visa_issue_date','cl_date_of_expiry':'visa_expiry_date',
         'f_squashlevels_id':'squashlevels_id','f_squashlevels_rating':'squashlevels_rating',
+        'f_emergency_name':'emergency_name','f_emergency_phone':'emergency_phone','f_emergency_email':'emergency_email',
+        'f_medical_allergies':'medical_allergies','f_medical_medications':'medical_medications','f_medical_notes':'medical_notes',
         '__passport_doc':'passport_doc_url',
         '__photo':'photo_url'
       };
@@ -16033,6 +16094,12 @@ async function writeEntryToPersonsDb(memberId) {
     passport_id: document.getElementById('f_passport_id')?.value.trim()||null,
     member_id: memberId,
     role: document.getElementById('f_role')?.value||null,
+    emergency_name: document.getElementById('f_emergency_name')?.value.trim()||null,
+    emergency_phone: document.getElementById('f_emergency_phone')?.value.trim()||null,
+    emergency_email: document.getElementById('f_emergency_email')?.value.trim()||null,
+    medical_allergies: document.getElementById('f_medical_allergies')?.value.trim()||null,
+    medical_medications: document.getElementById('f_medical_medications')?.value.trim()||null,
+    medical_notes: document.getElementById('f_medical_notes')?.value.trim()||null,
   };
   var r = await db.from('persons').insert(obj);
   if (r.error) toast('Fehler: ' + r.error.message);

@@ -349,6 +349,17 @@ en: {
   f_checkin: 'Check-in Date <span class="req">*</span>',
   f_checkout: 'Check-out Date <span class="req">*</span>',
   f_travel_toggle: "✈️ This person travels differently from the group defaults",
+  f_emergency_toggle: "🚨 Add emergency contact & medical details for this person",
+  f_emergency_name: "Emergency Contact – Name",
+  f_emergency_phone: "Phone",
+  f_emergency_email: "E-Mail",
+  f_medical_allergies: "Relevant Allergies",
+  f_medical_medications: "Required Medication",
+  f_medical_notes: "Special Medical Notes",
+  em_name_ph: "e.g. Anna Miller (mother)",
+  em_allergies_ph: "e.g. penicillin, bee sting, nuts…",
+  em_medications_ph: "e.g. asthma spray, insulin…",
+  em_notes_ph: "e.g. type 1 diabetes, epilepsy…",
   f_transport: "Transport",
   f_airport_transfer: "Airport Transfer",
   f_visa: "Confirmation Letter required?",
@@ -500,6 +511,17 @@ de: {
   f_checkin: 'Check-in Datum <span class="req">*</span>',
   f_checkout: 'Check-out Datum <span class="req">*</span>',
   f_travel_toggle: "✈️ Diese Person reist abweichend von den Gruppen-Standardwerten",
+  f_emergency_toggle: "🚨 Notfallkontakt & medizinische Angaben für diese Person hinzufügen",
+  f_emergency_name: "Notfallkontakt – Name",
+  f_emergency_phone: "Telefon",
+  f_emergency_email: "E-Mail",
+  f_medical_allergies: "Relevante Allergien",
+  f_medical_medications: "Notwendige Medikamente",
+  f_medical_notes: "Besondere medizinische Hinweise",
+  em_name_ph: "z. B. Anna Müller (Mutter)",
+  em_allergies_ph: "z. B. Penicillin, Wespenstich, Nüsse…",
+  em_medications_ph: "z. B. Asthmaspray, Insulin…",
+  em_notes_ph: "z. B. Diabetes Typ 1, Epilepsie…",
   f_transport: "Transport",
   f_airport_transfer: "Flughafentransfer",
   f_visa: "Bestätigungsschreiben erforderlich?",
@@ -1095,6 +1117,12 @@ function prefillGroupParticipant(id, p) {
   setVal('p_flight_in_' + id, p.flight_in);
   setVal('p_departure_date_' + id, p.departure_date); setVal('p_departure_time_' + id, p.departure_time);
   setVal('p_flight_out_' + id, p.flight_out);
+  setVal('p_emergency_name_' + id, p.emergency_name); setVal('p_emergency_phone_' + id, p.emergency_phone); setVal('p_emergency_email_' + id, p.emergency_email);
+  setVal('p_medical_allergies_' + id, p.medical_allergies); setVal('p_medical_medications_' + id, p.medical_medications); setVal('p_medical_notes_' + id, p.medical_notes);
+  if (p.emergency_name || p.emergency_phone || p.emergency_email || p.medical_allergies || p.medical_medications || p.medical_notes) {
+    var emf = document.getElementById('p_emergencyfields_' + id);
+    if (emf) emf.classList.add('open');
+  }
   if (p.arrival_date || p.arrival_time || p.flight_in || p.departure_date || p.departure_time || p.flight_out) {
     var tf = document.getElementById('p_travelfields_' + id);
     if (tf) tf.classList.add('open');
@@ -1282,6 +1310,16 @@ function addParticipantRow() {
     + '<div class="form-group"><label data-i18n="f_departure_date">' + t('f_departure_date') + '</label><input type="date" id="p_departure_date_' + id + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_departure_time">' + t('f_departure_time') + '</label><input type="time" id="p_departure_time_' + id + '" oninput="updateParticipantAirportTransfer(' + id + ')" /></div>'
     + '<div class="form-group"><label data-i18n="f_flight_out_short">' + t('f_flight_out_short') + '</label><input type="text" id="p_flight_out_' + id + '" /></div>'
+    + '</div></div>'
+    + '<span class="travel-toggle" onclick="toggleIndividualEmergency(' + id + ')" id="p_emergencytoggle_' + id + '" data-i18n="f_emergency_toggle">' + t('f_emergency_toggle') + '</span>'
+    + '<div class="travel-fields" id="p_emergencyfields_' + id + '">'
+    + '<div class="form-grid">'
+    + '<div class="form-group full"><label data-i18n="f_emergency_name">' + t('f_emergency_name') + '</label><input type="text" id="p_emergency_name_' + id + '" data-i18n-ph="em_name_ph" placeholder="' + t('em_name_ph') + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_emergency_phone">' + t('f_emergency_phone') + '</label><input type="tel" id="p_emergency_phone_' + id + '" placeholder="+49 151 …" /></div>'
+    + '<div class="form-group"><label data-i18n="f_emergency_email">' + t('f_emergency_email') + '</label><input type="email" id="p_emergency_email_' + id + '" placeholder="contact@email.com" /></div>'
+    + '<div class="form-group full"><label data-i18n="f_medical_allergies">' + t('f_medical_allergies') + '</label><textarea id="p_medical_allergies_' + id + '" data-i18n-ph="em_allergies_ph" placeholder="' + t('em_allergies_ph') + '" style="height:60px"></textarea></div>'
+    + '<div class="form-group full"><label data-i18n="f_medical_medications">' + t('f_medical_medications') + '</label><textarea id="p_medical_medications_' + id + '" data-i18n-ph="em_medications_ph" placeholder="' + t('em_medications_ph') + '" style="height:60px"></textarea></div>'
+    + '<div class="form-group full"><label data-i18n="f_medical_notes">' + t('f_medical_notes') + '</label><textarea id="p_medical_notes_' + id + '" data-i18n-ph="em_notes_ph" placeholder="' + t('em_notes_ph') + '" style="height:60px"></textarea></div>'
     + '</div></div>'
     + '</div>';
 
@@ -1797,6 +1835,11 @@ function toggleIndividualTravel(id) {
   fields.classList.toggle('open');
 }
 
+function toggleIndividualEmergency(id) {
+  var fields = document.getElementById('p_emergencyfields_' + id);
+  if (fields) fields.classList.toggle('open');
+}
+
 function populateEventsSelect(id) {
   var sel = document.getElementById('p_events_' + id);
   if (!sel) return;
@@ -2251,6 +2294,12 @@ async function submitGroupRegistration() {
       ams_bus: travel.ams_bus, airport_plus: travel.airport_plus,
       arrival_date: travel.arrival_date, arrival_time: travel.arrival_time, flight_in: travel.flight_in,
       departure_date: travel.departure_date, departure_time: travel.departure_time, flight_out: travel.flight_out,
+      emergency_name: v('p_emergency_name_' + id) || null,
+      emergency_phone: v('p_emergency_phone_' + id) || null,
+      emergency_email: v('p_emergency_email_' + id) || null,
+      medical_allergies: v('p_medical_allergies_' + id) || null,
+      medical_medications: v('p_medical_medications_' + id) || null,
+      medical_notes: v('p_medical_notes_' + id) || null,
       visa: document.getElementById('p_visa_' + id).value || null,
       place_of_birth: needsLetter ? (v('p_place_of_birth_' + id) || null) : null,
       visa_date_of_issue: needsLetter ? (v('p_date_of_issue_' + id) || null) : null,
