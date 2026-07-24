@@ -2505,6 +2505,34 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <div id="wp_preview" style="background:var(--bg2);border-radius:var(--radius);padding:12px 14px"></div>
           </div>
         </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <h3>🔗 Turnier-Links — <span id="tl_event_label" style="color:var(--blue)">kein Event aktiv</span></h3>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+              Gilt nur für das oben als <strong>Aktiv</strong> markierte Event. Diese Links erscheinen im digitalen Spielerpass.
+            </p>
+            <div class="form-grid" style="gap:12px;margin-bottom:14px">
+              <div class="form-group" style="grid-column:1/-1">
+                <label>🎾 Tournamentplanner</label>
+                <input type="url" id="tl_tournamentplanner" placeholder="https://www.tournamentsoftware.com/tournament/..." />
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>📺 Livestream</label>
+                <input type="url" id="tl_livestream" placeholder="https://www.youtube.com/... oder Twitch etc." />
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>🌐 Turnier-Webseite</label>
+                <input type="url" id="tl_website" placeholder="https://european-junior-open.com" />
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <button class="btn primary" onclick="saveTournamentLinks()" style="width:100%">💾 Für dieses Event speichern</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- BACKUP & RESTORE -->
@@ -4551,6 +4579,7 @@ async function initApp() {
   loadMealOptions().catch(function(){});
   loadPersonRoles().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
+  loadTournamentLinks().catch(function(){});
   updateMealOptionSelects();
   refreshTournamentWithdrawalBadge().catch(function(){});
   subscribeTournamentWithdrawalNotifications();
@@ -5852,7 +5881,7 @@ function nav(page) {
   else if (page === 'broadcast') { populateBcFilterOptions(); loadBcTemplates(); loadBroadcastRecipients(); }
   else if (page === 'checkin') loadCheckin();
   else if (page === 'mealcheck') loadMealCheck();
-  else if (page === 'events') { loadEvents(); loadWithdrawPolicy().catch(function(){}); }
+  else if (page === 'events') { loadEvents(); loadWithdrawPolicy().catch(function(){}); loadTournamentLinks().catch(function(){}); }
   else if (page === 'backup') initBackupPage();
   else if (page === 'persons') loadPersons();
   else if (page === 'settings') loadSettings();
@@ -10514,6 +10543,39 @@ function renderWithdrawPolicySettings() {
   }
 }
 
+// TURNIER-LINKS (pro Event) — erscheinen im digitalen Spielerpass
+async function loadTournamentLinks() {
+  var key = currentEventId ? ('tournament_links_' + currentEventId) : 'tournament_links';
+  var r = await db.from('app_settings').select('value').eq('key', key).limit(1);
+  var row = r.data && r.data[0];
+  if (!row && currentEventId) {
+    var legacy = await db.from('app_settings').select('value').eq('key', 'tournament_links').limit(1);
+    row = legacy.data && legacy.data[0];
+  }
+  var links = { tournamentplanner: '', livestream: '', website: '' };
+  if (row && row.value) {
+    try { var parsed = JSON.parse(row.value); links.tournamentplanner = parsed.tournamentplanner || ''; links.livestream = parsed.livestream || ''; links.website = parsed.website || ''; }
+    catch(e) { console.error('loadTournamentLinks error:', e); }
+  }
+  var tp = document.getElementById('tl_tournamentplanner'); if (tp) tp.value = links.tournamentplanner;
+  var ls = document.getElementById('tl_livestream'); if (ls) ls.value = links.livestream;
+  var ws = document.getElementById('tl_website'); if (ws) ws.value = links.website;
+  var lbl = document.getElementById('tl_event_label'); if (lbl) lbl.textContent = currentEventName || 'kein Event aktiv';
+}
+
+async function saveTournamentLinks() {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  var links = {
+    tournamentplanner: (document.getElementById('tl_tournamentplanner') && document.getElementById('tl_tournamentplanner').value.trim()) || '',
+    livestream: (document.getElementById('tl_livestream') && document.getElementById('tl_livestream').value.trim()) || '',
+    website: (document.getElementById('tl_website') && document.getElementById('tl_website').value.trim()) || ''
+  };
+  var key = 'tournament_links_' + currentEventId;
+  await db.from('app_settings').delete().eq('key', key);
+  await db.from('app_settings').insert({ key: key, value: JSON.stringify(links) });
+  toast('✅ Turnier-Links für dieses Event gespeichert');
+}
+
 // ENTRY FEE
 async function loadEntryFeeExt() {
   var r = await db.from('app_settings').select('*');
@@ -10578,6 +10640,7 @@ async function setActiveEvent(id, name) {
   if (currentPage === 'refereepenalty') restoreRefereePenaltyFolder().catch(function(){});
   refreshTournamentWithdrawalBadge().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
+  loadTournamentLinks().catch(function(){});
   loadAgeClasses().catch(function(){});
   loadLetterTypesSettings().catch(function(){});
   loadCertificateSettings().catch(function(){});
