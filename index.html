@@ -2528,6 +2528,11 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <input type="url" id="tl_website" placeholder="https://european-junior-open.com" />
               </div>
               <div class="form-group" style="grid-column:1/-1">
+                <label>💬 WhatsApp Organizer (Nummer)</label>
+                <input type="tel" id="tl_whatsapp" placeholder="+49 151 12345678" />
+                <div style="font-size:11px;color:var(--text3);margin-top:4px">Internationales Format. Erscheint im Spielerpass als eigene WhatsApp-Box mit direktem Chat-Link.</div>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
                 <button class="btn primary" onclick="saveTournamentLinks()" style="width:100%">💾 Für dieses Event speichern</button>
               </div>
             </div>
@@ -10552,14 +10557,15 @@ async function loadTournamentLinks() {
     var legacy = await db.from('app_settings').select('value').eq('key', 'tournament_links').limit(1);
     row = legacy.data && legacy.data[0];
   }
-  var links = { tournamentplanner: '', livestream: '', website: '' };
+  var links = { tournamentplanner: '', livestream: '', website: '', whatsapp: '' };
   if (row && row.value) {
-    try { var parsed = JSON.parse(row.value); links.tournamentplanner = parsed.tournamentplanner || ''; links.livestream = parsed.livestream || ''; links.website = parsed.website || ''; }
+    try { var parsed = JSON.parse(row.value); links.tournamentplanner = parsed.tournamentplanner || ''; links.livestream = parsed.livestream || ''; links.website = parsed.website || ''; links.whatsapp = parsed.whatsapp || ''; }
     catch(e) { console.error('loadTournamentLinks error:', e); }
   }
   var tp = document.getElementById('tl_tournamentplanner'); if (tp) tp.value = links.tournamentplanner;
   var ls = document.getElementById('tl_livestream'); if (ls) ls.value = links.livestream;
   var ws = document.getElementById('tl_website'); if (ws) ws.value = links.website;
+  var wa = document.getElementById('tl_whatsapp'); if (wa) wa.value = links.whatsapp;
   var lbl = document.getElementById('tl_event_label'); if (lbl) lbl.textContent = currentEventName || 'kein Event aktiv';
 }
 
@@ -10568,7 +10574,8 @@ async function saveTournamentLinks() {
   var links = {
     tournamentplanner: (document.getElementById('tl_tournamentplanner') && document.getElementById('tl_tournamentplanner').value.trim()) || '',
     livestream: (document.getElementById('tl_livestream') && document.getElementById('tl_livestream').value.trim()) || '',
-    website: (document.getElementById('tl_website') && document.getElementById('tl_website').value.trim()) || ''
+    website: (document.getElementById('tl_website') && document.getElementById('tl_website').value.trim()) || '',
+    whatsapp: (document.getElementById('tl_whatsapp') && document.getElementById('tl_whatsapp').value.trim()) || ''
   };
   var key = 'tournament_links_' + currentEventId;
   await db.from('app_settings').delete().eq('key', key);
