@@ -3061,6 +3061,22 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
             <tbody id="tpPreviewTable"><tr><td colspan="9" class="loading">–</td></tr></tbody>
           </table></div>
         </div>
+
+        <!-- TP-EXPORT -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><h3>📤 TP-Export</h3></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+              Exportiert alle Teilnehmer mit der Rolle <strong>Player</strong> des aktiven Events als Excel-Datei –
+              mit den Feldern: Member ID, Name, Firstname, Country, Mobile, Email, Gender, DOB und Event.
+            </p>
+            <button class="btn primary" onclick="exportTpPlayers()">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;display:inline;vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Player-Export herunterladen (Excel)
+            </button>
+            <div id="tpExportInfo" style="margin-top:10px;font-size:12px;color:var(--text3)"></div>
+          </div>
+        </div>
       </div>
 
       <!-- WARTELISTE -->
@@ -13013,6 +13029,53 @@ async function runTpImport() {
     : '<span style="color:var(--amber)">' + done + ' importiert, ' + errors + ' Fehler.</span><br><small>' + errList.slice(0,5).join('<br>') + '</small>';
   toast(done + ' Teilnehmer importiert');
   if (tpLastRows) await buildTpCandidates(tpLastRows);
+}
+
+// Exportiert alle Player des aktiven Events als Excel-Datei (TP-kompatible Felder).
+async function exportTpPlayers() {
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  var info = document.getElementById('tpExportInfo');
+  if (info) info.textContent = 'Lade Teilnehmer …';
+  try {
+    var r = await db.from('participants').select('*').eq('event_id', currentEventId);
+    if (r.error) { if (info) info.innerHTML = '<span style="color:var(--red)">Fehler: ' + r.error.message + '</span>'; return; }
+    var players = (r.data || []).filter(function(p){ return p.role && String(p.role).trim().toLowerCase() === 'player'; });
+    if (!players.length) { if (info) info.textContent = 'Keine Player im aktiven Event gefunden.'; toast('Keine Player gefunden'); return; }
+
+    // Geschlecht für TP zurückübersetzen (Männlich→Male, Weiblich→Female)
+    function genderOut(g) {
+      var s = (g == null ? '' : String(g)).trim().toLowerCase();
+      if (s.charAt(0) === 'm') return 'Male';
+      if (s.charAt(0) === 'w' || s.charAt(0) === 'f') return 'Female';
+      if (s.charAt(0) === 'd') return 'Divers';
+      return g || '';
+    }
+    function val(v){ return v == null ? '' : v; }
+
+    var headers = ['Member ID','Name','Firstname','Country','Mobile','Email','Gender','DOB','Event'];
+    var aoa = [headers];
+    // nach Nachname sortieren
+    players.sort(function(a,b){ return String(a.lastname||'').localeCompare(String(b.lastname||''), 'de'); });
+    players.forEach(function(p){
+      aoa.push([
+        val(p.member_id), val(p.lastname), val(p.firstname), val(p.country),
+        val(p.mobile), val(p.email), genderOut(p.gender), val(p.dob), val(p.events)
+      ]);
+    });
+
+    var XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:14},{wch:18},{wch:16},{wch:12},{wch:16},{wch:26},{wch:9},{wch:12},{wch:10}];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Players');
+    var evName = (currentEventName || 'Event').replace(/[^\w\-]+/g, '_');
+    XLSX.writeFile(wb, 'TP-Export_' + evName + '.xlsx');
+    if (info) info.innerHTML = '<span style="color:var(--green)">' + players.length + ' Player exportiert.</span>';
+    toast(players.length + ' Player exportiert');
+  } catch (err) {
+    console.error('exportTpPlayers error:', err);
+    if (info) info.innerHTML = '<span style="color:var(--red)">Fehler beim Export: ' + (err.message||err) + '</span>';
+  }
 }
 
 // MISC FORM HELPERS
