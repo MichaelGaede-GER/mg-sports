@@ -368,6 +368,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
     <div class="nav-item" onclick="nav('import')">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span data-i18n="nav_import">Import</span>
     </div>
+    <div class="nav-item" onclick="nav('tpimport')" style="padding-left:34px">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg><span>TP-Import</span>
+    </div>
     <div class="nav-item" onclick="nav('hotel')">
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span data-i18n="nav_hotel">Hotelbelegung</span>
     </div>
@@ -3001,6 +3004,63 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
 
         <!-- CATEGORIES -->
         <div id="idcardBlocks"></div>
+      </div>
+
+      <!-- TP-IMPORT -->
+      <div class="page" id="page-tpimport">
+        <div class="page-header"><h2>TP-Import</h2><span class="desc">Teilnehmer aus Tournament-Planner-Export (ImportTP.xlsx) importieren</span></div>
+
+        <!-- Schritt 1: Feld-Zuordnung -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="var b=document.getElementById('tpMappingBody');b.style.display=b.style.display==='none'?'block':'none'">
+            <h3 style="flex:1;margin:0">🔗 Feld-Zuordnung <span style="font-size:11px;color:var(--text3);font-weight:400">(TP-Spalte → Teilnehmerfeld)</span></h3>
+            <span style="font-size:12px;color:var(--blue)">ein-/ausklappen</span>
+          </div>
+          <div class="card-body" id="tpMappingBody">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+              Ordne jeder importierbaren Teilnehmer-Spalte die passende Spalte aus der ImportTP-Datei zu. Nur zugeordnete Felder werden importiert – setze ein Feld auf <em>„— nicht importieren —"</em>, um es zu überspringen. Die Zuordnung wird pro Event gespeichert.
+            </p>
+            <div class="table-wrap"><table>
+              <thead><tr><th style="width:38%">Teilnehmerfeld (Zielsystem)</th><th style="width:52%">TP-Spalte (Quelle)</th><th style="width:10%"></th></tr></thead>
+              <tbody id="tpMappingTable"></tbody>
+            </table></div>
+            <div style="margin-top:12px;display:flex;gap:10px">
+              <button class="btn primary" onclick="saveTpMapping()">💾 Zuordnung speichern</button>
+              <button class="btn" onclick="resetTpMapping()">Standard wiederherstellen</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schritt 2: Datei hochladen -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>📥 ImportTP-Datei hochladen</h3></div>
+          <div class="card-body">
+            <div id="tpDropZone" style="border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:36px;text-align:center;cursor:pointer;transition:border-color .2s" onclick="document.getElementById('tpFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--blue)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="handleTpDrop(event)">
+              <svg viewBox="0 0 24 24" style="width:32px;height:32px;stroke:var(--text3);fill:none;stroke-width:1.5;margin-bottom:10px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div style="font-size:14px;font-weight:500;color:var(--text)">ImportTP.xlsx hier hinziehen</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:4px">oder klicken zum Auswählen (.xlsx / .xls)</div>
+            </div>
+            <input type="file" id="tpFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleTpFileSelect(event)" />
+            <div id="tpFileInfo" style="display:none;margin-top:12px;font-size:13px;color:var(--text2)"></div>
+          </div>
+        </div>
+
+        <!-- Schritt 3: Vorschau (Warteliste-Style) -->
+        <div class="card" id="tpPreviewCard" style="display:none">
+          <div class="card-header" style="display:flex;align-items:center;gap:10px">
+            <h3 style="flex:1;margin:0">Import-Vorschau <span id="tpPreviewBadge" style="background:var(--blue);color:#fff;border-radius:12px;font-size:12px;font-weight:700;padding:2px 10px;margin-left:6px">0</span></h3>
+            <span id="tpDupInfo" style="font-size:12px;color:var(--text3)"></span>
+            <button class="btn primary" id="tpImportBtn" onclick="runTpImport()">✅ Ausgewählte importieren</button>
+          </div>
+          <div id="tpImportProgress" style="display:none;padding:10px 16px;font-size:12px;color:var(--text2)"></div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th style="width:36px"><input type="checkbox" id="tpSelectAll" checked onchange="tpToggleAll(this.checked)" /></th>
+              <th>Name</th><th>Member ID</th><th>Land</th><th>Geschlecht</th><th>Geburtsdatum</th><th>Altersklasse</th><th>E-Mail</th><th>Mobil</th>
+            </tr></thead>
+            <tbody id="tpPreviewTable"><tr><td colspan="9" class="loading">–</td></tr></tbody>
+          </table></div>
+        </div>
       </div>
 
       <!-- WARTELISTE -->
@@ -5848,7 +5908,7 @@ function nav(page) {
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => { if (i.getAttribute('onclick') && i.getAttribute('onclick').includes("'"+page+"'")) i.classList.add('active'); });
-  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',invoices:'Rechnungen',refereepenalty:'Schieds-Pflicht',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte',airport:'Airport Transfer',users:'Benutzer & Rollen'};
+  const titles = {dashboard:'Dashboard',participants:'Teilnehmer',entry:'Neu erfassen',packages:'Package-Verwaltung',hotel:'Hotelbelegung',payments:'Zahlungen',invoices:'Rechnungen',refereepenalty:'Schieds-Pflicht',withdrawals:'Absagen',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',mahnlog:'Mahnungs-Log',mahnlog:'Mahnungs-Log',waitlist:'Warteliste',import:'Daten importieren',events:'Event-Verwaltung',backup:'Backup & Restore',persons:'Personendatenbank',settings:'Einstellungen',reports:'Berichte',airport:'Airport Transfer',users:'Benutzer & Rollen',tpimport:'TP-Import'};
   document.getElementById('topbarTitle').textContent = titles[page] || page;
   currentPage = page;
   if (page === 'dashboard') {
@@ -5883,6 +5943,7 @@ function nav(page) {
   else if (page === 'idcard') { loadIdCards(); }
   else if (page === 'waitlist') loadWaitlist();
   else if (page === 'import') initImportPage();
+  else if (page === 'tpimport') initTpImportPage();
   else if (page === 'broadcast') { populateBcFilterOptions(); loadBcTemplates(); loadBroadcastRecipients(); }
   else if (page === 'checkin') loadCheckin();
   else if (page === 'mealcheck') loadMealCheck();
@@ -12655,6 +12716,293 @@ async function runImport() {
   if(btn){btn.textContent='Import abgeschlossen';}  importData=[]; toast(done+' Eintraege importiert');
 }
 
+// ============================ TP-IMPORT ============================
+// Standard-Spalten des Tournament-Planner-Exports (ImportTP.xlsx, Kopfzeile).
+var TP_COLUMNS = ['No.','Name','Firstname','Middlename','Address','Address2','Address3','Postalcode','City','State','Country','Phone Home','Phone Work','Mobile','Email','DOB','Gender','Member ID','Club','District','Level1','Level2','Rating1','Rating2','Ev.','Events','Av.','Entry Date','Entry Info','Entry Method','Fee','Due','Memo','Validation','T-Shirt Size players only (XXS,XS,S,M,L,XL,XXL)','National Ranking (non europeans only)','You have the confirmation from your national association?','payment info: https://european-junior-open.com/payment-information/','Meal package / 6 meals (90,-Euros)','Name of your coach at the tournament'];
+
+// Importierbare Teilnehmerfelder (Ziel) mit Standard-Zuordnung zur TP-Spalte (Quelle).
+var TP_IMPORT_TARGETS = [
+  { col:'lastname',    label:'Nachname',                tpDefault:'Name' },
+  { col:'firstname',   label:'Vorname',                 tpDefault:'Firstname' },
+  { col:'member_id',   label:'Member ID (ESID)',        tpDefault:'Member ID' },
+  { col:'gender',      label:'Geschlecht',              tpDefault:'Gender',   transform:'gender' },
+  { col:'dob',         label:'Geburtsdatum',            tpDefault:'DOB',      transform:'date' },
+  { col:'email',       label:'E-Mail',                  tpDefault:'Email' },
+  { col:'mobile',      label:'Mobil',                   tpDefault:'Mobile' },
+  { col:'country',     label:'Land',                    tpDefault:'Country' },
+  { col:'events',      label:'Altersklasse / Events',   tpDefault:'Events' },
+  { col:'shirt',       label:'T-Shirt-Größe',           tpDefault:'T-Shirt Size players only (XXS,XS,S,M,L,XL,XXL)' },
+  { col:'coach_name',  label:'Coach (Name)',            tpDefault:'Name of your coach at the tournament' },
+  { col:'memo',        label:'Memo',                    tpDefault:'Memo' }
+];
+
+var tpMapping = {};
+var tpCandidates = [];
+var tpFileName = '';
+var tpDiscoveredColumns = [];
+var tpLastRows = null;
+
+function tpDefaultMapping() {
+  var m = {};
+  TP_IMPORT_TARGETS.forEach(function(t){ m[t.col] = t.tpDefault; });
+  return m;
+}
+
+async function initTpImportPage() {
+  tpCandidates = [];
+  var fi = document.getElementById('tpFileInput'); if (fi) fi.value = '';
+  var info = document.getElementById('tpFileInfo'); if (info) { info.style.display='none'; info.textContent=''; }
+  var pc = document.getElementById('tpPreviewCard'); if (pc) pc.style.display='none';
+  await loadTpMapping();
+  renderTpMappingTable();
+}
+
+async function loadTpMapping() {
+  tpMapping = tpDefaultMapping();
+  try {
+    var key = currentEventId ? ('tp_import_mapping_' + currentEventId) : 'tp_import_mapping';
+    var r = await db.from('app_settings').select('value').eq('key', key).limit(1);
+    var row = r.data && r.data[0];
+    if (!row && currentEventId) {
+      var legacy = await db.from('app_settings').select('value').eq('key','tp_import_mapping').limit(1);
+      row = legacy.data && legacy.data[0];
+    }
+    if (row && row.value) {
+      var saved = JSON.parse(row.value);
+      TP_IMPORT_TARGETS.forEach(function(t){ if (saved.hasOwnProperty(t.col)) tpMapping[t.col] = saved[t.col]; });
+    }
+  } catch(e) { console.error('loadTpMapping error:', e); }
+}
+
+async function saveTpMapping() {
+  TP_IMPORT_TARGETS.forEach(function(t){
+    var sel = document.getElementById('tpmap_' + t.col);
+    if (sel) tpMapping[t.col] = sel.value;
+  });
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  var key = 'tp_import_mapping_' + currentEventId;
+  await db.from('app_settings').delete().eq('key', key);
+  await db.from('app_settings').insert({ key: key, value: JSON.stringify(tpMapping) });
+  toast('✅ Zuordnung gespeichert');
+  if (tpLastRows) buildTpCandidates(tpLastRows);
+}
+
+function resetTpMapping() {
+  tpMapping = tpDefaultMapping();
+  renderTpMappingTable();
+  toast('Standard-Zuordnung wiederhergestellt (noch nicht gespeichert)');
+}
+
+function renderTpMappingTable() {
+  var tb = document.getElementById('tpMappingTable');
+  if (!tb) return;
+  var cols = TP_COLUMNS.slice();
+  (tpDiscoveredColumns || []).forEach(function(c){ if (cols.indexOf(c) === -1) cols.push(c); });
+  tb.innerHTML = TP_IMPORT_TARGETS.map(function(t){
+    var opts = '<option value="">— nicht importieren —</option>' + cols.map(function(c){
+      var sel = (tpMapping[t.col] === c) ? ' selected' : '';
+      return '<option value="' + c.replace(/"/g,'&quot;') + '"' + sel + '>' + c + '</option>';
+    }).join('');
+    var note = t.transform === 'gender' ? ' <span style="font-size:10px;color:var(--text3)">(Male→Männlich)</span>'
+             : t.transform === 'date' ? ' <span style="font-size:10px;color:var(--text3)">(→ JJJJ-MM-TT)</span>' : '';
+    var dot = tpMapping[t.col] ? '<span style="color:var(--green)">●</span>' : '<span style="color:var(--text3)">○</span>';
+    return '<tr><td><strong>' + t.label + '</strong> <span style="font-size:11px;color:var(--text3)">' + t.col + '</span>' + note + '</td>'
+      + '<td><select id="tpmap_' + t.col + '" style="width:100%" onchange="tpMapping[\'' + t.col + '\']=this.value;renderTpMappingDots()">' + opts + '</select></td>'
+      + '<td style="text-align:center" id="tpmapdot_' + t.col + '">' + dot + '</td></tr>';
+  }).join('');
+}
+
+function renderTpMappingDots() {
+  TP_IMPORT_TARGETS.forEach(function(t){
+    var cell = document.getElementById('tpmapdot_' + t.col);
+    if (cell) cell.innerHTML = tpMapping[t.col] ? '<span style="color:var(--green)">●</span>' : '<span style="color:var(--text3)">○</span>';
+  });
+}
+
+function handleTpDrop(e) { e.preventDefault(); var dz=document.getElementById('tpDropZone'); if(dz) dz.style.borderColor='var(--border2)'; var f=e.dataTransfer.files[0]; if(f) processTpFile(f); }
+function handleTpFileSelect(e) { var f=e.target.files[0]; if(f) processTpFile(f); }
+
+async function processTpFile(file) {
+  tpFileName = file.name;
+  var info = document.getElementById('tpFileInfo');
+  if (info) { info.style.display='block'; info.textContent = 'Lese ' + file.name + ' …'; }
+  try {
+    var buf = await file.arrayBuffer();
+    var XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+    var wb = XLSX.read(buf, { type:'array', cellDates:true });
+    var ws = wb.Sheets[wb.SheetNames[0]];
+    var aoa = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null });
+    var headerIdx = -1;
+    for (var i = 0; i < Math.min(aoa.length, 15); i++) {
+      var rowl = (aoa[i] || []).map(function(c){ return c==null ? '' : String(c).trim().toLowerCase(); });
+      if (rowl.indexOf('firstname') !== -1 && rowl.indexOf('member id') !== -1) { headerIdx = i; break; }
+    }
+    if (headerIdx === -1) {
+      if (info) info.innerHTML = '<span style="color:var(--red)">Kopfzeile nicht gefunden. Erwarte Spalten wie „Firstname" und „Member ID".</span>';
+      return;
+    }
+    var headers = (aoa[headerIdx] || []).map(function(c){ return c==null ? '' : String(c).trim(); });
+    tpDiscoveredColumns = headers.filter(Boolean);
+    var rows = [];
+    for (var r = headerIdx + 1; r < aoa.length; r++) {
+      var arr = aoa[r] || [];
+      if (!arr.some(function(c){ return c!=null && String(c).trim()!==''; })) continue;
+      var obj = {};
+      headers.forEach(function(h, ci){ if (h) obj[h] = arr[ci]; });
+      rows.push(obj);
+    }
+    tpLastRows = rows;
+    renderTpMappingTable();
+    await buildTpCandidates(rows);
+  } catch (err) {
+    console.error('processTpFile error:', err);
+    if (info) info.innerHTML = '<span style="color:var(--red)">Fehler beim Lesen der Datei: ' + (err.message||err) + '</span>';
+  }
+}
+
+function tpNormalizeGender(v) {
+  if (v == null) return '';
+  var s = String(v).trim().toLowerCase();
+  if (!s) return '';
+  var c = s.charAt(0);
+  if (c === 'm' || c === 'b') return 'Männlich';
+  if (c === 'f' || c === 'g' || c === 'w') return 'Weiblich';
+  if (c === 'd') return 'Divers';
+  return '';
+}
+
+function tpNormalizeDate(v) {
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    return v.getFullYear() + '-' + String(v.getMonth()+1).padStart(2,'0') + '-' + String(v.getDate()).padStart(2,'0');
+  }
+  if (typeof v === 'number') {
+    var d = new Date(Date.UTC(1899,11,30) + v*86400000);
+    if (!isNaN(d.getTime())) return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+  }
+  var s = String(v).trim();
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+  m = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/);
+  if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  return null;
+}
+
+function tpApplyTransform(target, value) {
+  if (value == null) return null;
+  if (target.transform === 'gender') return tpNormalizeGender(value);
+  if (target.transform === 'date') return tpNormalizeDate(value);
+  var s = String(value).trim();
+  return s === '' ? null : s;
+}
+
+async function buildTpCandidates(rows) {
+  TP_IMPORT_TARGETS.forEach(function(t){ var sel=document.getElementById('tpmap_'+t.col); if(sel) tpMapping[t.col]=sel.value; });
+
+  var existing = new Set();
+  try {
+    var q = db.from('participants').select('member_id');
+    if (currentEventId) q = q.eq('event_id', currentEventId);
+    var er = await q;
+    (er.data || []).forEach(function(p){ if (p.member_id) existing.add(String(p.member_id).trim().toLowerCase()); });
+  } catch(e) { console.error('load existing member_ids error:', e); }
+
+  var memberCol = tpMapping['member_id'];
+  var seenInFile = new Set();
+  var candidates = [], dupExisting = 0, dupInFile = 0;
+
+  rows.forEach(function(raw){
+    var rec = {};
+    TP_IMPORT_TARGETS.forEach(function(t){
+      var src = tpMapping[t.col];
+      if (!src) return;
+      rec[t.col] = tpApplyTransform(t, raw[src]);
+    });
+    if (!rec.lastname && !rec.firstname) return;
+
+    var mid = memberCol ? (raw[memberCol]==null ? '' : String(raw[memberCol]).trim()) : '';
+    var midKey = mid.toLowerCase();
+    if (midKey && existing.has(midKey)) { dupExisting++; return; }
+    if (midKey && seenInFile.has(midKey)) { dupInFile++; return; }
+    if (midKey) seenInFile.add(midKey);
+    candidates.push(rec);
+  });
+
+  tpCandidates = candidates;
+  var info = document.getElementById('tpFileInfo');
+  if (info) {
+    info.style.display = 'block';
+    info.innerHTML = '<strong>' + tpFileName + '</strong> — ' + rows.length + ' Zeilen gelesen, '
+      + '<span style="color:var(--green)">' + candidates.length + ' neu importierbar</span>'
+      + (dupExisting ? ', <span style="color:var(--amber)">' + dupExisting + ' bereits in Teilnehmerliste (übersprungen)</span>' : '')
+      + (dupInFile ? ', ' + dupInFile + ' Datei-Dubletten übersprungen' : '') + '.';
+  }
+  renderTpPreview(dupExisting);
+}
+
+function tpEsc(v) { return v==null ? '' : String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderTpPreview(dupExisting) {
+  var card = document.getElementById('tpPreviewCard');
+  var body = document.getElementById('tpPreviewTable');
+  var badge = document.getElementById('tpPreviewBadge');
+  var dupInfo = document.getElementById('tpDupInfo');
+  if (!card || !body) return;
+  card.style.display = 'block';
+  if (badge) badge.textContent = tpCandidates.length;
+  if (dupInfo) dupInfo.textContent = dupExisting ? (dupExisting + ' Dublette(n) übersprungen') : '';
+  if (!tpCandidates.length) {
+    body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">Keine neuen Teilnehmer zum Importieren (alle bereits vorhanden oder keine Zuordnung).</td></tr>';
+    return;
+  }
+  body.innerHTML = tpCandidates.map(function(c, i){
+    var name = ((c.lastname||'') + (c.firstname ? ', ' + c.firstname : '')).trim();
+    return '<tr>'
+      + '<td><input type="checkbox" class="tp-row-cb" data-idx="' + i + '" checked /></td>'
+      + '<td><strong>' + tpEsc(name) + '</strong></td>'
+      + '<td>' + tpEsc(c.member_id) + '</td>'
+      + '<td>' + tpEsc(c.country) + '</td>'
+      + '<td>' + tpEsc(c.gender) + '</td>'
+      + '<td>' + tpEsc(c.dob) + '</td>'
+      + '<td>' + tpEsc(c.events) + '</td>'
+      + '<td>' + tpEsc(c.email) + '</td>'
+      + '<td>' + tpEsc(c.mobile) + '</td>'
+      + '</tr>';
+  }).join('');
+  var sa = document.getElementById('tpSelectAll'); if (sa) sa.checked = true;
+}
+
+function tpToggleAll(checked) {
+  document.querySelectorAll('.tp-row-cb').forEach(function(cb){ cb.checked = checked; });
+}
+
+async function runTpImport() {
+  if (!tpCandidates.length) { toast('Nichts zu importieren'); return; }
+  if (!currentEventId) { toast('⚠️ Bitte zuerst ein Event aktivieren'); return; }
+  var idxs = [];
+  document.querySelectorAll('.tp-row-cb').forEach(function(cb){ if (cb.checked) idxs.push(parseInt(cb.getAttribute('data-idx'),10)); });
+  if (!idxs.length) { toast('Keine Zeile ausgewählt'); return; }
+
+  var btn = document.getElementById('tpImportBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Importiere…'; }
+  var prog = document.getElementById('tpImportProgress'); if (prog) prog.style.display = 'block';
+  var done = 0, errors = 0, errList = [];
+  for (var k = 0; k < idxs.length; k++) {
+    var rec = Object.assign({}, tpCandidates[idxs[k]]);
+    rec.event_id = currentEventId;
+    if (!rec.role) rec.role = 'Player';
+    var r = await db.from('participants').insert(rec);
+    if (r.error) { errors++; errList.push((rec.lastname||'') + ', ' + (rec.firstname||'') + ': ' + r.error.message); }
+    else done++;
+    if (prog) prog.textContent = (done+errors) + ' / ' + idxs.length + ' verarbeitet…';
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '✅ Ausgewählte importieren'; }
+  if (prog) prog.innerHTML = errors === 0
+    ? '<span style="color:var(--green)">Import erfolgreich: ' + done + ' Teilnehmer importiert.</span>'
+    : '<span style="color:var(--amber)">' + done + ' importiert, ' + errors + ' Fehler.</span><br><small>' + errList.slice(0,5).join('<br>') + '</small>';
+  toast(done + ' Teilnehmer importiert');
+  if (tpLastRows) await buildTpCandidates(tpLastRows);
+}
+
 // MISC FORM HELPERS
 function updateShirtQty() { var s=document.getElementById('f_shirt')&&document.getElementById('f_shirt').value; var q=document.getElementById('f_shirt_qty'); if(!q) return; if(!s) q.value=0; else if(parseInt(q.value)===0) q.value=1; }
 function toggleFlightFields() { /* Flight fields always visible */ }
@@ -17960,6 +18308,7 @@ function recomputeEventRole() {
 }
 
 function canAccess(page) {
+  if (page === 'tpimport') page = 'import';
   if (noEventAccess) return 'hidden';
   if (!currentUserRole || currentUserRole === 'Admin') return 'write';
   var roleObj = (userRolesCache || []).find(function(r) { return r.name === currentUserRole; });
