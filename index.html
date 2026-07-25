@@ -6165,7 +6165,8 @@ function confirmBadgeHtml(p) {
   if (st === 'unconfirmed') {
     extra = ' <button class="btn" style="font-size:9px;padding:0 4px;line-height:14px"'
       + ' data-token="' + (p.confirm_token || '') + '"'
-      + ' onclick="adminConfirmRegistration(this.dataset.token)"'
+      + ' data-id="' + (p.id || '') + '"'
+      + ' onclick="adminConfirmRegistration(this.dataset.token, this.dataset.id)"'
       + ' title="Manuell best\u00e4tigen (z.B. wenn der Teilnehmer die Mail nicht findet)">\u2713</button>';
   }
   return '<div style="margin-top:3px"><span title="' + cfg.tip + '" style="display:inline-block;background:'
@@ -6177,13 +6178,23 @@ function confirmRowAttr(p) {
     ? ' style="opacity:0.62;background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(158,158,158,0.10) 6px,rgba(158,158,158,0.10) 12px)"'
     : '';
 }
-async function adminConfirmRegistration(token) {
-  if (!token) { alert('Kein Bestaetigungs-Token vorhanden (Anmeldung stammt aus der Zeit vor dem Double-Opt-In).'); return; }
-  if (!confirm('Diese Anmeldung manuell als bestaetigt markieren?\n\nNur nutzen, wenn der Teilnehmer den Bestaetigungslink nachweislich nicht erhalten hat.')) return;
-  var r = await db.rpc('confirm_registration', { p_token: token });
-  if (r.error) { alert('Fehler: ' + r.error.message); return; }
-  var n = (r.data && r.data.count) || 1;
-  alert(n > 1 ? (n + ' Anmeldungen der Gruppe wurden bestaetigt.') : 'Anmeldung wurde bestaetigt.');
+async function adminConfirmRegistration(token, id) {
+  // Mit Token: regulärer RPC-Weg (bestätigt ggf. die ganze Gruppe).
+  if (token) {
+    if (!confirm('Diese Anmeldung manuell als bestaetigt markieren?\n\nNur nutzen, wenn der Teilnehmer den Bestaetigungslink nachweislich nicht erhalten hat.')) return;
+    var r = await db.rpc('confirm_registration', { p_token: token });
+    if (r.error) { alert('Fehler: ' + r.error.message); return; }
+    var n = (r.data && r.data.count) || 1;
+    alert(n > 1 ? (n + ' Anmeldungen der Gruppe wurden bestaetigt.') : 'Anmeldung wurde bestaetigt.');
+    loadParticipants();
+    return;
+  }
+  // Ohne Token (z.B. TP-Import oder Altbestand): direkt per ID bestätigen.
+  if (!id) { alert('Kein Bestaetigungs-Token und keine ID vorhanden – Bestätigung nicht möglich.'); return; }
+  if (!confirm('Diese Anmeldung ohne Bestätigungslink direkt als bestätigt markieren?\n\n(z.B. bei importierten Teilnehmern – ein Double-Opt-In ist hier nicht nötig.)')) return;
+  var ur = await db.from('participants').update({ confirm_status: 'confirmed', updated_at: new Date().toISOString() }).eq('id', id);
+  if (ur.error) { alert('Fehler: ' + ur.error.message); return; }
+  toast('✅ Als bestätigt markiert');
   loadParticipants();
 }
 
@@ -12990,6 +13001,7 @@ async function runTpImport() {
     var rec = Object.assign({}, tpCandidates[idxs[k]]);
     rec.event_id = currentEventId;
     if (!rec.role) rec.role = 'Player';
+    rec.confirm_status = 'confirmed'; // Admin-Import: kein Double-Opt-In nötig
     var r = await db.from('participants').insert(rec);
     if (r.error) { errors++; errList.push((rec.lastname||'') + ', ' + (rec.firstname||'') + ': ' + r.error.message); }
     else done++;
