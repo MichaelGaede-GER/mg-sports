@@ -6291,7 +6291,17 @@ async function loadParticipants() {
   if (cntPend) { cntPend.textContent = pendingCount; cntPend.style.display = pendingCount > 0 ? 'inline-block' : 'none'; }
   document.getElementById('cntParticipants').textContent = rows.length;
 
+  // Stichtag für die Altersberechnung = letzter Turniertag (date_to) des jeweiligen Events.
+  if (!eventsCache || !eventsCache.length) { try { await loadEventsCache(); } catch(e){} }
+  var _evDateTo = {};
+  (eventsCache || []).forEach(function(e){ if (e && e.id) _evDateTo[e.id] = e.date_to || null; });
+
   function makeRow(p) {
+    var _ageRef = (p.event_id && _evDateTo[p.event_id]) ? _evDateTo[p.event_id] : null;
+    var _pAge = ageAtDate(p.dob, _ageRef);
+    var ageBadge = (_pAge !== null)
+      ? ' <span style="color:var(--text3);font-size:10px;white-space:nowrap" title="Alter am letzten Turniertag">· ' + _pAge + ' J.</span>'
+      : '';
     var pStatus = getDisplayPaymentStatus(p);
     var sb = '<span class="status ' + statusClass(pStatus) + '">' + (pStatus||'Neu') + '</span>';
     // Icons in order: Package(badge) · Meal · Hotel · Ankunft · Abflug
@@ -6340,7 +6350,7 @@ async function loadParticipants() {
       + '<td>' + p.lastname + '</td>'
       + '<td>' + p.firstname + '</td>'
       + '<td>' + (p.country||'-') + '</td>'
-      + '<td>' + (p.events||'-') + '</td>'
+      + '<td>' + (p.events||'-') + ageBadge + '</td>'
       + '<td>' + (p.role||'-') + '</td>'
       + '<td>' + pb + '</td>'
       + '<td>' + (p.coach_name||'-') + '</td>'
@@ -12078,7 +12088,9 @@ async function loadPersons() {
     var status=p.penalty?'<span style="background:var(--red-bg);color:var(--red);font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;border:1px solid var(--red)">Gesperrt</span>':'<span style="background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;border:1px solid var(--green)">Aktiv</span>';
     var passDoc=p.passport_doc_url?'<a href="'+p.passport_doc_url+'" target="_blank" style="font-size:16px;text-decoration:none">Doc</a>':'<span style="color:var(--text3);font-size:12px">-</span>';
     var importBtn=p.penalty?'<button class="btn" style="font-size:11px;padding:3px 8px;opacity:0.4;cursor:not-allowed" disabled>Gesperrt</button>':'<button class="btn primary" style="font-size:11px;padding:3px 8px" onclick="importPersonToEntry(\''+p.id+'\')">Ins Formular</button>';
-    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
+    var _pAgeNow=ageAtDate(p.dob);
+    var _dobAge=(_pAgeNow!==null)?' <span style="color:var(--text3);font-size:11px" title="Alter heute">('+_pAgeNow+' J.)</span>':'';
+    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+_dobAge+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
   }).join(''):'<tr><td colspan="12" class="empty">Keine Personen gefunden</td></tr>';
 }
 async function openPersonModal(person) {
@@ -15034,6 +15046,20 @@ function onPersonCoachSelect() {
 async function loadMarketing() {
   var today = new Date();
 
+  // Stichtag für die Altersanzeige = letzter Turniertag (date_to) des aktiven Events.
+  // Ohne aktives Event / ohne date_to fällt die Berechnung auf "heute" zurück.
+  _distAgeRef = null;
+  if (currentEventId) {
+    try {
+      var evRef = await db.from('events').select('date_to').eq('id', currentEventId).single();
+      if (evRef.data && evRef.data.date_to) _distAgeRef = evRef.data.date_to;
+    } catch (e) { /* Fallback: heute */ }
+  }
+  var ageRef = _distAgeRef || today;
+  var ageRefLabel = _distAgeRef
+    ? new Date(_distAgeRef).toLocaleDateString('de-DE')
+    : 'heute (kein Turnierende hinterlegt)';
+
   // Load all persons with email
   var r = await db.from('persons').select('*').order('lastname');
   if (r.error) { console.error('loadMarketing error:', r.error); toast('Fehler: ' + r.error.message); return; }
@@ -15057,13 +15083,11 @@ async function loadMarketing() {
   // Render players table
   var ptb = document.getElementById('playerDistTable');
   var pCount = document.getElementById('playerDistCount');
-  if (pCount) pCount.textContent = '(' + players.length + ' Personen, ' + players.filter(function(p){return p.email;}).length + ' mit E-Mail)';
+  if (pCount) pCount.textContent = '(' + players.length + ' Personen, ' + players.filter(function(p){return p.email;}).length + ' mit E-Mail · Alter zum Turnierende: ' + ageRefLabel + ')';
   if (ptb) {
     ptb.innerHTML = players.length ? players.map(function(p) {
-      var birth = new Date(p.dob);
-      var age = today.getFullYear() - birth.getFullYear();
-      var mo = today.getMonth() - birth.getMonth();
-      if (mo < 0 || (mo === 0 && today.getDate() < birth.getDate())) age--;
+      var age = ageAtDate(p.dob, ageRef);
+      if (age === null) age = '–';
       return '<tr>'
         + '<td><strong>' + (p.lastname||'–') + '</strong></td>'
         + '<td>' + (p.firstname||'–') + '</td>'
@@ -15246,13 +15270,28 @@ function sortDist(type, field) {
   else renderCoachDist();
 }
 
+// Berechnet das Alter zu einem beliebigen Stichtag (ref). Ohne ref = heute.
+// Gibt null zurück, wenn kein/ungültiges Geburtsdatum vorliegt.
+function ageAtDate(dob, ref) {
+  if (!dob) return null;
+  var birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  var r = ref ? new Date(ref) : new Date();
+  if (isNaN(r.getTime())) r = new Date();
+  var age = r.getFullYear() - birth.getFullYear();
+  var m = r.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && r.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+// Stichtag für die Alters­berechnung im Verteiler = letzter Turniertag (date_to)
+// des aktiven Events. Wird in loadMarketing() gesetzt.
+var _distAgeRef = null;
+
 function getAge(dob) {
   if (!dob) return 99;
-  var today = new Date(), birth = new Date(dob);
-  var age = today.getFullYear() - birth.getFullYear();
-  var m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+  var a = ageAtDate(dob, _distAgeRef);
+  return a === null ? 99 : a;
 }
 
 function renderPlayerDist() {
@@ -15292,7 +15331,8 @@ function renderPlayerDist() {
   // Update BCC list to filtered
   window._playerEmails = filtered.map(function(p){ return p.email; });
   var cnt = document.getElementById('playerDistCount');
-  if (cnt) cnt.textContent = '(' + filtered.length + ' von ' + _distPlayers.length + ' Spielern)';
+  var refLbl = _distAgeRef ? new Date(_distAgeRef).toLocaleDateString('de-DE') : 'heute';
+  if (cnt) cnt.textContent = '(' + filtered.length + ' von ' + _distPlayers.length + ' Spielern · Alter zum ' + refLbl + ')';
 }
 
 function renderCoachDist() {
