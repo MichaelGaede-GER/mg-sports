@@ -831,8 +831,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <div class="form-group"><label>Reisepass-Nr.</label><input type="text" id="f_passport_id" placeholder="Passport ID" /></div>
                 <div class="form-group"><label>Geschlecht</label><select id="f_gender" onchange="calcAgeCheck()"><option value="">–</option><option>Männlich</option><option>Weiblich</option><option>Divers</option></select></div>
                 <div class="form-group"><label>Member ID / ESF</label><input type="text" id="f_member_id" placeholder="Member-Nr." /></div>
-                <div class="form-group"><label>National ID</label><input type="text" id="f_national_id" placeholder="Nationale ID" oninput="clearIdHint('f_national_id_hint')" onblur="checkEntryIdUnique('national_id', this.value, 'f_national_id_hint')" /><div id="f_national_id_hint" style="font-size:11px;margin-top:3px"></div></div>
-                <div class="form-group"><label>WSF Spin</label><input type="text" id="f_wsf_spin" placeholder="WSF SPIN ID" oninput="clearIdHint('f_wsf_spin_hint')" onblur="checkEntryIdUnique('wsf_spin', this.value, 'f_wsf_spin_hint')" /><div id="f_wsf_spin_hint" style="font-size:11px;margin-top:3px"></div></div>
+                <div class="form-group"><label>National ID (optional)</label><input type="text" id="f_national_id" placeholder="Nationale ID" oninput="clearIdHint('f_national_id_hint')" onblur="checkEntryIdUnique('national_id', this.value, 'f_national_id_hint')" /><div id="f_national_id_hint" style="font-size:11px;margin-top:3px"></div></div>
+                <div class="form-group"><label>WSF Spin (optional)</label><input type="text" id="f_wsf_spin" placeholder="WSF SPIN ID" oninput="clearIdHint('f_wsf_spin_hint')" onblur="checkEntryIdUnique('wsf_spin', this.value, 'f_wsf_spin_hint')" /><div id="f_wsf_spin_hint" style="font-size:11px;margin-top:3px"></div></div>
                 <div class="form-group"><label>Verein</label><input type="text" id="f_verein" placeholder="Vereinsname" /></div>
                 <div class="form-group"><label>Bundesland</label><select id="f_bundesland"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select></div>
                 <div class="form-group"><label>Rolle *</label><select id="f_role" onchange="updateRoleFields()">
@@ -3498,8 +3498,8 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           <select id="personBundesland"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select>
         </div>
         <div class="form-group"><label>Member ID / ESF</label><input type="text" id="personMemberId" placeholder="Member-Nr." /></div>
-        <div class="form-group"><label>National ID</label><input type="text" id="personNationalId" placeholder="Nationale ID" oninput="clearIdHint('personNationalIdHint')" onblur="checkPersonIdUnique('national_id', this.value, 'personNationalIdHint')" /><div id="personNationalIdHint" style="font-size:11px;margin-top:3px"></div></div>
-        <div class="form-group"><label>WSF Spin</label><input type="text" id="personWsfSpin" placeholder="WSF SPIN ID" oninput="clearIdHint('personWsfSpinHint')" onblur="checkPersonIdUnique('wsf_spin', this.value, 'personWsfSpinHint')" /><div id="personWsfSpinHint" style="font-size:11px;margin-top:3px"></div></div>
+        <div class="form-group"><label>National ID (optional)</label><input type="text" id="personNationalId" placeholder="Nationale ID" oninput="clearIdHint('personNationalIdHint')" onblur="checkPersonIdUnique('national_id', this.value, 'personNationalIdHint')" /><div id="personNationalIdHint" style="font-size:11px;margin-top:3px"></div></div>
+        <div class="form-group"><label>WSF Spin (optional)</label><input type="text" id="personWsfSpin" placeholder="WSF SPIN ID" oninput="clearIdHint('personWsfSpinHint')" onblur="checkPersonIdUnique('wsf_spin', this.value, 'personWsfSpinHint')" /><div id="personWsfSpinHint" style="font-size:11px;margin-top:3px"></div></div>
         <div class="form-group"><label>Reisepass-Nr.</label><input type="text" id="personPassportId" placeholder="Passport ID" /></div>
         <div class="form-group" style="grid-column:1/-1"><label>Coach auswählen</label>
           <select id="personCoachName" onchange="onPersonCoachSelect()" style="width:100%">
@@ -12494,7 +12494,7 @@ async function checkPersonIdUnique(field, value, hintId) {
   var excludeId = document.getElementById('personEditId') && document.getElementById('personEditId').value || '';
   var msg = await findDuplicateIdPerson(field, value, excludeId);
   if (msg) { el.textContent = '⚠ ' + msg.replace(/^⛔ /, ''); el.style.color = 'var(--red)'; }
-  else { el.textContent = '✓ frei'; el.style.color = 'var(--green)'; }
+  else { el.textContent = ''; }
 }
 
 // Erfassungsformular: informiert (nicht blockierend), ob die ID bereits in der Personendatenbank existiert.
@@ -12511,8 +12511,7 @@ async function checkEntryIdUnique(field, value, hintId) {
     el.textContent = 'ℹ ' + label + ' bereits in der Personendatenbank: ' + (hit.lastname||'') + ', ' + (hit.firstname||'');
     el.style.color = 'var(--amber)';
   } else {
-    el.textContent = '✓ nicht vergeben';
-    el.style.color = 'var(--green)';
+    el.textContent = '';
   }
 }
 
