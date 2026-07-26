@@ -830,7 +830,9 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <div class="form-group"><label>Geburtsdatum</label><input type="date" id="f_dob" oninput="calcAgeCheck()" onchange="calcAgeCheck()" /></div>
                 <div class="form-group"><label>Reisepass-Nr.</label><input type="text" id="f_passport_id" placeholder="Passport ID" /></div>
                 <div class="form-group"><label>Geschlecht</label><select id="f_gender" onchange="calcAgeCheck()"><option value="">–</option><option>Männlich</option><option>Weiblich</option><option>Divers</option></select></div>
-                <div class="form-group"><label>Member ID / ESID</label><input type="text" id="f_member_id" placeholder="Member-Nr." /></div>
+                <div class="form-group"><label>Member ID / ESF</label><input type="text" id="f_member_id" placeholder="Member-Nr." /></div>
+                <div class="form-group"><label>National ID</label><input type="text" id="f_national_id" placeholder="Nationale ID" oninput="clearIdHint('f_national_id_hint')" onblur="checkEntryIdUnique('national_id', this.value, 'f_national_id_hint')" /><div id="f_national_id_hint" style="font-size:11px;margin-top:3px"></div></div>
+                <div class="form-group"><label>WSF Spin</label><input type="text" id="f_wsf_spin" placeholder="WSF SPIN ID" oninput="clearIdHint('f_wsf_spin_hint')" onblur="checkEntryIdUnique('wsf_spin', this.value, 'f_wsf_spin_hint')" /><div id="f_wsf_spin_hint" style="font-size:11px;margin-top:3px"></div></div>
                 <div class="form-group"><label>Verein</label><input type="text" id="f_verein" placeholder="Vereinsname" /></div>
                 <div class="form-group"><label>Bundesland</label><select id="f_bundesland"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select></div>
                 <div class="form-group"><label>Rolle *</label><select id="f_role" onchange="updateRoleFields()">
@@ -2154,13 +2156,15 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   <th class="sortable" onclick="sortPersons('role')" id="ph_role">Rolle <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('verein')" id="ph_verein">Verein <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('bundesland')" id="ph_bundesland">Bundesland <span class="sort-icon">↕</span></th>
-  <th class="sortable" onclick="sortPersons('member_id')" id="ph_member_id">Member ID <span class="sort-icon">↕</span></th>
+  <th class="sortable" onclick="sortPersons('member_id')" id="ph_member_id">Member ID / ESF <span class="sort-icon">↕</span></th>
+  <th class="sortable" onclick="sortPersons('national_id')" id="ph_national_id">National ID <span class="sort-icon">↕</span></th>
+  <th class="sortable" onclick="sortPersons('wsf_spin')" id="ph_wsf_spin">WSF Spin <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('email')" id="ph_email">E-Mail <span class="sort-icon">↕</span></th>
   <th>Status</th>
   <th>Passport</th>
   <th></th>
 </tr></thead>
-            <tbody id="personsTable"><tr><td colspan="13" class="loading">Lade…</td></tr></tbody>
+            <tbody id="personsTable"><tr><td colspan="15" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
       </div>
@@ -3493,7 +3497,9 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         <div class="form-group"><label>Bundesland</label>
           <select id="personBundesland"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select>
         </div>
-        <div class="form-group"><label>Member ID / ESID</label><input type="text" id="personMemberId" placeholder="Member-Nr." /></div>
+        <div class="form-group"><label>Member ID / ESF</label><input type="text" id="personMemberId" placeholder="Member-Nr." /></div>
+        <div class="form-group"><label>National ID</label><input type="text" id="personNationalId" placeholder="Nationale ID" oninput="clearIdHint('personNationalIdHint')" onblur="checkPersonIdUnique('national_id', this.value, 'personNationalIdHint')" /><div id="personNationalIdHint" style="font-size:11px;margin-top:3px"></div></div>
+        <div class="form-group"><label>WSF Spin</label><input type="text" id="personWsfSpin" placeholder="WSF SPIN ID" oninput="clearIdHint('personWsfSpinHint')" onblur="checkPersonIdUnique('wsf_spin', this.value, 'personWsfSpinHint')" /><div id="personWsfSpinHint" style="font-size:11px;margin-top:3px"></div></div>
         <div class="form-group"><label>Reisepass-Nr.</label><input type="text" id="personPassportId" placeholder="Passport ID" /></div>
         <div class="form-group" style="grid-column:1/-1"><label>Coach auswählen</label>
           <select id="personCoachName" onchange="onPersonCoachSelect()" style="width:100%">
@@ -6389,6 +6395,9 @@ async function loadParticipants() {
         + '</div>'
         + (p.verein ? '<div style="margin-top:2px;font-size:10px;color:var(--text3)" title="Verein">🏛 ' + p.verein + '</div>' : '')
         + (p.bundesland ? '<div style="margin-top:1px;font-size:10px;color:var(--text3)" title="Bundesland">📍 ' + p.bundesland + '</div>' : '')
+        + (p.member_id ? '<div style="margin-top:2px;font-size:10px;color:var(--text3)" title="Member ID / ESF">🆔 ESF: ' + p.member_id + '</div>' : '')
+        + (p.national_id ? '<div style="margin-top:1px;font-size:10px;color:var(--text3)" title="National ID">🆔 Nat.: ' + p.national_id + '</div>' : '')
+        + (p.wsf_spin ? '<div style="margin-top:1px;font-size:10px;color:var(--text3)" title="WSF Spin">🆔 WSF: ' + p.wsf_spin + '</div>' : '')
         + (p.mahnung && p.mahnung !== 'Keine' ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700">'+p.mahnung+'</span></div>' : '')
         + (p.travel_amount ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--amber);color:#000;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:pointer" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)" title="Betrag wird bei Anreise bezahlt – Klick zum Bearbeiten">✈ Anreise</span></div>' : '')
         + letterBadgeHtml(p)
@@ -6639,7 +6648,7 @@ async function editEntry(id) {
   if (!p) return;
   document.getElementById('editingId').value = id;
   document.getElementById('entryFormTitle').textContent = `Bearbeiten: ${p.lastname}, ${p.firstname}`;
-  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes',verein:'verein',bundesland:'bundesland'};
+  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes',verein:'verein',bundesland:'bundesland',national_id:'national_id',wsf_spin:'wsf_spin'};
   Object.entries(map).forEach(([k,v]) => {
     const el = document.getElementById('f_'+k);
     if (!el) return;
@@ -6934,6 +6943,7 @@ async function saveEntry() {
     confirmation_letter_type: document.getElementById('f_confirmation_letter_type')&&document.getElementById('f_confirmation_letter_type').value||null,
     confirmation_letter_price: parseFloat(document.getElementById('f_confirmation_letter_price')&&document.getElementById('f_confirmation_letter_price').value)||null,
     member_id: v('member_id'), role, events: v('events'),
+    national_id: v('national_id'), wsf_spin: v('wsf_spin'),
     verein: v('verein'), bundesland: v('bundesland'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
     shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'), placement: getPlacementValue(),
@@ -12138,8 +12148,8 @@ async function loadPersons() {
     var importBtn=p.penalty?'<button class="btn" style="font-size:11px;padding:3px 8px;opacity:0.4;cursor:not-allowed" disabled>Gesperrt</button>':'<button class="btn primary" style="font-size:11px;padding:3px 8px" onclick="importPersonToEntry(\''+p.id+'\')">Ins Formular</button>';
     var _pAgeNow=ageAtDate(p.dob);
     var _dobAge=(_pAgeNow!==null)?' <span style="color:var(--text3);font-size:11px" title="Alter heute">('+_pAgeNow+' J.)</span>':'';
-    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+_dobAge+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.verein||'-')+'</td><td style="font-size:12px">'+(p.bundesland||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
-  }).join(''):'<tr><td colspan="14" class="empty">Keine Personen gefunden</td></tr>';
+    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+_dobAge+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.verein||'-')+'</td><td style="font-size:12px">'+(p.bundesland||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.national_id||'-')+'</td><td style="font-size:12px">'+(p.wsf_spin||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
+  }).join(''):'<tr><td colspan="16" class="empty">Keine Personen gefunden</td></tr>';
 }
 async function openPersonModal(person) {
   personPhotoFile=null; personPassportFile=null; personCurrentPhotoUrl=person&&person.photo_url||null; personCurrentPassportUrl=person&&person.passport_doc_url||null;
@@ -12153,6 +12163,9 @@ async function openPersonModal(person) {
   if(document.getElementById('personEmail')) document.getElementById('personEmail').value=person&&person.email||'';
   if(document.getElementById('personMobile')) document.getElementById('personMobile').value=person&&person.mobile||'';
   if(document.getElementById('personMemberId')) document.getElementById('personMemberId').value=person&&person.member_id||'';
+  if(document.getElementById('personNationalId')) document.getElementById('personNationalId').value=person&&person.national_id||'';
+  if(document.getElementById('personWsfSpin')) document.getElementById('personWsfSpin').value=person&&person.wsf_spin||'';
+  clearIdHint('personNationalIdHint'); clearIdHint('personWsfSpinHint');
   if(document.getElementById('personPassportId')) document.getElementById('personPassportId').value=person&&person.passport_id||'';
   if(document.getElementById('personComments')) document.getElementById('personComments').value=person&&person.comments||'';
   if(document.getElementById('personDob')) document.getElementById('personDob').value=person&&person.dob||'';
@@ -12454,11 +12467,68 @@ async function uploadPersonMediaFile(path, blobOrFile, contentType) {
   return pub.data.publicUrl + '?v=' + Date.now();
 }
 
+// ===== ID-Eindeutigkeit (National ID / WSF Spin) =====
+// Beide dürfen jeweils nur einmal in der Personendatenbank vorkommen.
+function clearIdHint(hintId) {
+  var el = document.getElementById(hintId);
+  if (el) { el.textContent = ''; el.style.color = ''; }
+}
+
+async function findDuplicateIdPerson(field, value, excludeId) {
+  value = (value || '').trim();
+  if (!value) return null;
+  var r = await db.from('persons').select('id,lastname,firstname').eq(field, value);
+  if (r.error) return null;
+  var hit = (r.data || []).find(function(p){ return p.id !== excludeId; });
+  if (!hit) return null;
+  var label = field === 'national_id' ? 'National ID' : 'WSF Spin';
+  return '⛔ ' + label + ' „' + value + '" ist bereits vergeben an ' + (hit.lastname||'') + ', ' + (hit.firstname||'');
+}
+
+// Personen-Modal: prüft beim Verlassen des Feldes, ob die ID bereits einer anderen Person gehört.
+async function checkPersonIdUnique(field, value, hintId) {
+  var el = document.getElementById(hintId);
+  if (!el) return;
+  value = (value || '').trim();
+  if (!value) { el.textContent = ''; return; }
+  var excludeId = document.getElementById('personEditId') && document.getElementById('personEditId').value || '';
+  var msg = await findDuplicateIdPerson(field, value, excludeId);
+  if (msg) { el.textContent = '⚠ ' + msg.replace(/^⛔ /, ''); el.style.color = 'var(--red)'; }
+  else { el.textContent = '✓ frei'; el.style.color = 'var(--green)'; }
+}
+
+// Erfassungsformular: informiert (nicht blockierend), ob die ID bereits in der Personendatenbank existiert.
+async function checkEntryIdUnique(field, value, hintId) {
+  var el = document.getElementById(hintId);
+  if (!el) return;
+  value = (value || '').trim();
+  if (!value) { el.textContent = ''; return; }
+  var r = await db.from('persons').select('lastname,firstname').eq(field, value);
+  if (r.error) { el.textContent = ''; return; }
+  var hit = (r.data || [])[0];
+  var label = field === 'national_id' ? 'National ID' : 'WSF Spin';
+  if (hit) {
+    el.textContent = 'ℹ ' + label + ' bereits in der Personendatenbank: ' + (hit.lastname||'') + ', ' + (hit.firstname||'');
+    el.style.color = 'var(--amber)';
+  } else {
+    el.textContent = '✓ nicht vergeben';
+    el.style.color = 'var(--green)';
+  }
+}
+
 async function savePerson() {
   var lastname=document.getElementById('personLastname')&&document.getElementById('personLastname').value.trim();
   var firstname=document.getElementById('personFirstname')&&document.getElementById('personFirstname').value.trim();
   if(!lastname||!firstname){toast('Name ist Pflicht');return;}
   var id=document.getElementById('personEditId')&&document.getElementById('personEditId').value;
+
+  // Eindeutigkeit: National ID und WSF Spin dürfen nur einmal in der Personendatenbank vorkommen.
+  var _uniqNat = document.getElementById('personNationalId') && document.getElementById('personNationalId').value.trim();
+  var _uniqWsf = document.getElementById('personWsfSpin') && document.getElementById('personWsfSpin').value.trim();
+  var _dupMsg = await findDuplicateIdPerson('national_id', _uniqNat, id);
+  if (!_dupMsg) _dupMsg = await findDuplicateIdPerson('wsf_spin', _uniqWsf, id);
+  if (_dupMsg) { toast(_dupMsg); return; }
+
   var tempId=id||crypto.randomUUID();
   var photoUrl=personCurrentPhotoUrl; var passportUrl=personCurrentPassportUrl;
   if(personPhotoFile){
@@ -12498,6 +12568,8 @@ async function savePerson() {
     verein:document.getElementById('personVerein')&&document.getElementById('personVerein').value.trim()||null,
     bundesland:document.getElementById('personBundesland')&&document.getElementById('personBundesland').value||null,
     member_id:document.getElementById('personMemberId')&&document.getElementById('personMemberId').value.trim()||null,
+    national_id:document.getElementById('personNationalId')&&document.getElementById('personNationalId').value.trim()||null,
+    wsf_spin:document.getElementById('personWsfSpin')&&document.getElementById('personWsfSpin').value.trim()||null,
     passport_id:document.getElementById('personPassportId')&&document.getElementById('personPassportId').value.trim()||null,
     email:document.getElementById('personEmail')&&document.getElementById('personEmail').value.trim()||null,
     mobile:document.getElementById('personMobile')&&document.getElementById('personMobile').value.trim()||null,
@@ -12647,7 +12719,7 @@ async function savePersonFromEntry() {
   var ln=document.getElementById('f_lastname')&&document.getElementById('f_lastname').value.trim();
   var fn=document.getElementById('f_firstname')&&document.getElementById('f_firstname').value.trim();
   if(!ln||!fn){toast('Bitte zuerst Name eingeben');return;}
-  var row={lastname:ln,firstname:fn,country:document.getElementById('f_country')&&document.getElementById('f_country').value||null,dob:document.getElementById('f_dob')&&document.getElementById('f_dob').value||null,gender:document.getElementById('f_gender')&&document.getElementById('f_gender').value||null,role:document.getElementById('f_role')&&document.getElementById('f_role').value||null,member_id:document.getElementById('f_member_id')&&document.getElementById('f_member_id').value.trim()||null,passport_id:document.getElementById('f_passport_id')&&document.getElementById('f_passport_id').value.trim()||null,email:document.getElementById('f_email')&&document.getElementById('f_email').value.trim()||null,mobile:document.getElementById('f_mobile')&&document.getElementById('f_mobile').value.trim()||null,emergency_name:document.getElementById('f_emergency_name')&&document.getElementById('f_emergency_name').value.trim()||null,emergency_phone:document.getElementById('f_emergency_phone')&&document.getElementById('f_emergency_phone').value.trim()||null,emergency_email:document.getElementById('f_emergency_email')&&document.getElementById('f_emergency_email').value.trim()||null,medical_allergies:document.getElementById('f_medical_allergies')&&document.getElementById('f_medical_allergies').value.trim()||null,medical_medications:document.getElementById('f_medical_medications')&&document.getElementById('f_medical_medications').value.trim()||null,medical_notes:document.getElementById('f_medical_notes')&&document.getElementById('f_medical_notes').value.trim()||null,updated_at:new Date().toISOString()};
+  var row={lastname:ln,firstname:fn,country:document.getElementById('f_country')&&document.getElementById('f_country').value||null,dob:document.getElementById('f_dob')&&document.getElementById('f_dob').value||null,gender:document.getElementById('f_gender')&&document.getElementById('f_gender').value||null,role:document.getElementById('f_role')&&document.getElementById('f_role').value||null,member_id:document.getElementById('f_member_id')&&document.getElementById('f_member_id').value.trim()||null,national_id:document.getElementById('f_national_id')&&document.getElementById('f_national_id').value.trim()||null,wsf_spin:document.getElementById('f_wsf_spin')&&document.getElementById('f_wsf_spin').value.trim()||null,verein:document.getElementById('f_verein')&&document.getElementById('f_verein').value.trim()||null,bundesland:document.getElementById('f_bundesland')&&document.getElementById('f_bundesland').value||null,passport_id:document.getElementById('f_passport_id')&&document.getElementById('f_passport_id').value.trim()||null,email:document.getElementById('f_email')&&document.getElementById('f_email').value.trim()||null,mobile:document.getElementById('f_mobile')&&document.getElementById('f_mobile').value.trim()||null,emergency_name:document.getElementById('f_emergency_name')&&document.getElementById('f_emergency_name').value.trim()||null,emergency_phone:document.getElementById('f_emergency_phone')&&document.getElementById('f_emergency_phone').value.trim()||null,emergency_email:document.getElementById('f_emergency_email')&&document.getElementById('f_emergency_email').value.trim()||null,medical_allergies:document.getElementById('f_medical_allergies')&&document.getElementById('f_medical_allergies').value.trim()||null,medical_medications:document.getElementById('f_medical_medications')&&document.getElementById('f_medical_medications').value.trim()||null,medical_notes:document.getElementById('f_medical_notes')&&document.getElementById('f_medical_notes').value.trim()||null,updated_at:new Date().toISOString()};
   var ex=await db.from('persons').select('id').eq('lastname',ln).eq('firstname',fn).limit(1);
   var r=(ex.data&&ex.data.length)?await db.from('persons').update(row).eq('id',ex.data[0].id):await db.from('persons').insert(row);
   if(r.error){toast('Fehler: '+r.error.message);return;}
@@ -16529,6 +16601,8 @@ async function syncEntryWithPersons() {
     {entry:'f_mobile',            person:'mobile',             label:'Mobil'},
     {entry:'f_email',             person:'email',              label:'E-Mail'},
     {entry:'f_passport_id',       person:'passport_id',        label:'Passport ID'},
+    {entry:'f_national_id',       person:'national_id',        label:'National ID'},
+    {entry:'f_wsf_spin',          person:'wsf_spin',           label:'WSF Spin'},
     {entry:'cl_fullname',         person:'visa_full_name',      label:'VISA Full Name'},
     {entry:'cl_dob',              person:'visa_dob',            label:'VISA Date of Birth'},
     {entry:'cl_place_of_birth',   person:'visa_place_of_birth', label:'VISA Place of Birth'},
@@ -16820,6 +16894,10 @@ async function writeEntryToPersonsDb(memberId) {
     email: document.getElementById('f_email')?.value.trim()||null,
     passport_id: document.getElementById('f_passport_id')?.value.trim()||null,
     member_id: memberId,
+    national_id: document.getElementById('f_national_id')?.value.trim()||null,
+    wsf_spin: document.getElementById('f_wsf_spin')?.value.trim()||null,
+    verein: document.getElementById('f_verein')?.value.trim()||null,
+    bundesland: document.getElementById('f_bundesland')?.value||null,
     role: document.getElementById('f_role')?.value||null,
     emergency_name: document.getElementById('f_emergency_name')?.value.trim()||null,
     emergency_phone: document.getElementById('f_emergency_phone')?.value.trim()||null,
