@@ -333,6 +333,8 @@ en: {
   f_member_id_ph: "ES473686007",
   f_member_id_hint: "Format: ES + 9 digits",
   f_passport: "Passport / ID Number",
+  f_verein: "Club (optional)",
+  f_bundesland: "Federal State (optional)",
   f_mobile: 'Mobile <span class="req">*</span>',
   f_mobile_optional: "Mobile",
   f_mobile_ph: "optional, defaults to group contact",
@@ -495,6 +497,8 @@ de: {
   f_member_id_ph: "ES473686007",
   f_member_id_hint: "Format: ES + 9 Ziffern",
   f_passport: "Reisepass- / Ausweisnummer",
+  f_verein: "Verein (optional)",
+  f_bundesland: "Bundesland (optional)",
   f_mobile: 'Mobil <span class="req">*</span>',
   f_mobile_optional: "Mobil",
   f_mobile_ph: "optional, sonst Gruppenkontakt",
@@ -1061,6 +1065,7 @@ function prefillGroupParticipant(id, p) {
   setVal('p_lastname_' + id, p.lastname); setVal('p_firstname_' + id, p.firstname);
   setVal('p_country_' + id, p.country); setVal('p_dob_' + id, p.dob); setVal('p_gender_' + id, p.gender);
   setVal('p_member_id_' + id, p.member_id); setVal('p_passport_id_' + id, p.passport_id);
+  setVal('p_verein_' + id, p.verein); setVal('p_bundesland_' + id, p.bundesland);
   setVal('p_mobile_' + id, p.mobile); setVal('p_email_' + id, p.email);
   setVal('p_role_' + id, p.role); if (typeof onRoleChange === 'function') onRoleChange(id);
   setVal('p_events_' + id, p.events); setVal('p_shirt_' + id, p.shirt);
@@ -1269,6 +1274,8 @@ function addParticipantRow() {
     + '<div class="form-group"><label data-i18n="f_gender">' + t('f_gender') + '</label><select id="p_gender_' + id + '" onchange="calcAgeCategory(' + id + ')"></select></div>'
     + '<div class="form-group"><label data-i18n="f_member_id">' + t('f_member_id') + '</label><input type="text" id="p_member_id_' + id + '" data-i18n-ph="f_member_id_ph" placeholder="' + t('f_member_id_ph') + '" onblur="checkPlayerBlocked(' + id + ')" /><div class="esid-hint" data-i18n="f_member_id_hint">' + t('f_member_id_hint') + '</div><div id="p_blockedbanner_' + id + '" style="display:none;margin-top:8px;background:#fdecea;color:#7a1a1a;border:1px solid #f5b3ac;border-radius:8px;padding:12px 14px;font-size:13px"></div></div>'
     + '<div class="form-group"><label data-i18n="f_passport">' + t('f_passport') + '</label><input type="text" id="p_passport_id_' + id + '" /></div>'
+    + '<div class="form-group"><label data-i18n="f_verein">' + t('f_verein') + '</label><input type="text" id="p_verein_' + id + '" placeholder="Club / Verein" /></div>'
+    + '<div class="form-group"><label data-i18n="f_bundesland">' + t('f_bundesland') + '</label><select id="p_bundesland_' + id + '"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select></div>'
     + '<div class="form-group"><label data-i18n="f_mobile_optional">' + t('f_mobile_optional') + '</label><input type="tel" id="p_mobile_' + id + '" data-i18n-ph="f_mobile_ph" placeholder="' + t('f_mobile_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_email_optional">' + t('f_email_optional') + '</label><input type="email" id="p_email_' + id + '" data-i18n-ph="f_email_ph" placeholder="' + t('f_email_ph') + '" /></div>'
     + '<div class="form-group"><label data-i18n="f_role">' + t('f_role') + '</label><select id="p_role_' + id + '" onchange="onRoleChange(' + id + ')"></select></div>'
@@ -1994,6 +2001,8 @@ function buildRegistrationSummaryText(row, roomTypeLabel, travelRelevant) {
   add('Last Name', row.lastname);
   add('First Name', row.firstname);
   add('Country', row.country);
+  add('Club / Verein', row.verein);
+  add('Federal State / Bundesland', row.bundesland);
   add('Date of Birth', row.dob);
   add('Gender', row.gender);
   add('ESID / Member ID', row.member_id);
@@ -2279,6 +2288,7 @@ async function submitGroupRegistration() {
       mobile: normalizeMobile(v('p_mobile_' + id)) || gMobileNormalized || null,
       email: v('p_email_' + id) || v('g_email') || null,
       role: pRole, events: v('p_events_' + id) || null,
+      verein: v('p_verein_' + id) || null, bundesland: v('p_bundesland_' + id) || null,
       shirt: v('p_shirt_' + id) || null,
       package: pPackage, package_price: packagePrice,
       room_type: isPastDeadline ? 'Warteliste' : roomType,

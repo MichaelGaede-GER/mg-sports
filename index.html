@@ -831,6 +831,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 <div class="form-group"><label>Reisepass-Nr.</label><input type="text" id="f_passport_id" placeholder="Passport ID" /></div>
                 <div class="form-group"><label>Geschlecht</label><select id="f_gender" onchange="calcAgeCheck()"><option value="">–</option><option>Männlich</option><option>Weiblich</option><option>Divers</option></select></div>
                 <div class="form-group"><label>Member ID / ESID</label><input type="text" id="f_member_id" placeholder="Member-Nr." /></div>
+                <div class="form-group"><label>Verein</label><input type="text" id="f_verein" placeholder="Vereinsname" /></div>
+                <div class="form-group"><label>Bundesland</label><select id="f_bundesland"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select></div>
                 <div class="form-group"><label>Rolle *</label><select id="f_role" onchange="updateRoleFields()">
                   <option value="">– wählen –</option><option>Player</option><option>Coach</option><option>Parent</option><option>ESF Official</option><option>Referee</option><option>Director</option><option>DSQV</option><option>Turnierstab</option>
                 </select></div>
@@ -2150,13 +2152,15 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   <th class="sortable" onclick="sortPersons('dob')" id="ph_dob">Geburtsdatum <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('gender')" id="ph_gender">Geschlecht <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('role')" id="ph_role">Rolle <span class="sort-icon">↕</span></th>
+  <th class="sortable" onclick="sortPersons('verein')" id="ph_verein">Verein <span class="sort-icon">↕</span></th>
+  <th class="sortable" onclick="sortPersons('bundesland')" id="ph_bundesland">Bundesland <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('member_id')" id="ph_member_id">Member ID <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('email')" id="ph_email">E-Mail <span class="sort-icon">↕</span></th>
   <th>Status</th>
   <th>Passport</th>
   <th></th>
 </tr></thead>
-            <tbody id="personsTable"><tr><td colspan="11" class="loading">Lade…</td></tr></tbody>
+            <tbody id="personsTable"><tr><td colspan="13" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
       </div>
@@ -2936,6 +2940,43 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
             </table></div>
           </div>
         </div>
+
+        <!-- VERTEILER ALLE PERSONEN -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header" style="cursor:pointer" onclick="toggleDistCard('all')">
+            <h3>📇 Verteiler Alle Personen <span id="allDistCount" style="font-size:12px;font-weight:400;color:var(--text3)"></span></h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn primary" onclick="event.stopPropagation();emailDistribution('all')" style="white-space:nowrap">✉ E-Mail an Auswahl (BCC)</button>
+              <span id="allDistToggle" style="font-size:18px;color:var(--text3);transition:transform .2s">▾</span>
+            </div>
+          </div>
+          <div class="card-body" id="allDistBody">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Alle Personen aus der Datenbank. Filterbar nach Alter (von–bis), Land, Event, Rolle, Verein und Bundesland. Bei aktivem Event-Filter wird das Alter zum letzten Turniertag berechnet, sonst zum heutigen Tag. Für den E-Mail-Versand (BCC) werden nur Einträge mit gültiger E-Mail verwendet.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px">
+              <input type="search" id="allDistSearch" placeholder="Suche Name, E-Mail…" oninput="renderAllPersonsDist()" style="grid-column:1/-1" />
+              <input type="number" id="allDistAgeMin" placeholder="Alter von" min="0" max="120" oninput="renderAllPersonsDist()" />
+              <input type="number" id="allDistAgeMax" placeholder="Alter bis" min="0" max="120" oninput="renderAllPersonsDist()" />
+              <select id="allDistCountry" onchange="renderAllPersonsDist()"><option value="">Alle Länder</option></select>
+              <select id="allDistEvent" onchange="renderAllPersonsDist()"><option value="">Alle Events</option></select>
+              <select id="allDistRole" onchange="renderAllPersonsDist()"><option value="">Alle Rollen</option></select>
+              <select id="allDistVerein" onchange="renderAllPersonsDist()"><option value="">Alle Vereine</option></select>
+              <select id="allDistBundesland" onchange="renderAllPersonsDist()"><option value="">Alle Bundesländer</option></select>
+            </div>
+            <div class="table-wrap"><table>
+              <thead><tr>
+                <th class="sortable" onclick="sortDist('all','lastname')">Nachname <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="sortDist('all','firstname')">Vorname <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="sortDist('all','country')">Land <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="sortDist('all','bundesland')">Bundesland <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="sortDist('all','verein')">Verein <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="sortDist('all','age')">Alter <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="sortDist('all','role')">Rolle <span class="sort-icon">↕</span></th>
+                <th>E-Mail</th>
+              </tr></thead>
+              <tbody id="allDistTable"><tr><td colspan="8" class="loading">Lade…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
       </div>
 
       <!-- ID CARD -->
@@ -3447,6 +3488,10 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         </div>
         <div class="form-group"><label>Rolle</label>
           <select id="personRole"><option value="">–</option><option>Player</option><option>Coach</option><option>Parent</option><option>ESF Official</option><option>Referee</option><option>Director</option><option>DSQV</option><option>Turnierstab</option></select>
+        </div>
+        <div class="form-group"><label>Verein</label><input type="text" id="personVerein" placeholder="Vereinsname" /></div>
+        <div class="form-group"><label>Bundesland</label>
+          <select id="personBundesland"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select>
         </div>
         <div class="form-group"><label>Member ID / ESID</label><input type="text" id="personMemberId" placeholder="Member-Nr." /></div>
         <div class="form-group"><label>Reisepass-Nr.</label><input type="text" id="personPassportId" placeholder="Passport ID" /></div>
@@ -6342,6 +6387,8 @@ async function loadParticipants() {
         + '<div>' + (p.group_tp||p.id.slice(0,8))
         + (p.updated_at ? ' <span title="Zuletzt bearbeitet: '+new Date(p.updated_at).toLocaleString('de-DE')+'" style="color:var(--blue);font-size:11px;cursor:help">✏</span>' : '')
         + '</div>'
+        + (p.verein ? '<div style="margin-top:2px;font-size:10px;color:var(--text3)" title="Verein">🏛 ' + p.verein + '</div>' : '')
+        + (p.bundesland ? '<div style="margin-top:1px;font-size:10px;color:var(--text3)" title="Bundesland">📍 ' + p.bundesland + '</div>' : '')
         + (p.mahnung && p.mahnung !== 'Keine' ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700">'+p.mahnung+'</span></div>' : '')
         + (p.travel_amount ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--amber);color:#000;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:pointer" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)" title="Betrag wird bei Anreise bezahlt – Klick zum Bearbeiten">✈ Anreise</span></div>' : '')
         + letterBadgeHtml(p)
@@ -6592,7 +6639,7 @@ async function editEntry(id) {
   if (!p) return;
   document.getElementById('editingId').value = id;
   document.getElementById('entryFormTitle').textContent = `Bearbeiten: ${p.lastname}, ${p.firstname}`;
-  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes'};
+  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes',verein:'verein',bundesland:'bundesland'};
   Object.entries(map).forEach(([k,v]) => {
     const el = document.getElementById('f_'+k);
     if (!el) return;
@@ -6887,6 +6934,7 @@ async function saveEntry() {
     confirmation_letter_type: document.getElementById('f_confirmation_letter_type')&&document.getElementById('f_confirmation_letter_type').value||null,
     confirmation_letter_price: parseFloat(document.getElementById('f_confirmation_letter_price')&&document.getElementById('f_confirmation_letter_price').value)||null,
     member_id: v('member_id'), role, events: v('events'),
+    verein: v('verein'), bundesland: v('bundesland'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
     shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'), placement: getPlacementValue(),
     payment_status: computedPaymentStatus, amount_received: n('amount_received'),
@@ -12090,8 +12138,8 @@ async function loadPersons() {
     var importBtn=p.penalty?'<button class="btn" style="font-size:11px;padding:3px 8px;opacity:0.4;cursor:not-allowed" disabled>Gesperrt</button>':'<button class="btn primary" style="font-size:11px;padding:3px 8px" onclick="importPersonToEntry(\''+p.id+'\')">Ins Formular</button>';
     var _pAgeNow=ageAtDate(p.dob);
     var _dobAge=(_pAgeNow!==null)?' <span style="color:var(--text3);font-size:11px" title="Alter heute">('+_pAgeNow+' J.)</span>':'';
-    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+_dobAge+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
-  }).join(''):'<tr><td colspan="12" class="empty">Keine Personen gefunden</td></tr>';
+    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+_dobAge+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.verein||'-')+'</td><td style="font-size:12px">'+(p.bundesland||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
+  }).join(''):'<tr><td colspan="14" class="empty">Keine Personen gefunden</td></tr>';
 }
 async function openPersonModal(person) {
   personPhotoFile=null; personPassportFile=null; personCurrentPhotoUrl=person&&person.photo_url||null; personCurrentPassportUrl=person&&person.passport_doc_url||null;
@@ -12118,6 +12166,8 @@ async function openPersonModal(person) {
     document.getElementById('personGender').value = pg;
   }
   if(document.getElementById('personRole')) document.getElementById('personRole').value=person&&person.role||'';
+  if(document.getElementById('personVerein')) document.getElementById('personVerein').value=person&&person.verein||'';
+  if(document.getElementById('personBundesland')) document.getElementById('personBundesland').value=person&&person.bundesland||'';
   if(document.getElementById('personStreet')) document.getElementById('personStreet').value=person&&person.street||'';
   if(document.getElementById('personStreetNumber')) document.getElementById('personStreetNumber').value=person&&person.street_number||'';
   if(document.getElementById('personPostalCode')) document.getElementById('personPostalCode').value=person&&person.postal_code||'';
@@ -12445,6 +12495,8 @@ async function savePerson() {
     dob:document.getElementById('personDob')&&document.getElementById('personDob').value||null,
     gender:document.getElementById('personGender')&&document.getElementById('personGender').value||null,
     role:document.getElementById('personRole')&&document.getElementById('personRole').value||null,
+    verein:document.getElementById('personVerein')&&document.getElementById('personVerein').value.trim()||null,
+    bundesland:document.getElementById('personBundesland')&&document.getElementById('personBundesland').value||null,
     member_id:document.getElementById('personMemberId')&&document.getElementById('personMemberId').value.trim()||null,
     passport_id:document.getElementById('personPassportId')&&document.getElementById('personPassportId').value.trim()||null,
     email:document.getElementById('personEmail')&&document.getElementById('personEmail').value.trim()||null,
@@ -15134,6 +15186,9 @@ async function loadMarketing() {
 
   renderPlayerDist();
   renderCoachDist();
+
+  // Verteiler "Alle Personen": vollständige Liste (mit und ohne E-Mail) initialisieren
+  await initAllPersonsDist(r.data || []);
 }
 
 // Serien-E-Mail an einen Verteiler. Statt nur die ersten 50 Adressen zu verschicken,
@@ -15171,10 +15226,12 @@ function openBlockMailModal(emails, opts) {
 }
 
 function emailDistribution(type) {
-  var emails = type === 'players' ? (window._playerEmails || []) : (window._coachEmails || []);
+  var emails = type === 'players' ? (window._playerEmails || [])
+    : type === 'all' ? (window._allEmails || [])
+    : (window._coachEmails || []);
   _distMailType = type;
   openBlockMailModal(emails, {
-    label: 'Verteiler ' + (type === 'players' ? 'Spieler' : 'Coaches'),
+    label: 'Verteiler ' + (type === 'players' ? 'Spieler' : type === 'all' ? 'Alle Personen' : 'Coaches'),
     subject: 'MG Sports Event – Information',
     body: document.getElementById('distMailBody').value
       || 'Sehr geehrte Damen und Herren,\n\nhiermit möchten wir Sie über unser kommendes Event informieren.\n\nMit freundlichen Grüßen\nMG Sports & Eventmanagement'
@@ -15257,7 +15314,12 @@ function copyDistBlock(index) {
 // MARKETING SORT & FILTER STATE
 var _distPlayers = [];
 var _distCoaches = [];
-var _distSort = { players: { field: 'lastname', dir: 'asc' }, coaches: { field: 'lastname', dir: 'asc' } };
+var _distSort = { players: { field: 'lastname', dir: 'asc' }, coaches: { field: 'lastname', dir: 'asc' }, all: { field: 'lastname', dir: 'asc' } };
+// Verteiler "Alle Personen": komplette Personenliste + Hilfsdaten für Filter
+var _distAll = [];
+var _distAllEventDateTo = {};   // event_id -> date_to (letzter Turniertag)
+var _distAllEventMembers = {};  // event_id -> Set von Personen-Keys (member_id / email / name+dob)
+var _distAllEventNames = {};    // event_id -> Anzeigename
 
 function sortDist(type, field) {
   var s = _distSort[type];
@@ -15267,6 +15329,7 @@ function sortDist(type, field) {
   var prefix = type === 'players' ? 'player' : 'coach';
   document.querySelectorAll('#page-marketing .sortable').forEach(function(th){ th.classList.remove('sort-asc','sort-desc'); });
   if (type === 'players') renderPlayerDist();
+  else if (type === 'all') renderAllPersonsDist();
   else renderCoachDist();
 }
 
@@ -15370,10 +15433,139 @@ function renderCoachDist() {
 }
 
 
+// ---- Verteiler "Alle Personen" -------------------------------------------
+// Baut einen Personen-Key zum Abgleich zwischen persons und participants.
+function _personMatchKeys(p) {
+  var keys = [];
+  if (p.member_id && String(p.member_id).trim()) keys.push('m:' + String(p.member_id).trim().toLowerCase());
+  if (p.email && String(p.email).trim()) keys.push('e:' + String(p.email).trim().toLowerCase());
+  if (p.lastname && p.firstname) keys.push('n:' + (p.lastname + '|' + p.firstname + '|' + (p.dob || '')).toLowerCase());
+  return keys;
+}
+
+async function initAllPersonsDist(persons) {
+  _distAll = persons || [];
+
+  // Events + Teilnehmer laden, um den Event-Filter (wer ist wo gemeldet?) zu ermöglichen.
+  _distAllEventDateTo = {}; _distAllEventMembers = {}; _distAllEventNames = {};
+  try {
+    if (!eventsCache || !eventsCache.length) { try { await loadEventsCache(); } catch(e){} }
+    (eventsCache || []).forEach(function(e){
+      if (!e || !e.id) return;
+      _distAllEventDateTo[e.id] = e.date_to || null;
+      _distAllEventNames[e.id] = e.name || (e.id.slice(0,8));
+    });
+    var pr = await db.from('participants').select('event_id,member_id,email,lastname,firstname,dob').neq('withdraw','Ja');
+    (pr.data || []).forEach(function(pt){
+      if (!pt.event_id) return;
+      if (!_distAllEventMembers[pt.event_id]) _distAllEventMembers[pt.event_id] = {};
+      _personMatchKeys(pt).forEach(function(k){ _distAllEventMembers[pt.event_id][k] = true; });
+    });
+  } catch (e) { console.warn('initAllPersonsDist: Event-/Teilnehmerdaten nicht geladen', e); }
+
+  // Filter-Dropdowns füllen
+  function fill(id, values, allLabel) {
+    var sel = document.getElementById(id); if (!sel) return;
+    var cur = sel.value;
+    var opts = [...new Set(values.filter(Boolean))].sort(function(a,b){ return String(a).localeCompare(String(b)); });
+    sel.innerHTML = '<option value="">' + allLabel + '</option>' + opts.map(function(v){ return '<option value="'+v+'">'+v+'</option>'; }).join('');
+    if (cur) sel.value = cur;
+  }
+  fill('allDistCountry', _distAll.map(function(p){return p.country;}), 'Alle Länder');
+  fill('allDistRole', _distAll.map(function(p){return p.role;}), 'Alle Rollen');
+  fill('allDistVerein', _distAll.map(function(p){return p.verein;}), 'Alle Vereine');
+  fill('allDistBundesland', _distAll.map(function(p){return p.bundesland;}), 'Alle Bundesländer');
+  // Event-Dropdown (nur Events, für die es überhaupt gemeldete Teilnehmer gibt)
+  var evSel = document.getElementById('allDistEvent');
+  if (evSel) {
+    var curEv = evSel.value;
+    var evIds = Object.keys(_distAllEventMembers);
+    evSel.innerHTML = '<option value="">Alle Events</option>' + evIds.map(function(id){
+      return '<option value="'+id+'">'+(_distAllEventNames[id]||id)+'</option>';
+    }).join('');
+    if (curEv) evSel.value = curEv;
+  }
+
+  renderAllPersonsDist();
+}
+
+function renderAllPersonsDist() {
+  var search = (document.getElementById('allDistSearch') && document.getElementById('allDistSearch').value || '').toLowerCase();
+  var country = document.getElementById('allDistCountry') && document.getElementById('allDistCountry').value || '';
+  var role = document.getElementById('allDistRole') && document.getElementById('allDistRole').value || '';
+  var verein = document.getElementById('allDistVerein') && document.getElementById('allDistVerein').value || '';
+  var bundesland = document.getElementById('allDistBundesland') && document.getElementById('allDistBundesland').value || '';
+  var eventId = document.getElementById('allDistEvent') && document.getElementById('allDistEvent').value || '';
+  var ageMinEl = document.getElementById('allDistAgeMin');
+  var ageMaxEl = document.getElementById('allDistAgeMax');
+  var ageMin = ageMinEl && ageMinEl.value !== '' ? parseInt(ageMinEl.value) : null;
+  var ageMax = ageMaxEl && ageMaxEl.value !== '' ? parseInt(ageMaxEl.value) : null;
+
+  // Stichtag fürs Alter: bei Event-Filter = letzter Turniertag des Events, sonst heute.
+  var ageRef = (eventId && _distAllEventDateTo[eventId]) ? _distAllEventDateTo[eventId] : null;
+  var ageRefLabel = ageRef ? new Date(ageRef).toLocaleDateString('de-DE') : 'heute';
+
+  var s = _distSort.all;
+  var eventMembers = eventId ? (_distAllEventMembers[eventId] || {}) : null;
+
+  var filtered = _distAll.filter(function(p) {
+    if (country && p.country !== country) return false;
+    if (role && p.role !== role) return false;
+    if (verein && p.verein !== verein) return false;
+    if (bundesland && p.bundesland !== bundesland) return false;
+    if (eventMembers) {
+      var inEvent = _personMatchKeys(p).some(function(k){ return eventMembers[k]; });
+      if (!inEvent) return false;
+    }
+    if (ageMin !== null || ageMax !== null) {
+      var a = ageAtDate(p.dob, ageRef);
+      if (a === null) return false;
+      if (ageMin !== null && a < ageMin) return false;
+      if (ageMax !== null && a > ageMax) return false;
+    }
+    if (search && !((p.lastname||'')+' '+(p.firstname||'')+' '+(p.country||'')+' '+(p.verein||'')+' '+(p.bundesland||'')+' '+(p.email||'')).toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  filtered.sort(function(a, b) {
+    var va = s.field === 'age' ? (ageAtDate(a.dob, ageRef) === null ? 999 : ageAtDate(a.dob, ageRef)) : (a[s.field]||'');
+    var vb = s.field === 'age' ? (ageAtDate(b.dob, ageRef) === null ? 999 : ageAtDate(b.dob, ageRef)) : (b[s.field]||'');
+    if (s.field === 'age') return s.dir === 'asc' ? va - vb : vb - va;
+    return s.dir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+  });
+
+  var tb = document.getElementById('allDistTable');
+  if (!tb) return;
+  tb.innerHTML = filtered.length ? filtered.map(function(p, i) {
+    var age = ageAtDate(p.dob, ageRef);
+    if (age === null) age = '–';
+    var bg = i % 2 === 0 ? '' : 'background:var(--bg2)';
+    var mail = p.email
+      ? '<a href="mailto:' + p.email + '" style="color:var(--blue)">' + p.email + '</a>'
+      : '<span style="color:var(--text3)">–</span>';
+    return '<tr style="' + bg + '">'
+      + '<td><strong>' + (p.lastname||'–') + '</strong></td>'
+      + '<td>' + (p.firstname||'–') + '</td>'
+      + '<td>' + (p.country||'–') + '</td>'
+      + '<td>' + (p.bundesland||'–') + '</td>'
+      + '<td>' + (p.verein||'–') + '</td>'
+      + '<td style="text-align:center"><strong>' + age + '</strong></td>'
+      + '<td>' + (p.role||'–') + '</td>'
+      + '<td style="font-size:11px">' + mail + '</td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="8" class="empty">Keine Einträge gefunden</td></tr>';
+
+  // BCC-Liste = gefilterte Einträge mit gültiger E-Mail
+  var withMail = filtered.filter(function(p){ return p.email && p.email.trim(); });
+  window._allEmails = withMail.map(function(p){ return p.email; });
+  var cnt = document.getElementById('allDistCount');
+  if (cnt) cnt.textContent = '(' + filtered.length + ' Personen · ' + withMail.length + ' mit E-Mail · Alter zum ' + ageRefLabel + ')';
+}
+
 
 function toggleDistCard(type) {
-  var bodyId = type === 'players' ? 'playerDistBody' : 'coachDistBody';
-  var toggleId = type === 'players' ? 'playerDistToggle' : 'coachDistToggle';
+  var bodyId = type === 'players' ? 'playerDistBody' : type === 'all' ? 'allDistBody' : 'coachDistBody';
+  var toggleId = type === 'players' ? 'playerDistToggle' : type === 'all' ? 'allDistToggle' : 'coachDistToggle';
   var body = document.getElementById(bodyId);
   var icon = document.getElementById(toggleId);
   if (!body) return;
@@ -16332,6 +16524,8 @@ async function syncEntryWithPersons() {
     {entry:'f_country',           person:'country',            label:'Land'},
     {entry:'f_dob',               person:'dob',                label:'Geburtsdatum'},
     {entry:'f_gender',            person:'gender',             label:'Geschlecht'},
+    {entry:'f_verein',            person:'verein',             label:'Verein'},
+    {entry:'f_bundesland',        person:'bundesland',         label:'Bundesland'},
     {entry:'f_mobile',            person:'mobile',             label:'Mobil'},
     {entry:'f_email',             person:'email',              label:'E-Mail'},
     {entry:'f_passport_id',       person:'passport_id',        label:'Passport ID'},
