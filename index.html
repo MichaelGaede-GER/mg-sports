@@ -2603,6 +2603,19 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
         <div class="page-header"><h2>Einstellungen</h2></div>
 
         <div style="margin:4px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
+          <span>📋 Anmeldeformulare</span><div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Formularsteuerung — Pflichtfelder</h3>
+            <button class="btn primary" style="font-size:11px;padding:4px 10px" onclick="saveFormFieldConfig()">💾 Speichern</button>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Legt fest, welche Felder in der <strong>Einzel-</strong> und <strong>Gruppenanmeldung</strong> Pflicht oder Optional sind. Gilt für beide Online-Formulare. Nach dem Speichern greift die Änderung sofort für neue Anmeldungen.</p>
+            <div id="formFieldConfigTable" style="max-width:560px"><span style="color:var(--text3);font-size:13px">Lade…</span></div>
+          </div>
+        </div>
+
+        <div style="margin:22px 0 10px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:10px">
           <span>🏨 Hotel</span><div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
 
@@ -10980,7 +10993,63 @@ async function exportWaitlistPDF() {
 }
 
 // SETTINGS
+// ===== FORMULARSTEUERUNG (Pflichtfelder Anmeldeformulare) =====
+var REG_FIELD_DEFS = [
+  {key:'lastname',    label:'Nachname',                def:true},
+  {key:'firstname',   label:'Vorname',                 def:true},
+  {key:'country',     label:'Land',                    def:true},
+  {key:'dob',         label:'Geburtsdatum',            def:true},
+  {key:'gender',      label:'Geschlecht',              def:true},
+  {key:'member_id',   label:'Member ID / ESF',         def:true},
+  {key:'passport_id', label:'Reisepass-/Ausweis-Nr.',  def:false},
+  {key:'mobile',      label:'Mobilnummer',             def:true},
+  {key:'email',       label:'E-Mail',                  def:true},
+  {key:'verein',      label:'Verein',                  def:false},
+  {key:'bundesland',  label:'Bundesland',              def:false}
+];
+var _formFieldConfig = {};
+
+function regFieldRequired(cfg, key, def) {
+  var v = cfg && cfg[key];
+  if (v === 'required') return true;
+  if (v === 'optional') return false;
+  return def;
+}
+
+async function loadFormFieldConfig() {
+  var cont = document.getElementById('formFieldConfigTable');
+  if (!cont) return;
+  var cfg = {};
+  try {
+    var r = await db.from('app_settings').select('value').eq('key','registration_field_config').maybeSingle();
+    if (r.data && r.data.value) cfg = JSON.parse(r.data.value);
+  } catch (e) { /* Standardwerte verwenden */ }
+  _formFieldConfig = cfg;
+  cont.innerHTML = REG_FIELD_DEFS.map(function(fd) {
+    var req = regFieldRequired(cfg, fd.key, fd.def);
+    return '<div style="display:flex;align-items:center;gap:12px;padding:7px 2px;border-bottom:1px solid var(--border)">'
+      + '<div style="flex:1;font-size:13px">' + fd.label + '</div>'
+      + '<select data-fkey="' + fd.key + '" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);min-width:120px">'
+      + '<option value="required"' + (req ? ' selected' : '') + '>Pflicht</option>'
+      + '<option value="optional"' + (!req ? ' selected' : '') + '>Optional</option>'
+      + '</select></div>';
+  }).join('');
+}
+
+async function saveFormFieldConfig() {
+  var cfg = {};
+  document.querySelectorAll('#formFieldConfigTable select[data-fkey]').forEach(function(sel) {
+    cfg[sel.getAttribute('data-fkey')] = sel.value;
+  });
+  await db.from('app_settings').delete().eq('key','registration_field_config');
+  var r = await db.from('app_settings').insert({ key:'registration_field_config', value: JSON.stringify(cfg) });
+  if (r.error) { toast('Fehler: ' + r.error.message); return; }
+  _formFieldConfig = cfg;
+  toast('✅ Formularsteuerung gespeichert — gilt ab sofort für beide Anmeldeformulare');
+}
+
 async function loadSettings() {
+  try { await loadFormFieldConfig(); } catch(e) { console.error('loadFormFieldConfig error:', e); }
   try { await loadCertificateSettings(); } catch(e) { console.error('loadCertificateSettings error:', e); }
   try { await loadLetterTypesSettings(); } catch(e) { console.error('loadLetterTypesSettings error:', e); }
   try { await loadPhysioConfig(); } catch(e) { console.error('loadPhysioConfig error:', e); }

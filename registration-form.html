@@ -116,8 +116,8 @@
             <div id="blockedPlayerBanner" style="display:none;margin-top:8px;background:#fdecea;color:#7a1a1a;border:1px solid #f5b3ac;border-radius:8px;padding:12px 14px;font-size:13px"></div>
           </div>
           <div class="form-group"><label data-i18n="f_passport">Passport / ID Number</label><input type="text" id="r_passport_id" /></div>
-          <div class="form-group"><label data-i18n="f_verein">Club (optional)</label><input type="text" id="r_verein" placeholder="Club / Verein" /></div>
-          <div class="form-group"><label data-i18n="f_bundesland">Federal State (optional)</label>
+          <div class="form-group"><label data-i18n="f_verein">Club</label><input type="text" id="r_verein" placeholder="Club / Verein" /></div>
+          <div class="form-group"><label data-i18n="f_bundesland">Federal State</label>
             <select id="r_bundesland"><option value="">–</option><option>Baden-Württemberg</option><option>Bayern</option><option>Berlin</option><option>Brandenburg</option><option>Bremen</option><option>Hamburg</option><option>Hessen</option><option>Mecklenburg-Vorpommern</option><option>Niedersachsen</option><option>Nordrhein-Westfalen</option><option>Rheinland-Pfalz</option><option>Saarland</option><option>Sachsen</option><option>Sachsen-Anhalt</option><option>Schleswig-Holstein</option><option>Thüringen</option></select>
           </div>
           <div class="form-group"><label data-i18n="f_mobile">Mobile <span class="req">*</span></label><input type="tel" id="r_mobile" placeholder="+49 151 …" /></div>
@@ -452,8 +452,8 @@ en: {
   f_member_id: 'Member ID / ESID <span class="req">*</span>',
   f_member_id_hint: "Format: ES + 9 digits, e.g. ES473686007",
   f_passport: "Passport / ID Number",
-  f_verein: "Club (optional)",
-  f_bundesland: "Federal State (optional)",
+  f_verein: "Club",
+  f_bundesland: "Federal State",
   f_mobile: 'Mobile <span class="req">*</span>',
   f_email: 'E-Mail <span class="req">*</span>',
   f_role: 'Role <span class="req">*</span>',
@@ -598,8 +598,8 @@ de: {
   f_member_id: 'Mitglieds-ID / ESID <span class="req">*</span>',
   f_member_id_hint: "Format: ES + 9 Ziffern, z. B. ES473686007",
   f_passport: "Reisepass- / Ausweisnummer",
-  f_verein: "Verein (optional)",
-  f_bundesland: "Bundesland (optional)",
+  f_verein: "Verein",
+  f_bundesland: "Bundesland",
   f_mobile: 'Mobil <span class="req">*</span>',
   f_email: 'E-Mail <span class="req">*</span>',
   f_role: 'Rolle <span class="req">*</span>',
@@ -763,6 +763,7 @@ function applyStaticTranslations() {
   document.getElementById('langBtnEn').classList.toggle('active', LANG === 'en');
   document.getElementById('langBtnDe').classList.toggle('active', LANG === 'de');
   document.documentElement.lang = LANG;
+  if (typeof applyRegFieldConfig === 'function') applyRegFieldConfig();
 }
 
 function setLang(lang) {
@@ -824,8 +825,62 @@ function updateAirportTransfer() {
 }
 
 // ---------- INIT ----------
+// ===== FORMULARSTEUERUNG: Pflicht/Optional aus den Einstellungen =====
+var REG_FIELD_DEFS = [
+  {key:'lastname',   i18n:'f_lastname',   def:true},
+  {key:'firstname',  i18n:'f_firstname',  def:true},
+  {key:'country',    i18n:'f_country',    def:true},
+  {key:'dob',        i18n:'f_dob',        def:true},
+  {key:'gender',     i18n:'f_gender',     def:true},
+  {key:'member_id',  i18n:'f_member_id',  def:true},
+  {key:'passport_id',i18n:'f_passport',   def:false},
+  {key:'mobile',     i18n:'f_mobile',     def:true},
+  {key:'email',      i18n:'f_email',      def:true},
+  {key:'verein',     i18n:'f_verein',     def:false},
+  {key:'bundesland', i18n:'f_bundesland', def:false}
+];
+var _regFieldConfig = {};
+
+function regFieldRequired(key, def) {
+  var v = _regFieldConfig && _regFieldConfig[key];
+  if (v === 'required') return true;
+  if (v === 'optional') return false;
+  return def;
+}
+
+function _regLabelEl(inputId) {
+  var el = document.getElementById(inputId); if (!el) return null;
+  var grp = el.closest('.form-group'); if (!grp) return null;
+  return grp.querySelector('label');
+}
+
+function _setReqMark(labelEl, required) {
+  if (!labelEl) return;
+  var span = labelEl.querySelector('.req');
+  if (required) {
+    if (!span) { span = document.createElement('span'); span.className = 'req'; span.innerHTML = ' *'; labelEl.appendChild(span); }
+  } else {
+    if (span) span.remove();
+  }
+}
+
+// Setzt/entfernt das Pflicht-Sternchen an allen konfigurierbaren Feldern.
+function applyRegFieldConfig() {
+  REG_FIELD_DEFS.forEach(function(fd) {
+    _setReqMark(_regLabelEl('r_' + fd.key), regFieldRequired(fd.key, fd.def));
+  });
+}
+
+async function loadRegFieldConfig() {
+  try {
+    var r = await db.from('app_settings').select('value').eq('key','registration_field_config').maybeSingle();
+    if (r.data && r.data.value) _regFieldConfig = JSON.parse(r.data.value);
+  } catch (e) { _regFieldConfig = {}; }
+}
+
 async function init() {
   try { var savedLang = localStorage.getItem('regFormLang'); if (savedLang) LANG = savedLang; } catch (e) {}
+  await loadRegFieldConfig();
   applyStaticTranslations();
   document.getElementById('r_country').innerHTML = countryOptionsHtml();
   populateGenderSelect();
@@ -1757,11 +1812,13 @@ async function submitRegistration() {
     return;
   }
 
-  var required = [
-    ['r_lastname', t('f_lastname')], ['r_firstname', t('f_firstname')], ['r_country', t('f_country')],
-    ['r_dob', t('f_dob')], ['r_gender', t('f_gender')], ['r_member_id', t('f_member_id')],
-    ['r_mobile', t('f_mobile')], ['r_email', t('f_email')], ['r_role', t('f_role')]
-  ];
+  var required = [];
+  REG_FIELD_DEFS.forEach(function(fd) {
+    if (regFieldRequired(fd.key, fd.def) && document.getElementById('r_' + fd.key)) {
+      required.push(['r_' + fd.key, t(fd.i18n)]);
+    }
+  });
+  required.push(['r_role', t('f_role')]); // Rolle ist immer Pflicht (steuert weitere Felder)
   var errors = [];
 
   function plain(s) { return s.replace(/<[^>]+>/g, '').replace('*', '').trim(); }

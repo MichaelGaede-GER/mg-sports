@@ -333,8 +333,8 @@ en: {
   f_member_id_ph: "ES473686007",
   f_member_id_hint: "Format: ES + 9 digits",
   f_passport: "Passport / ID Number",
-  f_verein: "Club (optional)",
-  f_bundesland: "Federal State (optional)",
+  f_verein: "Club",
+  f_bundesland: "Federal State",
   f_mobile: 'Mobile <span class="req">*</span>',
   f_mobile_optional: "Mobile",
   f_mobile_ph: "optional, defaults to group contact",
@@ -497,8 +497,8 @@ de: {
   f_member_id_ph: "ES473686007",
   f_member_id_hint: "Format: ES + 9 Ziffern",
   f_passport: "Reisepass- / Ausweisnummer",
-  f_verein: "Verein (optional)",
-  f_bundesland: "Bundesland (optional)",
+  f_verein: "Verein",
+  f_bundesland: "Bundesland",
   f_mobile: 'Mobil <span class="req">*</span>',
   f_mobile_optional: "Mobil",
   f_mobile_ph: "optional, sonst Gruppenkontakt",
@@ -650,6 +650,7 @@ function applyStaticTranslations() {
   document.getElementById('langBtnEn').classList.toggle('active', LANG === 'en');
   document.getElementById('langBtnDe').classList.toggle('active', LANG === 'de');
   document.documentElement.lang = LANG;
+  if (typeof applyRegFieldConfigAllRows === 'function') applyRegFieldConfigAllRows();
 }
 
 function setLang(lang) {
@@ -717,6 +718,7 @@ async function init() {
     var savedLang = localStorage.getItem('groupRegLang');
     if (savedLang) LANG = savedLang;
   } catch (e) {}
+  await loadRegFieldConfig();
   applyStaticTranslations();
 
   // 1) Event: URL param ?event=<uuid> overrides the active event
@@ -1254,6 +1256,62 @@ function renderRoomBadges() {
 }
 
 // ---------- PARTICIPANT ROWS ----------
+// ===== FORMULARSTEUERUNG: Pflicht/Optional aus den Einstellungen =====
+// Hinweis: Mobil & E-Mail bleiben pro Teilnehmer optional (Kontakt läuft über die
+// Gruppenleitung) und werden hier bewusst nicht über die Konfiguration gesteuert.
+var REG_FIELD_DEFS = [
+  {key:'lastname',   i18n:'f_lastname',   def:true},
+  {key:'firstname',  i18n:'f_firstname',  def:true},
+  {key:'country',    i18n:'f_country',    def:true},
+  {key:'dob',        i18n:'f_dob',        def:true},
+  {key:'gender',     i18n:'f_gender',     def:true},
+  {key:'member_id',  i18n:'f_member_id',  def:true},
+  {key:'passport_id',i18n:'f_passport',   def:false},
+  {key:'verein',     i18n:'f_verein',     def:false},
+  {key:'bundesland', i18n:'f_bundesland', def:false}
+];
+var _regFieldConfig = {};
+
+function regFieldRequired(key, def) {
+  var v = _regFieldConfig && _regFieldConfig[key];
+  if (v === 'required') return true;
+  if (v === 'optional') return false;
+  return def;
+}
+
+async function loadRegFieldConfig() {
+  try {
+    var r = await db.from('app_settings').select('value').eq('key','registration_field_config').maybeSingle();
+    if (r.data && r.data.value) _regFieldConfig = JSON.parse(r.data.value);
+  } catch (e) { _regFieldConfig = {}; }
+}
+
+function _grpLabelEl(inputId) {
+  var el = document.getElementById(inputId); if (!el) return null;
+  var grp = el.closest('.form-group'); if (!grp) return null;
+  return grp.querySelector('label');
+}
+
+function _setReqMark(labelEl, required) {
+  if (!labelEl) return;
+  var span = labelEl.querySelector('.req');
+  if (required) {
+    if (!span) { span = document.createElement('span'); span.className = 'req'; span.innerHTML = ' *'; labelEl.appendChild(span); }
+  } else {
+    if (span) span.remove();
+  }
+}
+
+function applyRegFieldConfigForRow(id) {
+  REG_FIELD_DEFS.forEach(function(fd) {
+    _setReqMark(_grpLabelEl('p_' + fd.key + '_' + id), regFieldRequired(fd.key, fd.def));
+  });
+}
+
+function applyRegFieldConfigAllRows() {
+  (participantIds || []).forEach(function(id) { applyRegFieldConfigForRow(id); });
+}
+
 function addParticipantRow() {
   participantCounter++;
   var id = participantCounter;
@@ -1331,6 +1389,7 @@ function addParticipantRow() {
     + '</div>';
 
   document.getElementById('participantsContainer').appendChild(wrap);
+  if (typeof applyRegFieldConfigForRow === 'function') applyRegFieldConfigForRow(id);
   document.getElementById('p_country_' + id).innerHTML = countryOptionsHtml();
   populateGenderSelect(id);
   populateRoleSelect(id, false);
@@ -2163,11 +2222,19 @@ async function submitGroupRegistration() {
       checkout: t('f_checkout').replace(/<[^>]+>/g, '').replace('*', '').trim()
     };
 
-    [['p_lastname_'+id, label+': '+reqFieldLabels.lastname], ['p_firstname_'+id, label+': '+reqFieldLabels.firstname], ['p_country_'+id, label+': '+reqFieldLabels.country],
-     ['p_dob_'+id, label+': '+reqFieldLabels.dob], ['p_gender_'+id, label+': '+reqFieldLabels.gender], ['p_member_id_'+id, label+': '+reqFieldLabels.member_id],
-     ['p_role_'+id, label+': '+reqFieldLabels.role], ['p_package_'+id, label+': '+reqFieldLabels.package]].forEach(function(f) {
+    var _reqChecks = [];
+    REG_FIELD_DEFS.forEach(function(fd) {
+      if (regFieldRequired(fd.key, fd.def) && document.getElementById('p_' + fd.key + '_' + id)) {
+        var lbl = t(fd.i18n).replace(/<[^>]+>/g, '').replace('*', '').trim();
+        _reqChecks.push(['p_' + fd.key + '_' + id, label + ': ' + lbl]);
+      }
+    });
+    // Rolle und Package sind immer Pflicht
+    _reqChecks.push(['p_role_' + id, label + ': ' + reqFieldLabels.role]);
+    _reqChecks.push(['p_package_' + id, label + ': ' + reqFieldLabels.package]);
+    _reqChecks.forEach(function(f) {
       var el = document.getElementById(f[0]);
-      if (!el.value.trim()) { errors.push(f[1]); el.classList.add('error'); } else { el.classList.remove('error'); }
+      if (!el || !el.value.trim()) { errors.push(f[1]); if (el) el.classList.add('error'); } else { el.classList.remove('error'); }
     });
 
     // Shirt Size is only required while it's actually shown (Role = Player)
