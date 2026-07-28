@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MG Sports Event Management 1.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -6278,6 +6279,83 @@ async function adminConfirmRegistration(token, id) {
   loadParticipants();
 }
 
+// ==== Bestätigungs-/Verwaltungs-E-Mail (erneut) senden — via EmailJS, direkt aus dem Admin-Tool ====
+// Nützlich, wenn ein Teilnehmer die Mail gelöscht hat oder wenn jemand von Hand erfasst wurde
+// (z.B. ein Helfer) und seinen Bearbeiten-/Rückzug-Link erhalten soll.
+const ADMIN_EMAILJS_PUBLIC_KEY  = 'iTmRZnd2JRJc7KuFb';
+const ADMIN_EMAILJS_SERVICE_ID  = 'service_o7rgokk';
+const ADMIN_EMAILJS_TEMPLATE_ID = 'template_xf7w9u8';
+var _adminEmailjsReady = false;
+
+function _ensureEmailjs() {
+  if (_adminEmailjsReady) return true;
+  if (!window.emailjs) return false;
+  try { emailjs.init({ publicKey: ADMIN_EMAILJS_PUBLIC_KEY }); _adminEmailjsReady = true; return true; } catch (e) { return false; }
+}
+function _adminBaseUrl() { return window.location.origin + window.location.pathname.replace(/[^/]*$/, ''); }
+function _adminRandomToken() {
+  return (crypto.randomUUID
+    ? crypto.randomUUID()
+    : (Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2))
+  ).replace(/-/g, '');
+}
+
+async function sendParticipantConfirmation(id) {
+  if (!id) return;
+  if (!_ensureEmailjs()) { toast('⚠ E-Mail-Dienst (EmailJS) nicht geladen – bitte Seite neu laden.'); return; }
+
+  var pr = await db.from('participants').select('*').eq('id', id).single();
+  if (pr.error || !pr.data) { toast('Teilnehmer nicht gefunden.'); return; }
+  var p = pr.data;
+  if (!p.email || !p.email.trim()) { toast('⚠ Keine E-Mail-Adresse hinterlegt – Versand nicht möglich.'); return; }
+
+  if (!confirm('Bestätigungs-/Verwaltungs-E-Mail an ' + p.firstname + ' ' + p.lastname + ' (' + p.email + ') senden?\n\nDie Mail enthält den Bearbeiten-, Bestätigungs- und Rückzugs-Link.')) return;
+
+  // Fehlende Tokens (z.B. bei manueller Erfassung) jetzt erzeugen und speichern.
+  var patch = {};
+  if (!p.edit_token)     patch.edit_token     = _adminRandomToken();
+  if (!p.confirm_token)  patch.confirm_token  = _adminRandomToken();
+  if (!p.withdraw_token) patch.withdraw_token = _adminRandomToken();
+  if (Object.keys(patch).length) {
+    var up = await db.from('participants').update(patch).eq('id', id);
+    if (up.error) { toast('Fehler beim Erzeugen der Links: ' + up.error.message); return; }
+    Object.assign(p, patch);
+  }
+
+  var evName = 'the tournament';
+  try { var ev = await db.from('events').select('name').eq('id', p.event_id).single(); if (ev.data && ev.data.name) evName = ev.data.name; } catch (e) {}
+
+  var base = _adminBaseUrl();
+  var editLink     = base + 'registration-form.html?event=' + encodeURIComponent(p.event_id || '') + '&edit=' + p.edit_token;
+  var confirmLink  = base + 'confirm.html?confirm=' + p.confirm_token;
+  var withdrawLink = base + 'confirm.html?withdraw=' + p.withdraw_token;
+
+  var summary = [
+    'Name: ' + (p.lastname || '') + ', ' + (p.firstname || ''),
+    p.country ? 'Country: ' + p.country : '',
+    p.role ? 'Role: ' + p.role : '',
+    p.events ? 'Category: ' + p.events : '',
+    p.package ? 'Package: ' + p.package : ''
+  ].filter(Boolean).join('\n');
+
+  try {
+    await emailjs.send(ADMIN_EMAILJS_SERVICE_ID, ADMIN_EMAILJS_TEMPLATE_ID, {
+      withdrawal_policy: '',
+      to_email: p.email,
+      to_name: ((p.firstname || '') + ' ' + (p.lastname || '')).trim(),
+      event_name: evName,
+      esid: p.member_id || '-',
+      registration_summary: summary,
+      edit_link: editLink,
+      confirm_link: confirmLink,
+      withdraw_link: withdrawLink
+    });
+    toast('📧 E-Mail an ' + p.email + ' gesendet');
+  } catch (e) {
+    toast('❌ Versand fehlgeschlagen: ' + (e && (e.text || e.message) || e));
+  }
+}
+
 async function loadParticipants() {
   const search = document.getElementById('filterSearch').value.toLowerCase();
   const age = document.getElementById('filterAge').value;
@@ -6381,6 +6459,7 @@ async function loadParticipants() {
       ? '<span style="display:inline-flex;align-items:center;gap:0;white-space:nowrap"><span class="badge">' + pkgDisplayCodeRow + '</span>' + iconsHtml + '</span>'
       : '-';
     var eb = '<button class="btn" style="font-size:11px;padding:3px 8px" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)">Bearbeiten</button>';
+    var confBtn = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendParticipantConfirmation(this.dataset.id)" title="Bestätigungs-/Verwaltungs-E-Mail (mit Bearbeiten-, Bestätigungs- und Rückzugs-Link) an den Teilnehmer senden">📧</button>';
     var vb = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateEventpass(this.dataset.id)">Pass</button>';
     var certBtn = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="generateCertificate(this.dataset.id)" title="Certificate of Participation erstellen">🎓</button>';
     var sendBtns = '<button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="sendPassWhatsApp(this.dataset.id)" title="Per WhatsApp senden">📲</button>'
@@ -6389,7 +6468,7 @@ async function loadParticipants() {
     var db2 = '<button class="btn danger" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" data-name="'+p.lastname+', '+p.firstname+'" onclick="deleteParticipant(this.dataset.id, this.dataset.name)">🗑</button>';
     return '<tr' + confirmRowAttr(p) + '>'
 + '<td style="white-space:nowrap">'
-        + eb + ' ' + vb + ' ' + certBtn + ' ' + sendBtns
+        + eb + ' ' + confBtn + ' ' + vb + ' ' + certBtn + ' ' + sendBtns
         + (p.payment_status !== 'Bezahlt' && p.payment_status !== 'Kostenlos' && p.payment_status !== 'Pending'
            ? ' <button class="btn" style="font-size:11px;padding:3px 6px" data-id="'+p.id+'" onclick="openPaymentEmail(this.dataset.id)">✉</button>'
            : '')
