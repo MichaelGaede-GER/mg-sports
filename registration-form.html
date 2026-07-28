@@ -1762,6 +1762,7 @@ function buildRegistrationSummaryText(row, roomTypeLabel) {
   add('Hotel', row.hotel);
   add('Check-in', row.checkin);
   add('Check-out', row.checkout);
+  add('Meals included', row.meal_plus === 'Ja' ? 'Yes' : null);
 
   // Travel/Transport wird (wie im Formular selbst) nur einbezogen, wenn das gewählte
   // Package tatsächlich einen Transfer beinhaltet — sonst stehen hier sonst automatisch
@@ -2074,6 +2075,14 @@ async function submitRegistration() {
         event_name: registeredEventName || 'the tournament',
         esid: v('r_member_id') || '-',
         registration_summary: buildRegistrationSummaryText(row, roomTypeLabelsMail[row.room_type] || row.room_type),
+        package: row.package || '-',
+        room_type: (roomTypeLabelsMail[row.room_type] || row.room_type || '-'),
+        hotel: row.hotel || '-',
+        check_in: row.checkin || '-',
+        check_out: row.checkout || '-',
+        category: row.events || '-',
+        arrival_date: row.arrival_date || '-',
+        departure_date: row.departure_date || '-',
         edit_link: editLink,
         confirm_link: (r.data && r.data.confirm_token) ? (CONFIRM_PAGE + '?confirm=' + r.data.confirm_token) : '',
         withdraw_link: (r.data && r.data.withdraw_token) ? (CONFIRM_PAGE + '?withdraw=' + r.data.withdraw_token) : ''

@@ -2079,6 +2079,7 @@ function buildRegistrationSummaryText(row, roomTypeLabel, travelRelevant) {
   add('Hotel', row.hotel);
   add('Check-in', row.checkin);
   add('Check-out', row.checkout);
+  add('Meals included', row.meal_plus === 'Ja' ? 'Yes' : null);
 
   // Travel/Transport nur einbeziehen, wenn das Package DIESER Person tatsächlich einen
   // Transfer beinhaltet — sonst stehen hier automatisch erzeugte Default-Werte (z.B.

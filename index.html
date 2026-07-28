@@ -6330,13 +6330,58 @@ async function sendParticipantConfirmation(id) {
   var confirmLink  = base + 'confirm.html?confirm=' + p.confirm_token;
   var withdrawLink = base + 'confirm.html?withdraw=' + p.withdraw_token;
 
-  var summary = [
-    'Name: ' + (p.lastname || '') + ', ' + (p.firstname || ''),
-    p.country ? 'Country: ' + p.country : '',
-    p.role ? 'Role: ' + p.role : '',
-    p.events ? 'Category: ' + p.events : '',
-    p.package ? 'Package: ' + p.package : ''
-  ].filter(Boolean).join('\n');
+  // Vollständige Buchungs-Zusammenfassung (analog zur Online-Anmeldung).
+  var _s = [];
+  function _add(l, val) { if (val !== null && val !== undefined && val !== '') _s.push(l + ': ' + val); }
+  function _sec(t) { _s.push(''); _s.push('— ' + t + ' —'); }
+
+  _sec('Personal Data');
+  _add('Last Name', p.lastname); _add('First Name', p.firstname);
+  _add('Country', p.country); _add('Club / Verein', p.verein);
+  _add('Federal State / Bundesland', p.bundesland);
+  _add('Date of Birth', p.dob); _add('Gender', p.gender);
+  _add('ESID / Member ID', p.member_id); _add('National ID', p.national_id); _add('WSF Spin', p.wsf_spin);
+  _add('Mobile', p.mobile); _add('Email', p.email);
+  _add('Role', p.role); _add('Age Category / Event', p.events);
+  _add('Coach Name', p.coach_name); _add('Coach ESID', p.coach_esid);
+  _add('Shirt Size', p.shirt);
+
+  var _hasHotel = !!(p.room_type || p.hotel || p.checkin || p.checkout);
+  _sec(_hasHotel ? 'Package & Hotel' : 'Package');
+  _add('Package', p.package);
+  _add('Package Price', (p.package_price != null && p.package_price !== '') ? Number(p.package_price).toFixed(2) + ' EUR' : null);
+  _add('Room Type', p.room_type);
+  _add('Room Number', p.room_number);
+  _add('Hotel', p.hotel);
+  _add('Check-in', p.checkin);
+  _add('Check-out', p.checkout);
+  _add('Meals included', p.meal_plus === 'Ja' ? 'Yes' : null);
+
+  if (p.ams_bus || p.airport_plus || p.arrival_date || p.departure_date || p.flight_in || p.flight_out) {
+    _sec('Travel');
+    _add('Airport Bus', p.ams_bus);
+    _add('Additional Airport Transfer', p.airport_plus);
+    _add('Arrival Date', p.arrival_date); _add('Arrival Time', p.arrival_time); _add('Flight In', p.flight_in);
+    _add('Departure Date', p.departure_date); _add('Departure Time', p.departure_time); _add('Flight Out', p.flight_out);
+  }
+
+  if (p.visa === 'Ja' || p.confirmation_letter_type) {
+    _sec('VISA / Confirmation Letter');
+    _add('Place of Birth', p.place_of_birth);
+    _add('Passport Number', p.passport_id);
+    _add('Date of Issue', p.visa_date_of_issue);
+    _add('Date of Expiry', p.visa_date_of_expiry);
+    _add('Letter Type', p.confirmation_letter_type);
+  }
+
+  _sec('Payment');
+  _add('Status', p.payment_status);
+  _add('Entry Fee', (p.entry_fee != null && p.entry_fee !== '') ? Number(p.entry_fee).toFixed(2) + ' EUR' : null);
+  _add('Total', (p.total != null && p.total !== '') ? Number(p.total).toFixed(2) + ' EUR' : null);
+
+  if (p.memo) { _sec('Additional Notes'); _s.push(p.memo); }
+
+  var summary = _s.join('\n').replace(/^\n/, '');
 
   try {
     await emailjs.send(ADMIN_EMAILJS_SERVICE_ID, ADMIN_EMAILJS_TEMPLATE_ID, {
@@ -6346,6 +6391,15 @@ async function sendParticipantConfirmation(id) {
       event_name: evName,
       esid: p.member_id || '-',
       registration_summary: summary,
+      // Einzelfelder — falls die E-Mail-Vorlage sie gezielt anzeigt ({{package}}, {{hotel}}, ...)
+      package: p.package || '-',
+      room_type: p.room_type || '-',
+      hotel: p.hotel || '-',
+      check_in: p.checkin || '-',
+      check_out: p.checkout || '-',
+      category: p.events || '-',
+      arrival_date: p.arrival_date || '-',
+      departure_date: p.departure_date || '-',
       edit_link: editLink,
       confirm_link: confirmLink,
       withdraw_link: withdrawLink
