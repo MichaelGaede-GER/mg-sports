@@ -93,6 +93,14 @@
     </div>
   </div>
 
+  <div id="rejectionBox" style="display:none;background:#fdecea;border:1px solid #f5b5ae;border-radius:12px;padding:28px 26px;color:#7a1c12;text-align:left;line-height:1.6">
+    <div style="font-size:44px;text-align:center;margin-bottom:10px">⛔</div>
+    <p>Thank you very much for your renewed attempt to register for the tournament.</p>
+    <p>Unfortunately, the Tournament Director has rejected your entry for the following reason:</p>
+    <div id="rejectionReason" style="background:#fff;border:1px solid #f5b5ae;border-radius:8px;padding:14px 16px;margin:12px 0;font-weight:600;white-space:pre-line"></div>
+    <p>We kindly ask for your understanding and thank you for your interest in our tournament.</p>
+  </div>
+
   <div id="formContainer">
     <div id="errorBox" class="error-box"></div>
     <div id="noEventBox" class="error-box" style="display:none" data-i18n="no_event">⚠️ No active tournament found. Please contact the organizer.</div>
@@ -948,6 +956,17 @@ async function init() {
   if (editParam) {
     var editR = await db.from('participants').select('*').eq('edit_token', editParam).eq('event_id', eventId).maybeSingle();
     if (editR.data) {
+      // Endorsement abgelehnt → Zugang über den Änderungslink sperren und Hinweis zeigen.
+      var _rej = editR.data.endorsement_status === 'rejected';
+      var _rejReason = editR.data.endorsement_reason || '';
+      if (!_rej && editR.data.member_id) {
+        try {
+          var _pr = await db.from('persons').select('endorsement_status,endorsement_reason').eq('member_id', editR.data.member_id).maybeSingle();
+          if (_pr.data && _pr.data.endorsement_status === 'rejected') { _rej = true; _rejReason = _rejReason || _pr.data.endorsement_reason || ''; }
+        } catch (e) {}
+      }
+      if (_rej) { showEndorsementRejection(_rejReason); return; }
+
       editingParticipantId = editR.data.id;
       editToken = editParam;
       prefillFormForEdit(editR.data);
@@ -1117,6 +1136,14 @@ async function loadWithdrawalPolicyText() {
         + '• Withdrawal from ' + d(pol.date_none) + ': no refund';
     }
   } catch (e) { /* ohne Policy wird die Variable einfach leer übergeben */ }
+}
+
+function showEndorsementRejection(reason) {
+  var fc = document.getElementById('formContainer'); if (fc) fc.style.display = 'none';
+  var sb = document.getElementById('successBox'); if (sb) sb.style.display = 'none';
+  var rr = document.getElementById('rejectionReason'); if (rr) rr.textContent = (reason && reason.trim()) ? reason.trim() : '—';
+  var box = document.getElementById('rejectionBox'); if (box) box.style.display = 'block';
+  try { window.scrollTo(0, 0); } catch (e) {}
 }
 
 function prefillFormForEdit(p) {

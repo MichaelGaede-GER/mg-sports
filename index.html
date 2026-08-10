@@ -1390,6 +1390,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                   </select>
                 </div>
                 <div class="form-group"><label>Datum der Entscheidung</label><input type="date" id="f_endorsement_date" /></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Grund der Ablehnung <span style="color:var(--text3);font-weight:400">(wird dem Spieler bei „Abgelehnt" online angezeigt)</span></label><textarea id="f_endorsement_reason" rows="3" placeholder="z.B. No endorsement received from the national federation."></textarea></div>
                 <div class="form-group" style="grid-column:1/-1"><label>Interne Notiz</label><textarea id="f_endorsement_notes" rows="4" placeholder="z.B. Verband kontaktiert am …, Rückmeldung …"></textarea></div>
                 <div class="form-group" style="grid-column:1/-1"><label>Schriftliches Endorsement (PDF)</label>
                   <div id="entryEndorsementDocView" style="font-size:12px;color:var(--text3);padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2)">Kein PDF hinterlegt – Upload in der Personendatenbank (Tab „Endorsement").</div>
@@ -3868,6 +3869,8 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         </div>
         <div class="form-group"><label>Datum der Entscheidung</label><input type="date" id="personEndorsementDate" /></div>
       </div>
+
+      <div class="form-group" style="margin-bottom:16px"><label>Grund der Ablehnung <span style="color:var(--text3);font-weight:400">(wird dem Spieler bei „Abgelehnt" online angezeigt)</span></label><textarea id="personEndorsementReason" rows="3" placeholder="z.B. No endorsement received from the national federation."></textarea></div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px">
         <div>
@@ -6793,7 +6796,7 @@ function cancelEdit() {
 }
 
 function clearForm() {
-  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date','emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes','endorsement_date','endorsement_notes','endorsement_pdf_url'];
+  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date','emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes','endorsement_date','endorsement_notes','endorsement_pdf_url','endorsement_reason'];
   const shirtQtyEl = document.getElementById('f_shirt_qty'); if (shirtQtyEl) shirtQtyEl.value = '0';
   fields.forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = ''; });
   var _endSt = document.getElementById('f_endorsement_status'); if (_endSt) _endSt.value = 'pending';
@@ -6874,7 +6877,7 @@ async function editEntry(id) {
   if (!p) return;
   document.getElementById('editingId').value = id;
   document.getElementById('entryFormTitle').textContent = `Bearbeiten: ${p.lastname}, ${p.firstname}`;
-  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes',verein:'verein',bundesland:'bundesland',national_id:'national_id',wsf_spin:'wsf_spin',endorsement_status:'endorsement_status',endorsement_date:'endorsement_date',endorsement_notes:'endorsement_notes',endorsement_pdf_url:'endorsement_pdf_url'};
+  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes',verein:'verein',bundesland:'bundesland',national_id:'national_id',wsf_spin:'wsf_spin',endorsement_status:'endorsement_status',endorsement_date:'endorsement_date',endorsement_notes:'endorsement_notes',endorsement_pdf_url:'endorsement_pdf_url',endorsement_reason:'endorsement_reason'};
   Object.entries(map).forEach(([k,v]) => {
     const el = document.getElementById('f_'+k);
     if (!el) return;
@@ -7174,6 +7177,7 @@ async function saveEntry() {
     national_id: v('national_id'), wsf_spin: v('wsf_spin'),
     endorsement_status: v('endorsement_status')||null, endorsement_date: v('endorsement_date')||null,
     endorsement_notes: v('endorsement_notes')||null, endorsement_pdf_url: v('endorsement_pdf_url')||null,
+    endorsement_reason: v('endorsement_reason')||null,
     verein: v('verein'), bundesland: v('bundesland'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
     shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'), placement: getPlacementValue(),
@@ -12470,6 +12474,7 @@ async function openPersonModal(person) {
   if(document.getElementById('personEndorsementStatus')) document.getElementById('personEndorsementStatus').value=person&&person.endorsement_status||'pending';
   if(document.getElementById('personEndorsementDate')) document.getElementById('personEndorsementDate').value=person&&person.endorsement_date||'';
   if(document.getElementById('personEndorsementNotes')) document.getElementById('personEndorsementNotes').value=person&&person.endorsement_notes||'';
+  if(document.getElementById('personEndorsementReason')) document.getElementById('personEndorsementReason').value=person&&person.endorsement_reason||'';
   if(document.getElementById('personEndorsementSubject')) document.getElementById('personEndorsementSubject').value='';
   if(document.getElementById('personEndorsementMessage')) document.getElementById('personEndorsementMessage').value='';
   var _endHint=document.getElementById('personEndorsementSendHint'); if(_endHint) _endHint.textContent='';
@@ -12778,7 +12783,8 @@ function _endorsementEventName() {
 }
 function _endorsementFill(text) {
   var p=_endorsementActivePerson();
-  return (text||'').replace(/\{name\}/g, p.name || 'player').replace(/\{event\}/g, _endorsementEventName());
+  var reason=document.getElementById('personEndorsementReason')&&document.getElementById('personEndorsementReason').value||'';
+  return (text||'').replace(/\{name\}/g, p.name || 'player').replace(/\{event\}/g, _endorsementEventName()).replace(/\{reason\}/g, reason);
 }
 
 function loadEndorsementTemplate(which) {
@@ -13088,6 +13094,7 @@ async function savePerson() {
     endorsement_status:document.getElementById('personEndorsementStatus')&&document.getElementById('personEndorsementStatus').value||null,
     endorsement_date:document.getElementById('personEndorsementDate')&&document.getElementById('personEndorsementDate').value||null,
     endorsement_notes:document.getElementById('personEndorsementNotes')&&document.getElementById('personEndorsementNotes').value.trim()||null,
+    endorsement_reason:document.getElementById('personEndorsementReason')&&document.getElementById('personEndorsementReason').value.trim()||null,
     endorsement_pdf_url:endorsementUrl||null,
     updated_at:new Date().toISOString()
   };
@@ -17087,6 +17094,7 @@ async function syncEntryWithPersons() {
     {entry:'f_endorsement_status',person:'endorsement_status',  label:'Endorsement – Status'},
     {entry:'f_endorsement_date',  person:'endorsement_date',    label:'Endorsement – Datum'},
     {entry:'f_endorsement_notes', person:'endorsement_notes',   label:'Endorsement – Notiz'},
+    {entry:'f_endorsement_reason',person:'endorsement_reason',   label:'Endorsement – Ablehnungsgrund'},
     {entry:'f_endorsement_pdf_url',person:'endorsement_pdf_url',label:'Endorsement – PDF'},
   ];
 
