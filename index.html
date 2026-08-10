@@ -608,6 +608,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           <button class="entry-tab" onclick="switchEntryTab('other',this)">⚙ Sonstiges</button>
           <button class="entry-tab" onclick="switchEntryTab('media',this)">📸 Dokument &amp; Foto</button>
           <button class="entry-tab" onclick="switchEntryTab('nationalfed',this)">🏳 National Federation</button>
+          <button class="entry-tab" onclick="switchEntryTab('endorsement',this)">✅ Endorsement</button>
         </div>
 
         <div id="entryTab-personal" class="entry-tab-content active">
@@ -1373,6 +1374,30 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             </div>
           </div>
         </div>
+        </div>
+
+        <div id="entryTab-endorsement" class="entry-tab-content">
+          <div class="card">
+            <div class="card-header"><h3>✅ Endorsement</h3></div>
+            <div class="card-body">
+              <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Endorsement des nationalen Verbands (Pflicht für Spieler unter 19). Status hier pflegen und über „🔄 Mit Personendatenbank abgleichen" synchronisieren. Der PDF-Upload selbst erfolgt in der Personendatenbank (Tab „Endorsement"); der Link wird hier mit abgeglichen.</p>
+              <div class="form-grid">
+                <div class="form-group"><label>Status</label>
+                  <select id="f_endorsement_status">
+                    <option value="pending">⏳ Ausstehend</option>
+                    <option value="endorsed">✅ Endorsed / bestätigt</option>
+                    <option value="rejected">⛔ Abgelehnt (kein Endorsement / Absage)</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Datum der Entscheidung</label><input type="date" id="f_endorsement_date" /></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Interne Notiz</label><textarea id="f_endorsement_notes" rows="4" placeholder="z.B. Verband kontaktiert am …, Rückmeldung …"></textarea></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Schriftliches Endorsement (PDF)</label>
+                  <div id="entryEndorsementDocView" style="font-size:12px;color:var(--text3);padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2)">Kein PDF hinterlegt – Upload in der Personendatenbank (Tab „Endorsement").</div>
+                  <input type="hidden" id="f_endorsement_pdf_url" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- SAVE BAR -->
@@ -6768,9 +6793,11 @@ function cancelEdit() {
 }
 
 function clearForm() {
-  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date','emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes'];
+  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date','emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes','endorsement_date','endorsement_notes','endorsement_pdf_url'];
   const shirtQtyEl = document.getElementById('f_shirt_qty'); if (shirtQtyEl) shirtQtyEl.value = '0';
   fields.forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = ''; });
+  var _endSt = document.getElementById('f_endorsement_status'); if (_endSt) _endSt.value = 'pending';
+  if (typeof renderEntryEndorsementDoc === 'function') renderEntryEndorsementDoc();
   setPlacementValue('');
   /* f_entry_fee removed */
   const exprCb = document.getElementById('f_express'); if (exprCb) exprCb.checked = false;
@@ -6847,7 +6874,7 @@ async function editEntry(id) {
   if (!p) return;
   document.getElementById('editingId').value = id;
   document.getElementById('entryFormTitle').textContent = `Bearbeiten: ${p.lastname}, ${p.firstname}`;
-  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes',verein:'verein',bundesland:'bundesland',national_id:'national_id',wsf_spin:'wsf_spin'};
+  const map = {group_tp:'group_tp',lastname:'lastname',firstname:'firstname',country:'country',mobile:'mobile',email:'email',member_id:'member_id',passport_id:'passport_id',coach_name:'coach_name',coach_esid:'coach_esid',payment_link:'payment_link',memo:'memo',hotel:'hotel',room_number:'room_number',shirt_color:'shirt_color',flight_in:'flight_in',flight_out:'flight_out',batch:'batch',total:'total',penalty:'penalty',travel_amount:'travel_amount',nf_federation:'nf_federation',nf_trainer_name:'nf_trainer_name',nf_trainer_phone:'nf_trainer_phone',nf_trainer_mobile:'nf_trainer_mobile',nf_trainer_email:'nf_trainer_email',nf_office_phone:'nf_office_phone',nf_office_mobile:'nf_office_mobile',nf_office_email:'nf_office_email',emergency_name:'emergency_name',emergency_phone:'emergency_phone',emergency_email:'emergency_email',medical_allergies:'medical_allergies',medical_medications:'medical_medications',medical_notes:'medical_notes',verein:'verein',bundesland:'bundesland',national_id:'national_id',wsf_spin:'wsf_spin',endorsement_status:'endorsement_status',endorsement_date:'endorsement_date',endorsement_notes:'endorsement_notes',endorsement_pdf_url:'endorsement_pdf_url'};
   Object.entries(map).forEach(([k,v]) => {
     const el = document.getElementById('f_'+k);
     if (!el) return;
@@ -6874,6 +6901,8 @@ async function editEntry(id) {
     }
   });
   ['dob','checkin','checkout','arrival_date','departure_date','payment_date','withdraw_date','mahnung_date'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
+  var _endStatusEl = document.getElementById('f_endorsement_status'); if (_endStatusEl && !_endStatusEl.value) _endStatusEl.value = 'pending';
+  renderEntryEndorsementDoc();
   var clPob = document.getElementById('cl_place_of_birth'); if (clPob) clPob.value = p.place_of_birth || '';
   var clIssue = document.getElementById('cl_date_of_issue'); if (clIssue) clIssue.value = p.visa_date_of_issue || '';
   var clExpiry = document.getElementById('cl_date_of_expiry'); if (clExpiry) clExpiry.value = p.visa_date_of_expiry || '';
@@ -7143,6 +7172,8 @@ async function saveEntry() {
     confirmation_letter_price: parseFloat(document.getElementById('f_confirmation_letter_price')&&document.getElementById('f_confirmation_letter_price').value)||null,
     member_id: v('member_id'), role, events: v('events'),
     national_id: v('national_id'), wsf_spin: v('wsf_spin'),
+    endorsement_status: v('endorsement_status')||null, endorsement_date: v('endorsement_date')||null,
+    endorsement_notes: v('endorsement_notes')||null, endorsement_pdf_url: v('endorsement_pdf_url')||null,
     verein: v('verein'), bundesland: v('bundesland'),
     package: v('package'), package_price: n('package_price'), entry_fee: n('entry_fee'),
     shirt: v('shirt'), shirt_color: v('shirt_color'), shirt_qty: parseInt(document.getElementById('f_shirt_qty')?.value)||1, coach_name: v('coach_name'), coach_esid: v('coach_esid'), placement: getPlacementValue(),
@@ -17053,6 +17084,10 @@ async function syncEntryWithPersons() {
     {entry:'f_medical_allergies', person:'medical_allergies',   label:'Allergien (medizinisch)'},
     {entry:'f_medical_medications',person:'medical_medications',label:'Medikamente'},
     {entry:'f_medical_notes',     person:'medical_notes',       label:'Medizinische Hinweise'},
+    {entry:'f_endorsement_status',person:'endorsement_status',  label:'Endorsement – Status'},
+    {entry:'f_endorsement_date',  person:'endorsement_date',    label:'Endorsement – Datum'},
+    {entry:'f_endorsement_notes', person:'endorsement_notes',   label:'Endorsement – Notiz'},
+    {entry:'f_endorsement_pdf_url',person:'endorsement_pdf_url',label:'Endorsement – PDF'},
   ];
 
   // Compare values
@@ -17260,6 +17295,7 @@ async function applyEntrySync() {
         }
       }
     });
+    renderEntryEndorsementDoc();
   }
 
   // Save updates to persons DB
@@ -18923,6 +18959,19 @@ function toggleIdCardBlock(id) {
   if (icon) icon.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
 }
 
+
+function renderEntryEndorsementDoc() {
+  var urlEl = document.getElementById('f_endorsement_pdf_url');
+  var url = urlEl && urlEl.value || '';
+  var view = document.getElementById('entryEndorsementDocView');
+  if (!view) return;
+  if (url) {
+    var isPdf = url.toLowerCase().includes('.pdf');
+    view.innerHTML = (isPdf ? '📄 ' : '🖼 ') + '<a href="' + url + '" target="_blank" style="color:var(--blue)">Endorsement öffnen</a>';
+  } else {
+    view.innerHTML = 'Kein PDF hinterlegt – Upload in der Personendatenbank (Tab „Endorsement").';
+  }
+}
 
 function switchEntryTab(tab, btn) {
   document.querySelectorAll('.entry-tab').forEach(function(b){ b.classList.remove('active'); });
