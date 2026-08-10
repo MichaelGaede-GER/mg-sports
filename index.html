@@ -2144,6 +2144,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <option>Director</option><option>DSQV</option><option>Turnierstab</option>
           </select>
           <select id="personCountryFilter" onchange="loadPersons()"><option value="">Alle Länder</option></select>
+          <select id="personEndorsementFilter" onchange="loadPersons()" title="Endorsement-Status filtern"><option value="">Endorsement: alle</option><option value="pending">⏳ Ausstehend (U19)</option><option value="endorsed">✅ Endorsed</option><option value="rejected">⛔ Abgelehnt</option><option value="needs">Alle U19 (endorsement-pflichtig)</option></select>
         </div>
         <div class="card">
           <div class="table-wrap"><table>
@@ -2161,11 +2162,12 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
   <th class="sortable" onclick="sortPersons('national_id')" id="ph_national_id">National ID <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('wsf_spin')" id="ph_wsf_spin">WSF Spin <span class="sort-icon">↕</span></th>
   <th class="sortable" onclick="sortPersons('email')" id="ph_email">E-Mail <span class="sort-icon">↕</span></th>
+  <th>Endorsement</th>
   <th>Status</th>
   <th>Passport</th>
   <th></th>
 </tr></thead>
-            <tbody id="personsTable"><tr><td colspan="15" class="loading">Lade…</td></tr></tbody>
+            <tbody id="personsTable"><tr><td colspan="16" class="loading">Lade…</td></tr></tbody>
           </table></div>
         </div>
       </div>
@@ -3296,6 +3298,7 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
       <button class="person-tab" onclick="switchPersonTab('visa',this)" style="font-size:11px;padding:6px 10px">🛂 VISA</button>
       <button class="person-tab" onclick="switchPersonTab('nationalfed',this)" style="font-size:11px;padding:6px 10px">🏳 National Federation</button>
       <button class="person-tab" onclick="switchPersonTab('emergency',this)" style="font-size:11px;padding:6px 10px">🚨 Notfallkontakte</button>
+      <button class="person-tab" onclick="switchPersonTab('endorsement',this)" style="font-size:11px;padding:6px 10px">✅ Endorsement</button>
       </div>
     </div><!-- end header -->
     <div style="flex:1;overflow-y:auto;padding:16px 24px">
@@ -3825,6 +3828,56 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
         </div>
       </div>
     </div><!-- /personTab-emergency -->
+
+    <div id="personTab-endorsement" class="person-tab-content" style="display:none;background:var(--bg);min-height:200px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Endorsement des nationalen Verbands (Pflicht für Spieler unter 19 Jahren). Hier Status pflegen, das schriftliche Endorsement als PDF ablegen und dem Spieler die Bestätigung oder Absage per E-Mail/WhatsApp senden.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group"><label>Status</label>
+          <select id="personEndorsementStatus" onchange="renderEndorsementStatusHint()">
+            <option value="pending">⏳ Ausstehend</option>
+            <option value="endorsed">✅ Endorsed / bestätigt</option>
+            <option value="rejected">⛔ Abgelehnt (kein Endorsement / Absage des Verbands)</option>
+          </select>
+          <div id="personEndorsementStatusHint" style="font-size:11px;margin-top:4px"></div>
+        </div>
+        <div class="form-group"><label>Datum der Entscheidung</label><input type="date" id="personEndorsementDate" /></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px">
+        <div>
+          <div style="font-size:12px;font-weight:500;margin-bottom:8px;color:var(--text)">Schriftliches Endorsement (PDF/Bild)</div>
+          <div id="personEndorsementDocPreview" style="width:100%;height:120px;border-radius:var(--radius);border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;cursor:pointer;background:var(--bg3);gap:6px" onclick="document.getElementById('personEndorsementDocInput').click()">
+            <span style="font-size:28px">📄</span><span style="font-size:11px;color:var(--text3)">PDF oder Bild</span>
+          </div>
+          <input type="file" id="personEndorsementDocInput" accept="image/*,.pdf" style="display:none" onchange="previewPersonEndorsementDoc(event)" />
+          <button class="btn" style="font-size:11px;padding:4px 10px;width:100%" onclick="document.getElementById('personEndorsementDocInput').click()">Datei auswählen</button>
+          <button class="btn danger" id="personEndorsementDeleteBtn" style="font-size:11px;padding:4px 10px;width:100%;margin-top:6px;display:none" onclick="deletePersonEndorsementDoc()">Datei löschen</button>
+        </div>
+        <div class="form-group"><label>Interne Notiz</label><textarea id="personEndorsementNotes" rows="5" placeholder="z.B. Verband kontaktiert am …, Rückmeldung …"></textarea></div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);margin:18px 0 14px"></div>
+
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">✉ Nachricht an den Spieler</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn" style="font-size:11px;padding:5px 10px" onclick="loadEndorsementTemplate('confirm')">📥 Vorlage: Bestätigung laden</button>
+        <button class="btn" style="font-size:11px;padding:5px 10px" onclick="loadEndorsementTemplate('reject')">📥 Vorlage: Absage laden</button>
+        <span style="flex:1"></span>
+        <select id="personEndorsementTplTarget" style="font-size:11px;padding:5px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text)">
+          <option value="confirm">Bestätigung</option>
+          <option value="reject">Absage</option>
+        </select>
+        <button class="btn" style="font-size:11px;padding:5px 10px" onclick="saveEndorsementTemplate()">💾 Als Vorlage speichern</button>
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label>Betreff (für E-Mail)</label><input type="text" id="personEndorsementSubject" placeholder="z.B. Your participation in the tournament" /></div>
+      <div class="form-group" style="margin-bottom:12px"><label>Nachricht</label><textarea id="personEndorsementMessage" rows="10" placeholder="Text der Nachricht … (Platzhalter: {name}, {event})"></textarea></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" style="font-size:12px" onclick="sendEndorsementEmail()">✉ Per E-Mail senden</button>
+        <button class="btn" style="font-size:12px;background:#25D366;color:#fff;border-color:#25D366" onclick="sendEndorsementWhatsApp()">💬 Per WhatsApp senden</button>
+        <span id="personEndorsementSendHint" style="font-size:11px;color:var(--text3);align-self:center"></span>
+      </div>
+    </div><!-- /personTab-endorsement -->
     </div>
     <div style="padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;background:var(--bg)">
       <button class="btn" onclick="closeModal('personModal')">Abbrechen</button>
@@ -10739,6 +10792,8 @@ var DUMMY_PHOTO_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
 let entryPhotoFile = null;         // neu gewähltes Teilnehmerfoto (noch nicht hochgeladen)
 let entryCurrentPhotoUrl = null;   // bereits gespeichertes Foto des Teilnehmers
 let personPassportFile = null;
+let personEndorsementFile = null;
+let personCurrentEndorsementUrl = null;
 let entryPassportFile = null;
 let entryCurrentPassportUrl = null;
 let personCurrentPhotoUrl = null;
@@ -12316,6 +12371,19 @@ function sortPersons(field) {
   loadPersons();
 }
 
+// Braucht diese Person ein Endorsement? (Spieler unter 19, Stichtag heute)
+function personNeedsEndorsement(p) {
+  var a = ageAtDate(p.dob);
+  return a !== null && a < 19;
+}
+function endorsementBadge(p) {
+  if (!personNeedsEndorsement(p)) return '<span style="color:var(--text3);font-size:12px">–</span>';
+  var st = p.endorsement_status || 'pending';
+  if (st === 'endorsed') return '<span style="background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;border:1px solid var(--green)">✅ Endorsed</span>';
+  if (st === 'rejected') return '<span style="background:var(--red-bg);color:var(--red);font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;border:1px solid var(--red)">⛔ Abgelehnt</span>';
+  return '<span style="background:var(--amber-bg,#3a2f00);color:var(--amber,#e0a800);font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;border:1px solid var(--amber,#e0a800)">⏳ Ausstehend</span>';
+}
+
 async function loadPersons() {
   // Populate country filter if empty
   var csel = document.getElementById('personCountryFilter');
@@ -12335,6 +12403,17 @@ async function loadPersons() {
   if(role) q=q.eq('role',role); if(country2) q=q.eq('country',country2);
   var r=await q; var rows=r.data||[];
   if(search) rows=rows.filter(function(p){return (p.lastname+' '+p.firstname+' '+(p.country||'')+' '+(p.member_id||'')).toLowerCase().includes(search);});
+  var endFilter=document.getElementById('personEndorsementFilter')&&document.getElementById('personEndorsementFilter').value||'';
+  if(endFilter){
+    rows=rows.filter(function(p){
+      var st=p.endorsement_status||'pending';
+      if(endFilter==='pending')  return personNeedsEndorsement(p) && st==='pending';
+      if(endFilter==='endorsed') return st==='endorsed';
+      if(endFilter==='rejected') return st==='rejected';
+      if(endFilter==='needs')    return personNeedsEndorsement(p);
+      return true;
+    });
+  }
   var countries=[...new Set((r.data||[]).map(function(p){return p.country;}).filter(Boolean))].sort();
   var cSel=document.getElementById('personCountryFilter');
   if(cSel&&cSel.options.length<=1) countries.forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;cSel.appendChild(o);});
@@ -12350,11 +12429,34 @@ async function loadPersons() {
     var importBtn=p.penalty?'<button class="btn" style="font-size:11px;padding:3px 8px;opacity:0.4;cursor:not-allowed" disabled>Gesperrt</button>':'<button class="btn primary" style="font-size:11px;padding:3px 8px" onclick="importPersonToEntry(\''+p.id+'\')">Ins Formular</button>';
     var _pAgeNow=ageAtDate(p.dob);
     var _dobAge=(_pAgeNow!==null)?' <span style="color:var(--text3);font-size:11px" title="Alter heute">('+_pAgeNow+' J.)</span>':'';
-    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+_dobAge+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.verein||'-')+'</td><td style="font-size:12px">'+(p.bundesland||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.national_id||'-')+'</td><td style="font-size:12px">'+(p.wsf_spin||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
-  }).join(''):'<tr><td colspan="16" class="empty">Keine Personen gefunden</td></tr>';
+    return '<tr><td style="padding:6px 12px">'+photo+'</td><td><strong>'+p.lastname+'</strong></td><td>'+p.firstname+'</td><td>'+(p.country||'-')+'</td><td>'+fmtDate(p.dob)+_dobAge+'</td><td style="font-size:12px">'+(p.gender||'-')+'</td><td>'+(p.role||'-')+'</td><td style="font-size:12px">'+(p.verein||'-')+'</td><td style="font-size:12px">'+(p.bundesland||'-')+'</td><td style="font-size:12px">'+(p.member_id||'-')+'</td><td style="font-size:12px">'+(p.national_id||'-')+'</td><td style="font-size:12px">'+(p.wsf_spin||'-')+'</td><td style="font-size:12px">'+(p.email||'-')+'</td><td style="text-align:center">'+endorsementBadge(p)+'</td><td style="text-align:center">'+status+'</td><td style="text-align:center">'+passDoc+'</td><td style="display:flex;gap:6px">'+importBtn+'<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editPerson(\''+p.id+'\')">Bearbeiten</button><button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deletePerson(\''+p.id+'\')">Loeschen</button></td></tr>';
+  }).join(''):'<tr><td colspan="17" class="empty">Keine Personen gefunden</td></tr>';
 }
 async function openPersonModal(person) {
   personPhotoFile=null; personPassportFile=null; personCurrentPhotoUrl=person&&person.photo_url||null; personCurrentPassportUrl=person&&person.passport_doc_url||null;
+  // Endorsement
+  personEndorsementFile=null; personCurrentEndorsementUrl=person&&person.endorsement_pdf_url||null;
+  if(document.getElementById('personEndorsementStatus')) document.getElementById('personEndorsementStatus').value=person&&person.endorsement_status||'pending';
+  if(document.getElementById('personEndorsementDate')) document.getElementById('personEndorsementDate').value=person&&person.endorsement_date||'';
+  if(document.getElementById('personEndorsementNotes')) document.getElementById('personEndorsementNotes').value=person&&person.endorsement_notes||'';
+  if(document.getElementById('personEndorsementSubject')) document.getElementById('personEndorsementSubject').value='';
+  if(document.getElementById('personEndorsementMessage')) document.getElementById('personEndorsementMessage').value='';
+  var _endHint=document.getElementById('personEndorsementSendHint'); if(_endHint) _endHint.textContent='';
+  var _endPrev=document.getElementById('personEndorsementDocPreview');
+  var _endDelBtn=document.getElementById('personEndorsementDeleteBtn');
+  if(_endPrev){
+    if(person&&person.endorsement_pdf_url){
+      var _isPdf=person.endorsement_pdf_url.toLowerCase().includes('.pdf');
+      _endPrev.innerHTML=_isPdf?'<span style="font-size:28px">📄</span><a href="'+person.endorsement_pdf_url+'" target="_blank" style="font-size:11px;color:var(--blue)">Öffnen</a>':'<img src="'+person.endorsement_pdf_url+'" style="width:100%;height:100%;object-fit:cover" />';
+      if(_endDelBtn) _endDelBtn.style.display='block';
+    } else {
+      _endPrev.innerHTML='<span style="font-size:28px">📄</span><span style="font-size:11px;color:var(--text3)">PDF oder Bild</span>';
+      if(_endDelBtn) _endDelBtn.style.display='none';
+    }
+  }
+  var _endInput=document.getElementById('personEndorsementDocInput'); if(_endInput) _endInput.value='';
+  renderEndorsementStatusHint();
+  loadEndorsementTemplates();
   document.querySelectorAll('.person-tab').forEach(function(t,i){t.classList.toggle('active',i===0);});
   document.querySelectorAll('.person-tab-content').forEach(function(t,i){t.style.display=i===0?'block':'none';});
   document.getElementById('personModalTitle').textContent=person?'Person bearbeiten':'Person hinzufuegen';
@@ -12589,6 +12691,118 @@ function previewPersonPassportDoc(event) {
 function deletePersonPhoto() { personPhotoFile=null; personCurrentPhotoUrl=null; var p=document.getElementById('personPhotoPreview');if(p)p.innerHTML='<span style="font-size:28px">Foto</span>';var b=document.getElementById('personPhotoDeleteBtn');if(b)b.style.display='none';if(document.getElementById('personPhotoInput'))document.getElementById('personPhotoInput').value=''; }
 function deletePersonPassportDoc() { personPassportFile=null; personCurrentPassportUrl=null; var p=document.getElementById('personPassportDocPreview');if(p)p.innerHTML='<span style="font-size:28px">Dok</span><span style="font-size:11px;color:var(--text3)">PDF oder Bild</span>';var b=document.getElementById('personPassportDeleteBtn');if(b)b.style.display='none';if(document.getElementById('personPassportDocInput'))document.getElementById('personPassportDocInput').value=''; }
 
+// ============ ENDORSEMENT ============
+function previewPersonEndorsementDoc(event) {
+  var file=event.target.files[0]; if(!file) return; personEndorsementFile=file;
+  var prev=document.getElementById('personEndorsementDocPreview');
+  if(file.type.startsWith('image/')){var reader=new FileReader();reader.onload=function(e){if(prev)prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover" />';};reader.readAsDataURL(file);}
+  else{if(prev)prev.innerHTML='<span style="font-size:28px">📄</span><span style="font-size:11px;color:var(--text2)">'+file.name+'</span>';}
+  var btn=document.getElementById('personEndorsementDeleteBtn'); if(btn) btn.style.display='block';
+}
+function deletePersonEndorsementDoc() { personEndorsementFile=null; personCurrentEndorsementUrl=null; var p=document.getElementById('personEndorsementDocPreview');if(p)p.innerHTML='<span style="font-size:28px">📄</span><span style="font-size:11px;color:var(--text3)">PDF oder Bild</span>';var b=document.getElementById('personEndorsementDeleteBtn');if(b)b.style.display='none';if(document.getElementById('personEndorsementDocInput'))document.getElementById('personEndorsementDocInput').value=''; }
+
+function renderEndorsementStatusHint() {
+  var sel=document.getElementById('personEndorsementStatus'); var hint=document.getElementById('personEndorsementStatusHint');
+  if(!sel||!hint) return;
+  var m={pending:['Noch kein Endorsement des Verbands vorhanden.','var(--amber)'],endorsed:['Teilnahme durch den Verband bestätigt.','var(--green)'],rejected:['Kein Endorsement / Absage – Spieler nimmt nicht teil.','var(--red)']};
+  var v=m[sel.value]||m.pending; hint.textContent=v[0]; hint.style.color=v[1];
+}
+
+// Standard-Vorlagen (Englisch), überschreibbar über app_settings
+var ENDORSEMENT_TPL_DEFAULTS = {
+  confirm: {
+    subject: 'Your participation in {event} is confirmed',
+    body: 'Dear {name},\n\nWe are pleased to inform you that we have received the endorsement from your national federation for {event}. Your participation is hereby confirmed.\n\nWe look forward to welcoming you to the tournament. Should you have any questions regarding your travel or accommodation, please do not hesitate to contact us.\n\nKind regards,\nGerman Squash Federation (DSQV)'
+  },
+  reject: {
+    subject: 'Your entry for {event}',
+    body: 'Dear {name},\n\nThank you very much for your interest in taking part in {event}.\n\nUnfortunately, we have not received the endorsement from your national federation, which is a mandatory requirement for participation. For this reason we regret that we are unable to confirm your entry to the tournament.\n\nPlease understand that this decision lies with your national federation. We would be delighted to welcome you to one of our future events.\n\nKind regards,\nGerman Squash Federation (DSQV)'
+  }
+};
+var _endorsementTpl = { confirm: null, reject: null };
+
+async function loadEndorsementTemplates() {
+  try {
+    var r = await db.from('app_settings').select('key,value').in('key',['endorsement_tpl_confirm','endorsement_tpl_reject']);
+    (r.data||[]).forEach(function(row){
+      try {
+        var val = JSON.parse(row.value);
+        if (row.key==='endorsement_tpl_confirm') _endorsementTpl.confirm = val;
+        if (row.key==='endorsement_tpl_reject')  _endorsementTpl.reject  = val;
+      } catch(e){}
+    });
+  } catch(e){}
+}
+
+function _endorsementActivePerson() {
+  var id = document.getElementById('personEditId') && document.getElementById('personEditId').value;
+  return { id: id,
+    name: (document.getElementById('personFirstname')&&document.getElementById('personFirstname').value) || (document.getElementById('personLastname')&&document.getElementById('personLastname').value) || '',
+    email: document.getElementById('personEmail')&&document.getElementById('personEmail').value || '',
+    mobile: document.getElementById('personMobile')&&document.getElementById('personMobile').value || ''
+  };
+}
+function _endorsementEventName() {
+  return (typeof currentEventName !== 'undefined' && currentEventName) ? currentEventName : 'the tournament';
+}
+function _endorsementFill(text) {
+  var p=_endorsementActivePerson();
+  return (text||'').replace(/\{name\}/g, p.name || 'player').replace(/\{event\}/g, _endorsementEventName());
+}
+
+function loadEndorsementTemplate(which) {
+  var tpl = _endorsementTpl[which] || ENDORSEMENT_TPL_DEFAULTS[which];
+  var subj=document.getElementById('personEndorsementSubject'), msg=document.getElementById('personEndorsementMessage');
+  if(subj) subj.value=_endorsementFill(tpl.subject);
+  if(msg)  msg.value=_endorsementFill(tpl.body);
+  var tgt=document.getElementById('personEndorsementTplTarget'); if(tgt) tgt.value=which;
+  toast('Vorlage geladen ('+(which==='confirm'?'Bestätigung':'Absage')+')');
+}
+
+async function saveEndorsementTemplate() {
+  var which = document.getElementById('personEndorsementTplTarget') && document.getElementById('personEndorsementTplTarget').value || 'confirm';
+  var subj=document.getElementById('personEndorsementSubject')&&document.getElementById('personEndorsementSubject').value||'';
+  var body=document.getElementById('personEndorsementMessage')&&document.getElementById('personEndorsementMessage').value||'';
+  if(!body.trim()){ toast('Bitte zuerst einen Nachrichtentext eingeben.'); return; }
+  var key = which==='reject' ? 'endorsement_tpl_reject' : 'endorsement_tpl_confirm';
+  var payload = JSON.stringify({ subject: subj, body: body });
+  await db.from('app_settings').delete().eq('key', key);
+  var r = await db.from('app_settings').insert({ key: key, value: payload });
+  if(r.error){ toast('Fehler: '+r.error.message); return; }
+  _endorsementTpl[which] = { subject: subj, body: body };
+  toast('✅ Vorlage gespeichert ('+(which==='reject'?'Absage':'Bestätigung')+')');
+}
+
+function sendEndorsementEmail() {
+  var p=_endorsementActivePerson();
+  if(!p.email){ toast('⚠ Keine E-Mail-Adresse hinterlegt.'); return; }
+  var subj=document.getElementById('personEndorsementSubject')&&document.getElementById('personEndorsementSubject').value||'';
+  var body=document.getElementById('personEndorsementMessage')&&document.getElementById('personEndorsementMessage').value||'';
+  if(!body.trim()){ toast('Bitte zuerst eine Nachricht schreiben oder eine Vorlage laden.'); return; }
+  var href='mailto:'+encodeURIComponent(p.email)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+  window.location.href=href;
+  var h=document.getElementById('personEndorsementSendHint'); if(h){ h.textContent='E-Mail-Programm geöffnet.'; h.style.color='var(--green)'; }
+}
+
+function _waNormalize(num) {
+  var n=(num||'').replace(/[^0-9+]/g,'');
+  if(n.indexOf('+')===0) return n.slice(1).replace(/[^0-9]/g,'');
+  n=n.replace(/[^0-9]/g,'');
+  if(n.indexOf('00')===0) return n.slice(2);
+  if(n.indexOf('0')===0) return '49'+n.slice(1); // deutsche Nummer ohne Ländervorwahl
+  return n;
+}
+function sendEndorsementWhatsApp() {
+  var p=_endorsementActivePerson();
+  if(!p.mobile){ toast('⚠ Keine Mobilnummer hinterlegt.'); return; }
+  var body=document.getElementById('personEndorsementMessage')&&document.getElementById('personEndorsementMessage').value||'';
+  if(!body.trim()){ toast('Bitte zuerst eine Nachricht schreiben oder eine Vorlage laden.'); return; }
+  var num=_waNormalize(p.mobile);
+  if(!num){ toast('⚠ Mobilnummer nicht verwertbar.'); return; }
+  window.open('https://wa.me/'+num+'?text='+encodeURIComponent(body), '_blank');
+  var h=document.getElementById('personEndorsementSendHint'); if(h){ h.textContent='WhatsApp geöffnet ('+num+').'; h.style.color='var(--green)'; }
+}
+
 // Passfoto-Upload im Teilnehmerformular (Confirmation Letter Tab) — analog zum Upload in
 // der Personendatenbank, nutzt dieselben Storage-Helfer (compressImageFile, uploadPersonMediaFile).
 function previewEntryPassportDoc(event) {
@@ -12761,6 +12975,22 @@ async function savePerson() {
       return;
     }
   }
+  var endorsementUrl = personCurrentEndorsementUrl;
+  if(personEndorsementFile){
+    showUploadProgress(70,'Endorsement wird verarbeitet...');
+    try {
+      if (personEndorsementFile.type.startsWith('image/')) {
+        var compressedEnd = await compressImageFile(personEndorsementFile, 1600, 0.8);
+        endorsementUrl = await uploadPersonMediaFile(tempId + '/endorsement.jpg', compressedEnd, 'image/jpeg');
+      } else {
+        endorsementUrl = await uploadPersonMediaFile(tempId + '/endorsement.pdf', personEndorsementFile, 'application/pdf');
+      }
+    } catch (e) {
+      hideUploadProgress();
+      toast('⚠️ Endorsement-Upload fehlgeschlagen: ' + (e.message||e));
+      return;
+    }
+  }
   var row={lastname:lastname,firstname:firstname,
     country:document.getElementById('personCountry')&&document.getElementById('personCountry').value||null,
     dob:document.getElementById('personDob')&&document.getElementById('personDob').value||null,
@@ -12823,7 +13053,12 @@ async function savePerson() {
     medical_notes: document.getElementById('personMedicalNotes')&&document.getElementById('personMedicalNotes').value.trim()||null,
     squashlevels_id:document.getElementById('personSquashlevelId')&&document.getElementById('personSquashlevelId').value.trim()||null,
     squashlevels_rating:parseInt(document.getElementById('personSquashlevelRating')&&document.getElementById('personSquashlevelRating').value)||null,
-    photo_url:photoUrl||null,passport_doc_url:passportUrl||null,updated_at:new Date().toISOString()
+    photo_url:photoUrl||null,passport_doc_url:passportUrl||null,
+    endorsement_status:document.getElementById('personEndorsementStatus')&&document.getElementById('personEndorsementStatus').value||null,
+    endorsement_date:document.getElementById('personEndorsementDate')&&document.getElementById('personEndorsementDate').value||null,
+    endorsement_notes:document.getElementById('personEndorsementNotes')&&document.getElementById('personEndorsementNotes').value.trim()||null,
+    endorsement_pdf_url:endorsementUrl||null,
+    updated_at:new Date().toISOString()
   };
   var r=id?await db.from('persons').update(row).eq('id',id):(row.id=tempId,await db.from('persons').insert(row));
   hideUploadProgress();
