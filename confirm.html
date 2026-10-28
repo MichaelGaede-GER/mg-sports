@@ -150,6 +150,15 @@ async function doConfirm(token) {
   var name = esc((d.name || '').trim());
   var n = d.count || 1;
 
+  // Klick protokollieren (confirmed_at) – auch fuer bereits bestaetigte, z.B. importierte
+  // Teilnehmer. Fehler hier blockieren die Bestaetigungsseite nicht.
+  if (d.code === 'confirmed' || d.code === 'already') {
+    try {
+      var mk = await db.rpc('mark_confirm_clicked', { p_token: token });
+      if (mk.error) console.warn('mark_confirm_clicked', mk.error);
+    } catch (e) { console.warn('mark_confirm_clicked', e); }
+  }
+
   if (d.code === 'confirmed') {
     var txt = n > 1
       ? t('ok_p_group').replace('{N}', n)

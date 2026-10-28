@@ -342,7 +342,7 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
       <div class="brand">MG Sports EM</div>
       <div class="sub" data-i18n="sidebar_sub">Turnierverwaltung 2026</div>
       <!-- Wird bei jedem Push automatisch per GitHub Action (.github/workflows/version.yml) gesetzt – nicht von Hand aendern -->
-      <div class="app-version" id="appVersion" title="Version 1.0.295 · Commit e8e2504 · 28.10.2026 21:42"><!--APP_VERSION-->v1.0.295 · 28.10.2026 21:42<!--/APP_VERSION--></div>
+      <div class="app-version" id="appVersion" title="Version 1.0.294 · Commit 8f4a558 · 28.10.2026 19:10"><!--APP_VERSION-->v1.0.294 · 28.10.2026 19:10<!--/APP_VERSION--></div>
       <span class="role-badge" id="roleBadge">Admin</span>
     </div>
     <div class="nav-section" data-i18n="nav_section_overview">Übersicht</div>
@@ -560,6 +560,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
             <option value="">Alle (Bestätigung)</option>
             <option value="unconfirmed">⏳ Unbestätigt</option>
             <option value="confirmed">✅ Bestätigt</option>
+            <option value="link_clicked">🔗 Link geklickt</option>
+            <option value="mail_open">✉️ Mail gesendet, nicht geklickt</option>
             <option value="withdraw_pending">⚠️ Rückzug angefordert</option>
             <option value="withdrawn">🚫 Zurückgezogen</option>
           </select>
@@ -6355,6 +6357,29 @@ function confirmBadgeHtml(p) {
     + cfg.bg + ';color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:help">'
     + cfg.txt + '</span>' + extra + '</div>';
 }
+// Zeigt, ob der Bestaetigungslink tatsaechlich geklickt wurde (confirmed_at, gesetzt von
+// confirm.html via RPC mark_confirm_clicked) bzw. ob die Mail raus ist (confirm_mail_sent_at).
+// Wichtig fuer importierte/manuell erfasste Teilnehmer, die ohnehin als 'confirmed' gelten.
+function confirmLinkBadgeHtml(p) {
+  var st = confirmStatusOf(p);
+  if (st === 'withdrawn') return '';
+  var fmt = function(ts) { var d = new Date(ts); return isNaN(d) ? '' : d.toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }); };
+  var pill = function(bg, txt, tip) {
+    return '<div style="margin-top:3px"><span title="' + esc(tip) + '" style="display:inline-block;background:' + bg
+      + ';color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:help">' + txt + '</span></div>';
+  };
+  if (p.confirmed_at) {
+    var d = new Date(p.confirmed_at);
+    var short = isNaN(d) ? '' : (' ' + d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' }));
+    return pill('var(--green)', '\u2705 Link best\u00e4tigt' + short,
+      'Best\u00e4tigungslink geklickt am ' + fmt(p.confirmed_at)
+      + (p.confirm_mail_sent_at ? '\nMail gesendet am ' + fmt(p.confirm_mail_sent_at) : ''));
+  }
+  if (p.confirm_mail_sent_at && st !== 'unconfirmed') {
+    return pill('#5b7fa6', '\u2709 Mail gesendet', 'Best\u00e4tigungs-Mail gesendet am ' + fmt(p.confirm_mail_sent_at) + '\nLink noch nicht geklickt');
+  }
+  return '';
+}
 function confirmRowAttr(p) {
   return confirmStatusOf(p) === 'unconfirmed'
     ? ' style="opacity:0.62;background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(158,158,158,0.10) 6px,rgba(158,158,158,0.10) 12px)"'
@@ -6506,6 +6531,13 @@ async function sendParticipantConfirmation(id) {
       withdraw_link: withdrawLink
     });
     toast('📧 E-Mail an ' + p.email + ' gesendet');
+    // Versandzeitpunkt merken (Spalte confirm_mail_sent_at, siehe SQL-Update). Fehler hier
+    // (z.B. Spalte noch nicht angelegt) duerfen den erfolgreichen Versand nicht ueberdecken.
+    try {
+      var sm = await db.from('participants').update({ confirm_mail_sent_at: new Date().toISOString() }).eq('id', id);
+      if (sm.error) console.warn('confirm_mail_sent_at:', sm.error.message);
+      else if (typeof loadParticipants === 'function') loadParticipants();
+    } catch (e2) { console.warn('confirm_mail_sent_at:', e2); }
   } catch (e) {
     toast('❌ Versand fehlgeschlagen: ' + (e && (e.text || e.message) || e));
   }
@@ -6549,7 +6581,9 @@ async function loadParticipants() {
 
   // Filter auf Bestaetigungsstatus (Double-Opt-In)
   var confFilter = document.getElementById('filterConfirm') && document.getElementById('filterConfirm').value;
-  if (confFilter) rows = rows.filter(function(p) { return confirmStatusOf(p) === confFilter; });
+  if (confFilter === 'link_clicked') rows = rows.filter(function(p) { return !!p.confirmed_at; });
+  else if (confFilter === 'mail_open') rows = rows.filter(function(p) { return !!p.confirm_mail_sent_at && !p.confirmed_at && confirmStatusOf(p) !== 'withdrawn'; });
+  else if (confFilter) rows = rows.filter(function(p) { return confirmStatusOf(p) === confFilter; });
 
   // Enrich participants with photos from persons DB (by member_id)
   var memberIds = rows.filter(function(p){ return p.member_id && !p.photo_url; }).map(function(p){ return p.member_id; });
@@ -6649,6 +6683,7 @@ async function loadParticipants() {
         + (p.travel_amount ? '<div style="margin-top:3px"><span style="display:inline-block;background:var(--amber);color:#000;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;cursor:pointer" data-id="'+p.id+'" onclick="editEntry(this.dataset.id)" title="Betrag wird bei Anreise bezahlt – Klick zum Bearbeiten">✈ Anreise</span></div>' : '')
         + letterBadgeHtml(p)
         + confirmBadgeHtml(p)
+        + confirmLinkBadgeHtml(p)
         + '</td>'
       + '<td>' + p.lastname + '</td>'
       + '<td>' + p.firstname + '</td>'
