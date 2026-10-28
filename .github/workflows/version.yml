@@ -1,0 +1,77 @@
+# Setzt bei jedem Push automatisch eine neue Versionsnummer:
+#  - index.html: Anzeige links oben unter "Turnierverwaltung 2026" (z.B. "v1.0.142 · 28.10.2026 19:05")
+#  - sw.js:      CACHE_NAME wird mitgezogen, damit Browser alte Caches verwerfen
+# Danach wird ein GitHub-Pages-Build angestossen, damit die neue Version sicher live geht.
+name: Versionsnummer setzen
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: version-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    # Eigene Versions-Commits nicht erneut verarbeiten (Endlosschleife vermeiden)
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version berechnen und eintragen
+        run: |
+          git pull --rebase origin main
+          # Zaehlt nur echte Aenderungen (ohne die automatischen Versions-Commits)
+          N=$(git rev-list --count HEAD --perl-regexp --author='^((?!github-actions).)*$')
+          VERSION="1.0.${N}"
+          STAMP=$(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')
+          SHA=$(git rev-parse --short HEAD)
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          python3 - "$VERSION" "$STAMP" "$SHA" <<'PY'
+          import re, sys
+          version, stamp, sha = sys.argv[1:4]
+          label = f"v{version} · {stamp}"
+
+          p = "index.html"
+          s = open(p, encoding="utf-8").read()
+          s, n1 = re.subn(r"<!--APP_VERSION-->.*?<!--/APP_VERSION-->",
+                          f"<!--APP_VERSION-->{label}<!--/APP_VERSION-->", s, flags=re.S)
+          s, n2 = re.subn(r'(id="appVersion" title=")[^"]*(")',
+                          rf'\g<1>Version {version} · Commit {sha} · {stamp}\g<2>', s)
+          if n1 != 1 or n2 != 1:
+              sys.exit(f"Versions-Platzhalter in index.html nicht gefunden ({n1}/{n2})")
+          open(p, "w", encoding="utf-8").write(s)
+
+          p = "sw.js"
+          s = open(p, encoding="utf-8").read()
+          s, n3 = re.subn(r"const CACHE_NAME = '[^']*'; // @auto-version",
+                          f"const CACHE_NAME = 'mg-sports-v{version}'; // @auto-version", s)
+          if n3 != 1:
+              sys.exit("CACHE_NAME-Markierung in sw.js nicht gefunden")
+          open(p, "w", encoding="utf-8").write(s)
+          print("Gesetzt:", label)
+          PY
+
+      - name: Commit und Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html sw.js
+          git diff --cached --quiet && { echo "Keine Aenderung"; exit 0; }
+          git commit -m "Version v${VERSION}"
+          git push origin HEAD:main
+
+      - name: GitHub-Pages-Build anstossen
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
