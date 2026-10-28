@@ -1111,7 +1111,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
                 </select>
                 <div id="roomSelectInfo" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
               </div>
-              <div class="form-group"><label>Zimmernummer</label><input type="text" id="f_room_number" placeholder="z.B. 101" oninput="onRoomNumberManual()" /></div>
+              <div class="form-group"><label>Zimmernummer (intern)</label><input type="text" id="f_room_number" placeholder="z.B. DZ01" oninput="onRoomNumberManual()" /></div>
+              <div class="form-group"><label>🏨 Hotel-Zimmernr.</label><input type="text" id="f_hotel_room_no" placeholder="vom Hotel vergeben, z.B. 214" title="Gilt für das ganze Zimmer – wird beim Speichern am Zimmer hinterlegt" /></div>
               <div class="form-group"><label>Zimmer-Kategorie</label>
                 <select id="f_room_type" onchange="checkRoomAvailability()">
                   <option value="">–</option>
@@ -2698,8 +2699,8 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
           </div>
           <div class="card-body">
             <div class="table-wrap"><table>
-              <thead><tr><th>Hotel</th><th>Zimmer-Nr.</th><th>Kategorie</th><th>Belegung</th><th>Notiz</th><th>Aktionen</th></tr></thead>
-              <tbody id="roomsSettingsTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
+              <thead><tr><th>Hotel</th><th>Zimmer-Nr. (intern)</th><th>🏨 Hotel-Nr.</th><th>Kategorie</th><th>Belegung</th><th>Notiz</th><th>Aktionen</th></tr></thead>
+              <tbody id="roomsSettingsTable"><tr><td colspan="7" class="loading">Lade…</td></tr></tbody>
             </table></div>
           </div>
         </div>
@@ -4455,6 +4456,10 @@ dies ist unsere letzte Zahlungserinnerung..."></textarea></div>
           <option>Doppelzimmer</option>
           <option>Dreibettzimmer</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label>🏨 Hotel-Zimmernr. (optional)</label>
+        <input type="text" id="roomHotelNo" placeholder="vom Hotel vergeben, z.B. 214" />
       </div>
       <div class="form-group">
         <label>Notiz (optional)</label>
@@ -6851,7 +6856,7 @@ function cancelEdit() {
 }
 
 function clearForm() {
-  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date','emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes','endorsement_date','endorsement_notes','endorsement_pdf_url','endorsement_reason'];
+  const fields = ['group_tp','lastname','firstname','country','mobile','email','dob','passport_id','member_id','gender','role','meal_option','meal_option_price','events','package','package_price','entry_fee','shirt','shirt_color','coach_name','coach_esid','payment_link','memo','checkin','checkout','hotel','room_number','hotel_room_no','flight_in','flight_out','arrival_date','arrival_time','departure_date','departure_time','batch','withdraw_date','total','amount_received','payment_date','mahnung_date','emergency_name','emergency_phone','emergency_email','medical_allergies','medical_medications','medical_notes','endorsement_date','endorsement_notes','endorsement_pdf_url','endorsement_reason'];
   const shirtQtyEl = document.getElementById('f_shirt_qty'); if (shirtQtyEl) shirtQtyEl.value = '0';
   fields.forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = ''; });
   var _endSt = document.getElementById('f_endorsement_status'); if (_endSt) _endSt.value = 'pending';
@@ -7017,6 +7022,7 @@ async function editEntry(id) {
           if (sel.options[i].getAttribute('data-number') === rn) { sel.value = sel.options[i].value; break; }
         }
       }
+      fillHotelRoomNoField();
       checkRoomAvailability();
     }
   });
@@ -7322,6 +7328,7 @@ async function saveEntry() {
     ({ error } = await db.from('participants').insert(row));
   }
   if (error) { toast('Fehler: ' + error.message); return; }
+  try { await syncHotelRoomNoFromEntry(row.hotel, row.room_number, v('hotel_room_no')); } catch (e) { console.warn('Hotel-Zimmernr. nicht gespeichert', e); }
   const msg = id ? 'Eintrag aktualisiert' : 'Eintrag gespeichert';
   document.getElementById('editingId').value = '';
   document.getElementById('entryFormTitle').textContent = 'Neuen Teilnehmer erfassen';
@@ -7873,6 +7880,7 @@ async function saveShuttleAssignments() {
 
 async function loadHotel() {
   await populateHotelDropdowns();
+  await ensureHotelRoomNoMap();
   const hotelSel = document.getElementById('hotelFilterSelect');
   const selectedHotel = hotelSel ? hotelSel.value : '';
   const filter = document.getElementById('hotelFilter') ? document.getElementById('hotelFilter').value : '';
@@ -7908,9 +7916,9 @@ async function loadHotel() {
       let hdr = '';
       if (p.room_number && p.room_number !== lastRoom) {
         lastRoom = p.room_number;
-        hdr = '<tr style="background:var(--blue-bg)"><td colspan="15" style="padding:6px 12px;font-size:12px;font-weight:600;color:var(--blue)">Zimmer ' + p.room_number + ' · ' + (p.room_type||'') + ' · ' + (roomMap[p.room_number]||[]).length + ' Person(en): ' + (roomMap[p.room_number]||[]).join(' | ') + '</td></tr>';
+        hdr = '<tr style="background:var(--blue-bg)"><td colspan="15" style="padding:6px 12px;font-size:12px;font-weight:600;color:var(--blue)">Zimmer ' + p.room_number + (hotelRoomNoOf(p) ? ' · 🏨 Hotel-Nr. ' + hotelRoomNoOf(p) : '') + ' · ' + (p.room_type||'') + ' · ' + (roomMap[p.room_number]||[]).length + ' Person(en): ' + (roomMap[p.room_number]||[]).join(' | ') + '</td></tr>';
       }
-      return hdr + '<tr><td>' + p.lastname + '</td><td>' + p.firstname + '</td><td>' + (p.country||'-') + '</td><td><strong>' + (p.room_number||'-') + '</strong></td><td>' + (p.room_type||'-') + '</td><td>' + (p.hotel||'-') + '</td><td>' + fmtDate(p.checkin) + '</td><td>' + fmtDate(p.checkout) + '</td><td>' + nights + '</td><td>' + (p.package ? '<span class=\"badge\">'+p.package+'</span>' : '-') + '</td><td><span class=\"status ' + statusClass(p.payment_status) + '\">' + (p.payment_status||'-') + '</span></td><td style=\"font-size:12px\">' + (p.passport_id||'-') + '</td><td style=\"font-size:12px\">' + fmtDate(p.dob) + '</td><td>' + (p.gender||'-') + '</td><td style=\"font-size:12px\">' + (p.mobile||'-') + '</td></tr>';
+      return hdr + '<tr><td>' + p.lastname + '</td><td>' + p.firstname + '</td><td>' + (p.country||'-') + '</td><td><strong>' + (p.room_number||'-') + '</strong>' + (hotelRoomNoOf(p) ? '<div style="font-size:11px;color:var(--text2)">🏨 ' + hotelRoomNoOf(p) + '</div>' : '') + '</td><td>' + (p.room_type||'-') + '</td><td>' + (p.hotel||'-') + '</td><td>' + fmtDate(p.checkin) + '</td><td>' + fmtDate(p.checkout) + '</td><td>' + nights + '</td><td>' + (p.package ? '<span class=\"badge\">'+p.package+'</span>' : '-') + '</td><td><span class=\"status ' + statusClass(p.payment_status) + '\">' + (p.payment_status||'-') + '</span></td><td style=\"font-size:12px\">' + (p.passport_id||'-') + '</td><td style=\"font-size:12px\">' + fmtDate(p.dob) + '</td><td>' + (p.gender||'-') + '</td><td style=\"font-size:12px\">' + (p.mobile||'-') + '</td></tr>';
     }).join('');
   })();
 }
@@ -10373,6 +10381,7 @@ async function saveEventAccess(email) {
 
 // PDF EXPORTS
 async function exportHotelPDF() {
+  await ensureHotelRoomNoMap();
   const { data } = await db.from('participants').select('*').not('checkin', 'is', null).order('room_number');
   if (!data || !data.length) { toast('Keine Hoteldaten vorhanden'); return; }
   data.sort((a,b) => {
@@ -10418,7 +10427,7 @@ async function exportHotelPDF() {
     // Room header row
     tableRows += '<tr>'
       + '<td colspan="14" style="background:' + bgColor + ';border-left:4px solid ' + bdColor + ';border-top:2px solid ' + bdColor + ';padding:5px 10px;font-weight:700;font-size:11px;color:#333">'
-      + '🏨 Zimmer ' + rn + ' &nbsp;·&nbsp; ' + rtype + ' &nbsp;·&nbsp; ' + hotel
+      + '🏨 Zimmer ' + rn + (hotelRoomNoOf(p0) ? ' &nbsp;·&nbsp; Hotel-Nr. <span style="font-size:13px">' + hotelRoomNoOf(p0) + '</span>' : '') + ' &nbsp;·&nbsp; ' + rtype + ' &nbsp;·&nbsp; ' + hotel
       + (persons.length > 1 ? ' &nbsp;·&nbsp; <span style="color:' + bdColor + '">' + persons.length + ' Personen</span>' : '')
       + '</td></tr>';
 
@@ -11689,12 +11698,13 @@ async function openHotelEmailModal() {
 }
 async function downloadHotelPDFForEmail() {
   var hotel=window._currentEmailHotel; if(!hotel) return;
+  await ensureHotelRoomNoMap();
   var rQ=db.from('participants').select('*').eq('hotel',hotel.name).neq('withdraw','Ja').order('room_number'); if(currentEventId) rQ=rQ.eq('event_id',currentEventId);
   var r=await rQ;
   if(!r.data||!r.data.length){toast('Keine Buchungen');return;}
   r.data.sort(function(a,b){return (a.room_number||'zzz').localeCompare(b.room_number||'zzz',undefined,{numeric:true});});
   var rm={}; r.data.forEach(function(p){if(p.room_number){if(!rm[p.room_number])rm[p.room_number]=[];rm[p.room_number].push(p.lastname+', '+p.firstname);}});
-  printTable('Zimmerliste - '+hotel.name,['Zimmer-Nr.','Zimmerkat.','Mitbewohner','Nachname','Vorname','Land','Mobil','E-Mail','Geburtsdatum','Geschlecht','Passport ID','Member ID','Event','Check-in','Check-out','Zahlung'],r.data.map(function(p){var rm2=(rm[p.room_number]||[]).filter(function(n){return n!==p.lastname+', '+p.firstname;}).join(' | ')||'-';return[p.room_number||'-',p.room_type||'-',rm2,p.lastname,p.firstname,p.country||'-',p.mobile||'-',p.email||'-',fmtDate(p.dob),p.gender||'-',p.passport_id||'-',p.member_id||'-',p.events||'-',fmtDate(p.checkin),fmtDate(p.checkout),p.payment_status||'-'];}));
+  printTable('Zimmerliste - '+hotel.name,['Zimmer-Nr.','Hotel-Nr.','Zimmerkat.','Mitbewohner','Nachname','Vorname','Land','Mobil','E-Mail','Geburtsdatum','Geschlecht','Passport ID','Member ID','Event','Check-in','Check-out','Zahlung'],r.data.map(function(p){var rm2=(rm[p.room_number]||[]).filter(function(n){return n!==p.lastname+', '+p.firstname;}).join(' | ')||'-';return[p.room_number||'-',hotelRoomNoOf(p)||'-',p.room_type||'-',rm2,p.lastname,p.firstname,p.country||'-',p.mobile||'-',p.email||'-',fmtDate(p.dob),p.gender||'-',p.passport_id||'-',p.member_id||'-',p.events||'-',fmtDate(p.checkin),fmtDate(p.checkout),p.payment_status||'-'];}));
 }
 function sendHotelEmail() {
   var hotel=window._currentEmailHotel; if(!hotel||!hotel.email){toast('Keine E-Mail-Adresse');return;}
@@ -14592,6 +14602,58 @@ async function loadHotelRooms() {
   if (currentEventId) q = q.eq('event_id', currentEventId);
   var r = await q;
   hotelRoomsCache = r.data || [];
+  buildHotelRoomNoMap();
+}
+
+// ---- Hotel-Zimmernummer (vom Hotel vergeben) ----
+// Schlüssel: "Hotelname|interneNr" – Fallback nur interneNr, wenn sie eindeutig ist
+var hotelRoomNoMap = {};
+function buildHotelRoomNoMap() {
+  hotelRoomNoMap = {};
+  var cnt = {};
+  hotelRoomsCache.forEach(function(r) { cnt[r.room_number] = (cnt[r.room_number] || 0) + 1; });
+  hotelRoomsCache.forEach(function(r) {
+    if (!r.hotel_room_no) return;
+    var hn = r.hotels ? r.hotels.name : '';
+    hotelRoomNoMap[hn + '|' + r.room_number] = r.hotel_room_no;
+    if (cnt[r.room_number] === 1) hotelRoomNoMap['|' + r.room_number] = r.hotel_room_no;
+  });
+}
+async function ensureHotelRoomNoMap() { await loadHotelRooms(); }
+function hotelRoomNoOf(p) {
+  if (!p || !p.room_number) return '';
+  return hotelRoomNoMap[(p.hotel || '') + '|' + p.room_number] || hotelRoomNoMap['|' + p.room_number] || '';
+}
+function findHotelRoom(hotelName, roomNumber) {
+  if (!roomNumber) return null;
+  var hits = hotelRoomsCache.filter(function(r) { return r.room_number === roomNumber; });
+  var exact = hits.filter(function(r) { return (r.hotels ? r.hotels.name : '') === (hotelName || ''); });
+  if (exact.length) return exact[0];
+  return hits.length === 1 ? hits[0] : null;
+}
+async function saveHotelRoomNo(roomId, value) {
+  var val = (value || '').trim() || null;
+  var r = await db.from('hotel_rooms').update({ hotel_room_no: val }).eq('id', roomId);
+  if (r.error) { toast('Fehler: ' + r.error.message); return false; }
+  hotelRoomsCache.forEach(function(x) { if (x.id === roomId) x.hotel_room_no = val; });
+  buildHotelRoomNoMap();
+  return true;
+}
+async function syncHotelRoomNoFromEntry(hotelName, roomNumber, value) {
+  if (!roomNumber) return;
+  if (!hotelRoomsCache.length) await loadHotelRooms();
+  var room = findHotelRoom(hotelName, roomNumber);
+  if (!room) return;
+  var val = (value || '').trim() || null;
+  if ((room.hotel_room_no || null) === val) return;
+  await saveHotelRoomNo(room.id, val);
+}
+function fillHotelRoomNoField() {
+  var f = document.getElementById('f_hotel_room_no'); if (!f) return;
+  var rn = document.getElementById('f_room_number') && document.getElementById('f_room_number').value.trim();
+  var hn = document.getElementById('f_hotel') && document.getElementById('f_hotel').value;
+  var room = findHotelRoom(hn, rn);
+  f.value = room && room.hotel_room_no ? room.hotel_room_no : '';
 }
 
 async function populateRoomDropdown() {
@@ -14657,11 +14719,12 @@ async function populateRoomDropdown() {
       opt.setAttribute('data-hotel', hotelName);
       opt.setAttribute('data-used', used);
       opt.setAttribute('data-max', max);
+      opt.setAttribute('data-hotelno', room.hotel_room_no || '');
       opt.disabled = isFull;
       var statusText = isFull ? ' [VOLL]' : free === max ? ' [frei]' : ' [' + free + '/' + max + ' frei]';
       var names = occupantsMap[room.room_number] || [];
       var namesStr = names.length ? ' · ' + names.join(', ') : '';
-      opt.textContent = 'Zimmer ' + room.room_number + ' · ' + room.room_type + statusText + namesStr + (room.notes ? ' · ' + room.notes : '');
+      opt.textContent = 'Zimmer ' + room.room_number + (room.hotel_room_no ? ' (Hotel ' + room.hotel_room_no + ')' : '') + ' · ' + room.room_type + statusText + namesStr + (room.notes ? ' · ' + room.notes : '');
       if (isFull) opt.style.color = 'var(--red)';
       og.appendChild(opt);
     });
@@ -14688,6 +14751,7 @@ async function onRoomSelect() {
 
   // Fill hotel
   var fh = document.getElementById('f_hotel'); if (fh) fh.value = hotel;
+  var fhn = document.getElementById('f_hotel_room_no'); if (fhn) fhn.value = opt.getAttribute('data-hotelno') || '';
 
   // Show occupants info
   await showRoomOccupants(num, used, max, type);
@@ -14697,7 +14761,8 @@ async function onRoomSelect() {
 
   // Update info label
   var info = document.getElementById('roomSelectInfo');
-  if (info) info.textContent = 'Zimmer ' + num + ' · ' + hotel + ' · ' + used + '/' + max + ' belegt';
+  var hno = opt.getAttribute('data-hotelno');
+  if (info) info.textContent = 'Zimmer ' + num + (hno ? ' (Hotel-Nr. ' + hno + ')' : '') + ' · ' + hotel + ' · ' + used + '/' + max + ' belegt';
 }
 
 function onRoomNumberManual() {
@@ -14706,6 +14771,7 @@ function onRoomNumberManual() {
   if (sel) sel.value = '';
   var info = document.getElementById('roomSelectInfo'); if (info) info.textContent = '';
   var occ = document.getElementById('roomOccupantsInfo'); if (occ) occ.style.display = 'none';
+  fillHotelRoomNoField();
 }
 
 async function showRoomOccupants(roomNumber, used, max, type) {
@@ -14727,6 +14793,7 @@ async function showRoomOccupants(roomNumber, used, max, type) {
 
   // Fetch current occupants
   var q = db.from('participants').select('lastname,firstname,country').eq('room_number', roomNumber).neq('withdraw','Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
   if (document.getElementById('editingId') && document.getElementById('editingId').value) {
     q = q.neq('id', document.getElementById('editingId').value);
   }
@@ -14750,6 +14817,7 @@ async function checkRoomAvailability() {
   var maxMap = { 'Einzelzimmer': 1, 'Doppelzimmer': 2, 'Dreibettzimmer': 3 };
   var max = maxMap[rt] || 1;
   var q = db.from('participants').select('id,lastname,firstname,country').eq('room_number', rn).neq('withdraw','Ja');
+  if (currentEventId) q = q.eq('event_id', currentEventId);
   var editingId = document.getElementById('editingId') && document.getElementById('editingId').value;
   if (editingId) q = q.neq('id', editingId);
   var r = await q;
@@ -14817,6 +14885,7 @@ async function loadRoomsSettings() {
     return '<tr>'
       + '<td>' + (room.hotels ? room.hotels.name : '-') + '</td>'
       + '<td><strong>' + room.room_number + '</strong></td>'
+      + '<td><input type="text" class="hotel-room-no-input" data-room-id="' + room.id + '" value="' + escAttrRoomNo(room.hotel_room_no) + '" placeholder="–" style="width:90px;font-size:13px;padding:4px 8px" onchange="onHotelRoomNoInline(this)" onkeydown="if(event.key===&quot;Enter&quot;)this.blur()" /></td>'
       + '<td>' + room.room_type + '</td>'
       + '<td>' + occBar + '</td>'
       + '<td style="font-size:12px;color:var(--text2)">' + (room.notes||'-') + '</td>'
@@ -14824,7 +14893,18 @@ async function loadRoomsSettings() {
       + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="editRoom(\'' + room.id + '\')">Bearbeiten</button>'
       + '<button class="btn danger" style="font-size:11px;padding:3px 8px" onclick="deleteRoom(\'' + room.id + '\')">Löschen</button>'
       + '</td></tr>';
-  }).join('') : '<tr><td colspan="6" class="empty">Noch keine Zimmer erfasst. Klicke "+ Zimmer hinzufügen" um zu starten.</td></tr>';
+  }).join('') : '<tr><td colspan="7" class="empty">Noch keine Zimmer erfasst. Klicke "+ Zimmer hinzufügen" um zu starten.</td></tr>';
+}
+
+function escAttrRoomNo(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+async function onHotelRoomNoInline(el) {
+  var id = el.getAttribute('data-room-id'); if (!id) return;
+  el.style.borderColor = 'var(--amber)';
+  var ok = await saveHotelRoomNo(id, el.value);
+  el.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+  if (ok) { toast('🏨 Hotel-Zimmernr. gespeichert'); setTimeout(function() { el.style.borderColor = ''; }, 1500); }
 }
 
 async function openRoomModal(room) {
@@ -14833,6 +14913,7 @@ async function openRoomModal(room) {
   document.getElementById('roomNumber').value = room ? room.room_number || '' : '';
   document.getElementById('roomType').value = room ? room.room_type || '' : '';
   document.getElementById('roomNotes').value = room ? room.notes || '' : '';
+  var rhn = document.getElementById('roomHotelNo'); if (rhn) rhn.value = room ? room.hotel_room_no || '' : '';
   
   // Load hotels fresh and populate dropdown
   await loadHotelsCache();
@@ -14868,7 +14949,8 @@ async function saveRoom() {
   if (!number) { toast('Bitte Zimmernummer eingeben'); return; }
   if (!type) { toast('Bitte Zimmerkategorie wählen'); return; }
   var id = document.getElementById('roomEditId') && document.getElementById('roomEditId').value;
-  var row = { hotel_id: hotelId, room_number: number, room_type: type, notes: document.getElementById('roomNotes').value.trim() || null };
+  var row = { hotel_id: hotelId, room_number: number, room_type: type, notes: document.getElementById('roomNotes').value.trim() || null,
+    hotel_room_no: (document.getElementById('roomHotelNo') && document.getElementById('roomHotelNo').value.trim()) || null };
   if (!id) row.event_id = currentEventId || null;
   var r = id ? await db.from('hotel_rooms').update(row).eq('id', id) : await db.from('hotel_rooms').insert(row);
   if (r.error) { toast('Fehler: ' + r.error.message); return; }
@@ -19184,8 +19266,9 @@ async function exportHotelExcel() {
   var q = db.from('participants').select('*').not('checkin','is',null).not('withdraw','eq','Ja').order('room_number');
   if (currentEventId) q = q.eq('event_id', currentEventId);
   var r = await q; var data = r.data || [];
-  var headers = ['Zimmernummer','Zimmertyp','Nachname','Vorname','Land','Package','Check-in','Check-out','Mahlzeiten'];
-  var rows = data.map(function(p){ return [p.room_number||'',p.room_type||'',p.lastname,p.firstname,p.country||'',p.package||'',p.checkin||'',p.checkout||'',p.meal_plus==='Ja'?'Ja':'Nein']; });
+  await ensureHotelRoomNoMap();
+  var headers = ['Zimmernummer','Hotel-Zimmernr.','Zimmertyp','Nachname','Vorname','Land','Package','Check-in','Check-out','Mahlzeiten'];
+  var rows = data.map(function(p){ return [p.room_number||'',hotelRoomNoOf(p)||'',p.room_type||'',p.lastname,p.firstname,p.country||'',p.package||'',p.checkin||'',p.checkout||'',p.meal_plus==='Ja'?'Ja':'Nein']; });
   await exportExcelBase('Hotel-Liste', 'Hotel', headers, rows);
 }
 
