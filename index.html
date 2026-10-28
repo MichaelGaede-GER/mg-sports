@@ -1135,10 +1135,10 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <div class="form-group"><label>Anreise</label>
                 <select id="f_ams_bus">
                   <option value="">Bitte wählen</option>
-                  <option>Bus</option>
-                  <option>Zug</option>
-                  <option>Auto</option>
-                  <option>Flugzeug</option>
+                  <option value="Bus">Bus</option>
+                  <option value="Zug">Zug</option>
+                  <option value="Auto">Auto</option>
+                  <option value="Flugzeug">Flugzeug</option>
                 </select>
               </div>
 
@@ -2699,6 +2699,21 @@ tr:hover td{background:var(--bg2)}tr:nth-child(even) td{background:rgba(255,255,
               <thead><tr><th>Hotel</th><th>Zimmer-Nr.</th><th>Kategorie</th><th>Belegung</th><th>Notiz</th><th>Aktionen</th></tr></thead>
               <tbody id="roomsSettingsTable"><tr><td colspan="6" class="loading">Lade…</td></tr></tbody>
             </table></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <h3>Anreise-Arten</h3>
+            <button class="btn" style="font-size:11px;padding:4px 10px" onclick="resetTravelModes()">↺ Standard wiederherstellen</button>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Diese Optionen erscheinen im Erfassungsformular unter „Hotel &amp; Reise" → „Anreise". Mit ◀ ▶ die Reihenfolge ändern.</p>
+            <div id="travelModesList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="newTravelModeInput" placeholder="z.B. Shuttle oder Fähre" style="width:220px;font-size:13px" onkeydown="if(event.key==='Enter')addTravelMode()" />
+              <button class="btn primary" style="font-size:12px" onclick="addTravelMode()">+ Hinzufügen</button>
+            </div>
           </div>
         </div>
 
@@ -4807,6 +4822,7 @@ async function initApp() {
     populateCoachDropdowns();
   }).catch(function(){});
   loadMealOptions().catch(function(){});
+  loadTravelModes().catch(function(){});
   loadPersonRoles().catch(function(){});
   loadWithdrawPolicy().catch(function(){});
   loadTournamentLinks().catch(function(){});
@@ -4839,6 +4855,7 @@ async function loadEntryFee() {
   });
   const transpCb = document.getElementById('f_transport_booked'); if (transpCb) transpCb.checked = false;
   const flightGrp = document.getElementById('flightFieldsGroup'); /* always visible */
+  if (typeof updateTravelModeSelect === 'function') updateTravelModeSelect('');
   var rs = document.getElementById('f_room_select'); if (rs) rs.value = '';
   window._eventAutoFilled = false;
   var evBadge = document.getElementById('eventAutoBadge'); if (evBadge) evBadge.style.display = 'none';
@@ -6815,6 +6832,7 @@ function clearForm() {
   });
   const transpCb = document.getElementById('f_transport_booked'); if (transpCb) transpCb.checked = false;
   const flightGrp = document.getElementById('flightFieldsGroup'); /* always visible */
+  if (typeof updateTravelModeSelect === 'function') updateTravelModeSelect('');
   var rs = document.getElementById('f_room_select'); if (rs) rs.value = '';
   var ri = document.getElementById('roomSelectInfo'); if (ri) ri.textContent = '';
   var ro = document.getElementById('roomOccupantsInfo'); if (ro) ro.style.display = 'none';
@@ -6969,6 +6987,9 @@ async function editEntry(id) {
   });
   ['arrival_time','departure_time'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
   ['gender','role','events','shirt','payment_status','visa','mahnung','meal_plus','airport_plus','ams_bus','tp_check','room_type','airport_pickup_location'].forEach(f => { const el = document.getElementById('f_'+f); if (el) el.value = p[f]||''; });
+  // Anreise-Art: Liste kommt aus den Einstellungen; ein gespeicherter Wert, der dort
+  // inzwischen fehlt, bleibt als Option erhalten und geht beim Speichern nicht verloren.
+  updateTravelModeSelect(p.ams_bus || '');
   // Die Online-Formulare schreiben visa='Ja'/'Nein', das Dropdown hier kennt aber nur
   // 'Nicht erforderlich'/'Beantragt'/'Ausgestellt'. Ohne diese Umsetzung stand das Feld
   // bei Online-Anmeldungen auf dem ersten Eintrag und der Letter-Wunsch war unsichtbar.
@@ -11281,6 +11302,7 @@ async function loadSettings() {
   try { await loadPhysioConfig(); } catch(e) { console.error('loadPhysioConfig error:', e); }
   try { await loadWithdrawPolicy(); } catch(e) { console.error('loadWithdrawPolicy error:', e); }
   try { await loadMealOptionsSettings(); } catch(e) { console.error('loadMealOptionsSettings error:', e); }
+  try { await loadTravelModesSettings(); } catch(e) { console.error('loadTravelModesSettings error:', e); }
   try { await loadAgeClasses(); } catch(e) { console.error('loadAgeClasses error:', e); }
   try { await loadRoomsSettings(); } catch(e) { console.error('loadRoomsSettings error:', e); }
   // Populate auto-room hotel dropdown
@@ -16128,6 +16150,108 @@ function toggleDistCard(type) {
   if (icon) icon.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
 }
 
+
+// ANREISE-ARTEN (Einstellungen → Hotel & Reise). Gespeichert in app_settings 'travel_modes'
+// als JSON-Array; Feld am Teilnehmer bleibt ams_bus (Text), daher keine Migration nötig.
+var TRAVEL_MODES_DEFAULT = ['Bus', 'Zug', 'Auto', 'Flugzeug'];
+var travelModesCache = TRAVEL_MODES_DEFAULT.slice();
+
+async function loadTravelModes() {
+  var r = await db.from('app_settings').select('value').eq('key', 'travel_modes').limit(1);
+  var row = r.data && r.data[0];
+  var list = null;
+  if (row && row.value) {
+    try { list = JSON.parse(row.value); } catch(e) { console.error('loadTravelModes error:', e); }
+  }
+  travelModesCache = (Array.isArray(list) && list.length) ? list.map(String) : TRAVEL_MODES_DEFAULT.slice();
+  updateTravelModeSelect();
+}
+
+async function saveTravelModes() {
+  await db.from('app_settings').delete().eq('key', 'travel_modes');
+  var r = await db.from('app_settings').insert({ key: 'travel_modes', value: JSON.stringify(travelModesCache) });
+  if (r.error) { toast('❌ Fehler beim Speichern: ' + r.error.message); return false; }
+  return true;
+}
+
+async function loadTravelModesSettings() {
+  await loadTravelModes();
+  renderTravelModesList();
+}
+
+function renderTravelModesList() {
+  var el = document.getElementById('travelModesList');
+  if (!el) return;
+  if (!travelModesCache.length) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:13px">Keine Anreise-Arten definiert.</span>';
+    return;
+  }
+  var btn = 'background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;padding:0 2px;line-height:1;opacity:0.7';
+  el.innerHTML = travelModesCache.map(function(m, i) {
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--blue-bg);border:1px solid var(--blue);border-radius:20px;padding:4px 10px;font-size:13px;font-weight:600;color:var(--blue)">'
+      + (i > 0 ? '<button onclick="moveTravelMode(' + i + ',-1)" style="' + btn + '" title="Nach vorne">◀</button>' : '')
+      + esc(m)
+      + (i < travelModesCache.length - 1 ? '<button onclick="moveTravelMode(' + i + ',1)" style="' + btn + '" title="Nach hinten">▶</button>' : '')
+      + '<button onclick="removeTravelMode(' + i + ')" style="' + btn + ';font-size:14px" title="Löschen">×</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function addTravelMode() {
+  var input = document.getElementById('newTravelModeInput');
+  var val = input ? input.value.trim() : '';
+  if (!val) { toast('Bitte Anreise-Art eingeben'); return; }
+  var exists = travelModesCache.some(function(m) { return m.toLowerCase() === val.toLowerCase(); });
+  if (exists) { toast(val + ' ist bereits vorhanden'); return; }
+  travelModesCache.push(val);
+  if (!(await saveTravelModes())) { travelModesCache.pop(); return; }
+  renderTravelModesList();
+  updateTravelModeSelect();
+  if (input) input.value = '';
+  toast(val + ' hinzugefügt');
+}
+
+async function removeTravelMode(idx) {
+  var m = travelModesCache[idx];
+  if (!confirm('Anreise-Art "' + m + '" wirklich löschen?\nBereits erfasste Teilnehmer behalten ihren Eintrag.')) return;
+  travelModesCache.splice(idx, 1);
+  if (!(await saveTravelModes())) { travelModesCache.splice(idx, 0, m); return; }
+  renderTravelModesList();
+  updateTravelModeSelect();
+  toast(m + ' entfernt');
+}
+
+async function moveTravelMode(idx, dir) {
+  var j = idx + dir;
+  if (j < 0 || j >= travelModesCache.length) return;
+  var tmp = travelModesCache[idx]; travelModesCache[idx] = travelModesCache[j]; travelModesCache[j] = tmp;
+  renderTravelModesList();
+  updateTravelModeSelect();
+  await saveTravelModes();
+}
+
+async function resetTravelModes() {
+  if (!confirm('Anreise-Arten auf Standard zurücksetzen (Bus, Zug, Auto, Flugzeug)?')) return;
+  travelModesCache = TRAVEL_MODES_DEFAULT.slice();
+  if (!(await saveTravelModes())) return;
+  renderTravelModesList();
+  updateTravelModeSelect();
+  toast('Standard wiederhergestellt');
+}
+
+// Baut das Anreise-Dropdown im Erfassungsformular neu auf. keepValue: Wert, der gesetzt
+// werden soll (undefined = aktuellen Wert behalten). Unbekannte Werte werden als
+// zusätzliche Option angezeigt, damit Altdaten beim Speichern nicht verloren gehen.
+function updateTravelModeSelect(keepValue) {
+  var sel = document.getElementById('f_ams_bus');
+  if (!sel) return;
+  var cur = (keepValue === undefined) ? sel.value : (keepValue || '');
+  var opts = travelModesCache.slice();
+  if (cur && opts.indexOf(cur) < 0) opts.push(cur);
+  sel.innerHTML = '<option value="">Bitte wählen</option>'
+    + opts.map(function(m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('');
+  sel.value = cur;
+}
 
 // MEAL OPTIONS
 var mealOptionsCache = [];
