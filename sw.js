@@ -1,6 +1,6 @@
-// Bei jeder inhaltlichen Änderung diese Versionsnummer erhöhen — das sorgt dafür, dass
-// alte Caches beim nächsten Seitenaufruf zuverlässig verworfen werden.
-const CACHE_NAME = 'mg-sports-v2';
+// Wird bei jedem Push automatisch per GitHub Action (.github/workflows/version.yml) erhöht —
+// das sorgt dafür, dass alte Caches beim nächsten Seitenaufruf zuverlässig verworfen werden.
+const CACHE_NAME = 'mg-sports-v2'; // @auto-version
 
 // WICHTIG: Die Hauptdatei heißt auf GitHub Pages "index.html" (nicht mehr
 // "mg-sports-event-management.html"). Ein falscher Dateiname hier lässt cache.addAll()
